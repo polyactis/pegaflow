@@ -4,67 +4,45 @@ import subprocess
 from setuptools import setup, find_packages
 
 src_dir = os.path.dirname(__file__)
-home_dir = os.path.abspath(os.path.join(src_dir, "../../.."))
 
 install_requires = [
     "Werkzeug==0.14.1",
     "Flask==0.12.4",
     "Jinja2==2.8.1",
-    "Flask-SQLAlchemy==0.16",
+    "SQLAlchemy",
     "Flask-Cache==0.13.1",
     "requests==2.18.4",
     "MarkupSafe==1.0",
-    "itsdangerous==0.24",
     "boto==2.48.0",
     "pam==0.1.4",
     "plex==2.0.0dev",
     "future"
 ]
 
-excludes = ['Pegasus.test*']
+with open(os.path.join(src_dir, 'README.md')) as readme_file:
+    README = readme_file.read()
 
+with open(os.path.join(src_dir, 'HISTORY.md')) as history_file:
+    HISTORY = history_file.read()
 
 #
 # Create Manifest file to exclude tests, and service files
 #
 def create_manifest_file():
-    global excludes
-
     f = None
     try:
         f = open('MANIFEST.in', 'w')
-        f.write('recursive-exclude Pegasus/test *\n')
-
-        if sys.version_info[1] <= 4:
-            f.write('recursive-exclude Pegasus/service *\n')
-            excludes.append('Pegasus.service*')
-
+        f.write('recursive-exclude pegapy3/test *\n')
+        f.write('global-exclude *.py[cod]\n')
     finally:
         if f:
             f.close()
-
 
 #
 # Install conditional dependencies
 #
 def setup_installer_dependencies():
     global install_requires
-
-
-#
-# Utility function to read the pegasus Version.in file
-#
-def read_version():
-    return subprocess.Popen("%s/release-tools/getversion" % home_dir,
-                            stdout=subprocess.PIPE, shell=True).communicate()[0].strip()
-
-
-#
-# Utility function to read the README file.
-#
-def read(fname):
-    return open(os.path.join(src_dir, fname)).read()
-
 
 def find_package_data(dirname):
     def find_paths(dirname):
@@ -80,18 +58,17 @@ def find_package_data(dirname):
     items = find_paths(dirname)
     return [path.replace(dirname, "") for path in items]
 
-create_manifest_file()
-setup_installer_dependencies()
 
-setup(
-    name="pegasus-wms",
-    version="4.9.1",
-    author="Pegasus Team",
-    author_email="pegasus@isi.edu",
-    description="Pegasus Workflow Management System Python API",
-    long_description=read("README"),
+setup_args = dict(
+    name="pegapy3",
+    version="0.0.1",
+    author="Yu S. Huang",
+    author_email="polyactis@gmail.com",
+    description="Pegasus DAX Python3 API with a helper class",
+    long_description_content_type="text/markdown",
+    long_description=README + '\n\n' + HISTORY,
     license="Apache2",
-    url="http://pegasus.isi.edu",
+    url="http://www.yfish.org",
     keywords=["scientific workflows"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
@@ -103,10 +80,14 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: Apache Software License",
     ],
-    packages=find_packages(exclude=excludes),
-    package_data={"Pegasus.service": find_package_data("Pegasus/service/")},
+    packages=find_packages(exclude=['pegapy3.test*']),
+    package_data={"pegapy3.service": find_package_data("pegapy3/service/")},
     include_package_data=True,
     zip_safe=False,
-    install_requires=install_requires
 )
 
+
+if __name__ == '__main__':
+    create_manifest_file()
+    setup_installer_dependencies()
+    setup(**setup_args, install_requires=install_requires)
