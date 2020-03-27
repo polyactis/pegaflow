@@ -5,19 +5,7 @@ from setuptools import setup, find_packages
 
 src_dir = os.path.dirname(__file__)
 
-install_requires = [
-    "Werkzeug==0.14.1",
-    "Flask==0.12.4",
-    "Jinja2==2.8.1",
-    "SQLAlchemy",
-    "Flask-Cache==0.13.1",
-    "requests==2.18.4",
-    "MarkupSafe==1.0",
-    "boto==2.48.0",
-    "pam==0.1.4",
-    "plex==2.0.0dev",
-    "future"
-]
+install_requires = []
 
 with open(os.path.join(src_dir, 'README.md')) as readme_file:
     README = readme_file.read()

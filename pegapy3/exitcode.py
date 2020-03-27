@@ -9,9 +9,9 @@ import os
 import uuid
 from optparse import OptionParser
 
-from Pegasus.cluster import RecordParser
-from Pegasus.tools import kickstart_parser
-from Pegasus.monitoring.metadata import Metadata
+from cluster import RecordParser
+from tools import kickstart_parser
+from monitoring.metadata import Metadata
 
 
 # logging
@@ -249,7 +249,7 @@ def append_to_wf_metadata_log(files_metadata, logfile):
     with io.open(logfile, 'a', encoding='utf8') as outfile:
         for file_metadata in files_metadata:
             res = file_metadata.convert_to_rce()
-            outfile.write(unicode(res + '\n'))
+            outfile.write(res + u'\n')
 
 
 
@@ -366,7 +366,7 @@ def _write_logs(log_filename):
         # writing to log file (concurrency safe)
         with io.open(log_filename, 'a', encoding='utf8') as outfile:
             res = json.dumps(log, ensure_ascii=False)
-            outfile.write(unicode(res + '\n'))
+            outfile.write(res + u'\n')
 
     else:
         print(json.dumps(log))

@@ -150,14 +150,7 @@ import shlex
 import codecs
 import warnings
 
-if sys.version_info >= (3, 0):
-    # compatibility with Python 3
-    from past.builtins import basestring
-
-try:
-    from StringIO import StringIO
-except ImportError:
-    from io import StringIO
+from io import StringIO
 
 SCHEMA_NAMESPACE = "http://pegasus.isi.edu/schema/DAX"
 SCHEMA_LOCATION = "http://pegasus.isi.edu/schema/dax-3.6.xsd"
@@ -189,7 +182,7 @@ class Element:
             if value is not None:
                 if isinstance(value, bool):
                     value = str(value).lower()
-                elif not isinstance(value, basestring):
+                elif not isinstance(value, str):
                     value = repr(value)
                 attr = attr.replace('__', ':')
                 self.attrs.append((attr, value))
@@ -219,7 +212,7 @@ class Element:
         return element
 
     def text(self, value):
-        if not isinstance(value, basestring):
+        if not isinstance(value, str):
             value = str(value)
         self.children.append(self._escape(value))
         return self
@@ -259,7 +252,7 @@ class Element:
             for child in self.children:
                 if not flat:
                     stream.write('\t' * (level + 1))
-                if isinstance(child, basestring):
+                if isinstance(child, str):
                     stream.write(child)
                 else:
                     child.write(stream, level + 1, flat)
@@ -1207,7 +1200,7 @@ class AbstractJob(ProfileMixin, UseMixin, InvokeMixin, MetadataMixin):
     def addArguments(self, *arguments):
         """Add one or more arguments to the job (this will add whitespace)"""
         for arg in arguments:
-            if not isinstance(arg, (File, basestring)):
+            if not isinstance(arg, (File, str)):
                 raise FormatError("Invalid argument", arg)
         for arg in arguments:
             if len(self.arguments) > 0:
@@ -1217,7 +1210,7 @@ class AbstractJob(ProfileMixin, UseMixin, InvokeMixin, MetadataMixin):
     def addRawArguments(self, *arguments):
         """Add one or more arguments to the job (whitespace will NOT be added)"""
         for arg in arguments:
-            if not isinstance(arg, (File, basestring)):
+            if not isinstance(arg, (File, str)):
                 raise FormatError("Invalid argument", arg)
         self.arguments.extend(arguments)
 
@@ -1230,7 +1223,7 @@ class AbstractJob(ProfileMixin, UseMixin, InvokeMixin, MetadataMixin):
         args = []
         for a in self.arguments:
             if isinstance(a, File):
-                args.append(unicode(a.toArgumentXML()))
+                args.append(a.toArgumentXML())
             else:
                 args.append(a)
         return ''.join(args)
@@ -1374,7 +1367,7 @@ class Job(AbstractJob):
             self.name = name.name
             self.namespace = name.namespace
             self.version = name.version
-        elif isinstance(name, basestring):
+        elif isinstance(name, str):
             self.name = name
         else:
             raise FormatError("Name must be a string, Transformation or Executable")
@@ -1430,7 +1423,7 @@ class DAX(AbstractJob):
         """
         if isinstance(file, File):
             self.file = file
-        elif isinstance(file, str) or isinstance(file, unicode):
+        elif isinstance(file, str):
             self.file = File(name=file)
         else:
             raise FormatError("invalid file", file)
@@ -1480,7 +1473,7 @@ class DAG(AbstractJob):
         """
         if isinstance(file, File):
             self.file = file
-        elif isinstance(file, str) or isinstance(file, unicode):
+        elif isinstance(file, str):
             self.file = File(name=file)
         else:
             raise FormatError("Invalid file", file)
@@ -1965,10 +1958,7 @@ def parse(infile):
         try:
             import xml.etree.ElementTree as etree
         except:
-            try:
-                import elementtree.ElementTree as etree
-            except:
-                raise Exception("Please install elementtree")
+            raise Exception("ERROR: xml.etree module is misisng.")
 
     NS = "{http://pegasus.isi.edu/schema/DAX}"
 
@@ -2106,7 +2096,7 @@ def parse(infile):
         args = e.find(QN("argument"))
         if args is not None:
             for i in iterelem(args):
-                if isinstance(i, basestring):
+                if isinstance(i, str):
                     j.addRawArguments(i)
                 else:
                     j.addRawArguments(File(i.attrib['name']))

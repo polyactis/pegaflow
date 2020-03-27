@@ -1,5 +1,7 @@
 .idea
 **/*.pyc
+**/__pycache__
+**/.*.swp
 .autotools
 .cproject
 .depend
