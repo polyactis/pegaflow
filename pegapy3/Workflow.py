@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-a class for pegasus workflows to inherit
+Class Workflow is a class for other programs to inherit and helps to simplify pegasus workflow dax writing.
 """
 import sys, os
 from DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, Job, Dependency
@@ -9,7 +9,6 @@ class PassingData(object):
     """
     a class to hold any data structure
     """
-    
     def __init__(self, **keywords):
         """
         add keyword handling
@@ -190,96 +189,64 @@ def getExecutableClustersSize(executable=None):
 
 class Workflow(ADAG):
     __doc__ = __doc__
-    db_option_dict = {
-                    ('drivername', 1,):['postgresql', 'v', 1, 'which type of database? mysql or postgresql', ],\
-                    ('hostname', 1, ): ['localhost', 'z', 1, 'hostname of the db server', ],\
-                    ('dbname', 1, ): ['', 'd', 1, 'database name', ],\
-                    ('schema', 0, ): ['public', 'k', 1, 'database schema name', ],\
-                    ('db_user', 1, ): [None, 'u', 1, 'database username', ],\
-                    ('db_passwd', 1, ): [None, 'p', 1, 'database password', ],\
-                    ('port', 0, ):[None, '', 1, 'database port number'],\
-                    ('commit', 0, ):[None, '', 0, 'commit database transaction if there is db transaction'],\
-                    ("data_dir", 0, ): ["", 't', 1, 'the base directory where all db-affiliated files are stored. '
-                                    'If not given, use the default stored in db.'],\
-                    ("local_data_dir", 0, ): ["", 'D', 1, 'this one should contain same files as data_dir but accessible locally. '
-                            'If not given, use the default stored in db (db.data_dir). This argument is used to find all input files available.\n '
-                            'It should be different from data_dir only when you generate a workflow on one computer and execute it on another which has different data_dir.'],\
-
-                    }
-    option_default_dict = {
-                        ("home_path", 1, ): [os.path.expanduser("~"), 'e', 1, 'path to the home directory on the working nodes'],\
-                        ("pegasusCleanupPath", 1, ): ["%s/bin/pegasus/bin/pegasus-cleanup", '', 1, 'path to pegasus-cleanup executable, it will be registered and run on local universe of condor pool (rather than the vanilla universe)'],\
-                        ("pegasusTransferPath", 1, ): ["%s/bin/pegasus/bin/pegasus-transfer", '', 1, 'path to pegasus-transfer executable, it will be registered and run on local universe of condor pool (rather than the vanilla universe)'],\
-                        ("site_handler", 1, ): ["condorpool", 'l', 1, 'which site to run the jobs: condorpool, hoffman2'],\
-                        ("input_site_handler", 1, ): ["local", 'j', 1, 'which site has all the input files: local, condorpool, hoffman2. '
-                            'If site_handler is condorpool, this must be condorpool and files will be symlinked. '
-                            'If site_handler is hoffman2, input_site_handler=local induces file transfer and input_site_handler=hoffman2 induces symlink.'],\
-                        ('clusters_size', 1, int):[30, 'C', 1, 'For short jobs that will be clustered, how many of them should be clustered int one'],\
-                        ('pegasusFolderName', 0, ): ['folder', 'F', 1, 'the folder relative to pegasus workflow root to contain input & output. '
-                                'It will be created during the pegasus staging process. It is useful to separate multiple workflows. '
-                                'If empty, everything is in the pegasus root.', ],\
-                        ('inputSuffixList', 0, ): [None, '', 1, 'coma-separated list of input file suffices. If None, any suffix. '
-                            'Suffix include the dot, (i.e. .tsv). Typical zip suffices are excluded (.gz, .bz2, .zip, .bz).'],\
-                        ('outputFname', 1, ): [None, 'o', 1, 'xml workflow output file'],\
-                        ("tmpDir", 1, ): ["/tmp/", '', 1, 'for MarkDuplicates.jar, etc., default is /tmp/ but sometimes it is too small'],\
-                        ('max_walltime', 1, int):[4320, '', 1, 'maximum wall time any job could have, in minutes. 20160=2 weeks.\n'
-                            'used in addGenericJob().'],\
-                        ('jvmVirtualByPhysicalMemoryRatio', 1, float):[1.0, '', 1, 
-                            "if a job's virtual memory (usually 1.2X of JVM resident memory) exceeds request, "
-                            "it will be killed on hoffman2. Hence this argument"],\
-                        ("thisModulePath", 1, ): ["%s", '', 1, 'path of the module that owns this program. '
-                            'used to add executables from this module.'],\
-                        ('debug', 0, int):[0, 'b', 0, 'toggle debug mode'],\
-                        ('needSSHDBTunnel', 0, int):[0, 'H', 0, 'DB-interacting jobs need a ssh tunnel (running on cluster behind firewall).'],\
-                        ('report', 0, int):[0, 'r', 0, 'toggle report, more verbose stdout/stderr.']
-                        }
-                        #('bamListFname', 1, ): ['/tmp/bamFileList.txt', 'L', 1, 'The file contains path to each bam file, one file per line.'],\
-
-    pathToInsertHomePathList = ['pegasusCleanupPath', \
-                            'pegasusTransferPath', "thisModulePath"]
-
-    def __init__(self, inputArgumentLs=None, **keywords):
+    # Each entry of pathToInsertHomePathList should contain %s, i.e. '%s/bin/myprogram'
+    #  and will be expanded to be '/home/user/bin/myprogram'.
+    # Child classes can add stuff into this list.
+    pathToInsertHomePathList = []
+    def __init__(self, site_handler=None, input_site_handler=None, clusters_size=30, \
+            pegasusFolderName='folder', inputSuffixList=None, output_path=None, \
+            tmpDir='/tmp/', max_walltime=4320, jvmVirtualByPhysicalMemoryRatio=1.2,\
+            debug=False, needSSHDBTunnel=False, report=False):
         """
+        site_handler: The name of the computing site where the jobs run and executables are stored. Check your Pegasus configuration.
+        input_site_handler: 'local or same as site_handler. It is the name of the site that has all the input files.'
+            'If it is the same as site_handler, the input files will be symlinked.'
+            'If input_site_handler=local, input files will be transferred to the computing cluster by pegasus-transfer.'
+        clusters_size: 'This number decides how many of pegasus jobs should be clustered into one job. '
+            'Good if your workflow contains many quick jobs. It will reduce Pegasus monitor I/O.'
+        pegasusFolderName: 'the path relative to the pegasus workflow root. This folder will contains pegasus input & output.'
+            'It will be created during the pegasus staging process. It is useful to separate multiple sub-workflows.'
+            'If empty or None, everything is in the pegasus root.'
+        inputSuffixList: 'coma-separated list of input file suffices. If None, any suffix.'
+            'Suffix include the dot, (i.e. .tsv). Typical zip suffices are excluded (.gz, .bz2, .zip, .bz).'
+        output_path: 'the path to the output file that will contain the Pegasus DAG.'
+        tmpDir: 'a local folder for some jobs (MarkDup) to store temp data. /tmp/ can be too small sometimes.'
+        max_walltime: 'maximum wall time any job could have, in minutes. 20160=2 weeks.'
+            'used in addGenericJob().'
+        jvmVirtualByPhysicalMemoryRatio: "if a job's virtual memory (usually 1.2X of JVM resident memory) exceeds request, "
+            "it will be killed on some clusters, hoffman2. This will make sure your job requests enough memory from the job scheduler."
+        debug: 'toggle debug mode.'
+        needSSHDBTunnel: 'If all DB-interacting jobs need a ssh tunnel to access a database that is inaccessible to computing nodes.'
+        report: 'toggle verbose output.'
         """
-        # call parent
-        ADAG.__init__(self, "myworkflow")
-        """
-        # methods of ADAG
-        >>> dir(a)
-        ['__doc__', '__init__', '__module__', '__str__', '__unicode__', 'addDAG', 'addDAX', 'addDependency',
-        'addExecutable', 'addFile', 'addInvoke', 'addJob', 'addTransformation', 'clearDependencies',
-        'clearExecutables', 'clearFiles', 'clearInvokes', 'clearJobs', 'clearTransformations', 'count',
-        'dependencies', 'depends', 'executables', 'files', 'getJob', 'hasDependency', 'hasExecutable',
-        'hasFile', 'hasInvoke', 'hasJob', 'hasTransformation', 'index', 'invocations', 'invoke', 'jobs',
-         'name', 'nextJobID', 'removeDependency', 'removeExecutable', 'removeFile', 'removeInvoke',
-         'removeJob', 'removeTransformation', 'sequence', 'toXML', 'transformations', 'writeXML', 'writeXMLFile']
-
-        """
-        from pymodule import ProcessOptions
-        self.ad = ProcessOptions.process_function_arguments(keywords, self.option_default_dict, error_doc=self.__doc__, \
-                                                        class_to_have_attr=self)
-        self.inputSuffixList = getListOutOfStr(list_in_str=self.inputSuffixList, data_type=str, separator1=',', separator2='-')
+        self.site_handler = site_handler
+        self.input_site_handler = input_site_handler
+        self.clusters_size = clusters_size
+        self.pegasusFolderName = pegasusFolderName
+        self.inputSuffixList = getListOutOfStr(list_in_str=inputSuffixList, data_type=str, 
+            separator1=',', separator2='-')
         self.inputSuffixSet = set(self.inputSuffixList)
-        self.inputArgumentLs = inputArgumentLs
-        if self.inputArgumentLs is None:
-            self.inputArgumentLs = []
 
+        self.output_path = output_path
+        self.tmpDir = tmpDir
+        self.max_walltime = max_walltime
+        self.jvmVirtualByPhysicalMemoryRatio = jvmVirtualByPhysicalMemoryRatio
+        self.debug = debug
+        self.needSSHDBTunnel = needSSHDBTunnel
+        self.report = report
         #change the workflow name to reflect the output filename
-        workflowName = os.path.splitext(os.path.basename(self.outputFname))[0]
+        workflowName = os.path.splitext(os.path.basename(self.output_path))[0]
+        # call parent
         self.name = workflowName
+        ADAG.__init__(self, self.name)
 
         for pathName in self.pathToInsertHomePathList:
             absPath = self.insertHomePath(getattr(self, pathName, None), self.home_path)
             if absPath:
                 setattr(self, pathName, absPath)
             else:
-                sys.stderr.write("Warning: %s has empty absolute path. Skip.\n"%(pathName))
+                sys.stderr.write("Warning: %s has an empty absolute path. Skip.\n"%(pathName))
         
-        #self.pymodulePath = self.insertHomePath(self.pymodulePath, self.home_path)
-
-        # Add executables to the DAX-level replica catalog
-        # In this case the binary is keg, which is shipped with Pegasus, so we use
-        # the remote PEGASUS_HOME to build the path.
         self.architecture = "x86_64"
         self.operatingSystem = "linux"
         self.namespace = "pegasus"
@@ -615,7 +582,6 @@ class Workflow(ADAG):
         setattr(self, pythonVariableName, pegasusFile)
         return pegasusFile
 
-
     def addInputToMergeJob(self, mergeJob=None, inputF=None, inputArgumentOption="",\
                             parentJobLs=None, \
                             extraDependentInputLs=None, **keywords):
@@ -950,7 +916,7 @@ class Workflow(ADAG):
         executableFile could be None
         use pipeCommandOutput2File to get output piped into outputF
             no frontArgumentList exposed because the order of initial arguments are fixed.
-                ~/pymodule/shell/pipeCommandOutput2File.sh commandPath outputFname [commandArguments]
+                ~/pymodule/shell/pipeCommandOutput2File.sh commandPath output_path [commandArguments]
 
 
         """
@@ -1052,9 +1018,7 @@ class Workflow(ADAG):
 
     def setup_run(self):
         """
-        assign all returned data to self, rather than pdata (pdata has become self)
-        wrap all standard pre-run() related functions into this function.
-            setting up for run(), called by run()
+        Wrap all standard pre-run() related functions into this function.
         """
         if self.debug:
             import pdb
@@ -1080,13 +1044,14 @@ class Workflow(ADAG):
 
     def end_run(self):
         """
-        To be called in the end of run()
+        To be called in the end.
+        Write the DAG to an output file and close the database connection if there is one.
         """
         # Write the DAX to stdout
         if self.isDAGWrittenToDisk:
             sys.stderr.write("Warning: the dag has been written to a file already (writeXML() has been called). No more calling.\n")
         else:
-            outf = open(self.outputFname, 'w')
+            outf = open(self.output_path, 'w')
             self.writeXML(outf)
             self.isDAGWrittenToDisk = True
 
@@ -1100,14 +1065,51 @@ class Workflow(ADAG):
 if __name__ == '__main__':
     from argparse import ArgumentParser
     ap = ArgumentParser()
-    ap.add_argument("-i", "--input_file", type=str, required=True,
-                    help="the path to the input file.")
-    ap.add_argument("-o", "--output_file", type=str, required=True,
-                    help="the path to the output file.")
-    ap.add_argument("-s", "--source_code_dir", type=str, 
-            default=os.path.expanduser('~/src/mygit/'), 
-            help="the path to the source code dir. (default: %(default)s)")
+    ap.add_argument("-l", "--site_handler", type=str, required=True,
+            help="The name of the computing site where the jobs run and executables are stored. "
+            "Check your Pegasus configuration in submit.sh.")
+    ap.add_argument("-j", "--input_site_handler", type=str,
+            help="It is the name of the site that has all the input files."
+            "Possible values can be 'local' or same as site_handler."
+            "If not given, it is asssumed to be the same as site_handler and the input files will be symlinked into the running folder."
+            "If input_site_handler=local, the input files will be transferred to the computing site by pegasus-transfer.")
+    ap.add_argument("-C", "--clusters_size", type=int, default=30,
+            help="Default: %(default)s. "
+            "This number decides how many of pegasus jobs should be clustered into one job. "
+            "Good if your workflow contains many quick jobs. "
+            "It will reduce Pegasus monitor I/O.")
+    ap.add_argument("-o", "--output_path", type=str, required=True,
+            help="The path to the output file that will contain the Pegasus DAG.")
+    ap.add_argument("-F", "--pegasusFolderName", type=str,
+            help='The path relative to the workflow running root. '
+            'This folder will contain pegasus input & output. '
+            'It will be created during the pegasus staging process. '
+            'It is useful to separate multiple sub-workflows. '
+            'If empty or None, everything is in the pegasus root.')
+    ap.add_argument("--inputSuffixList", type=str,
+            help='Coma-separated list of input file suffices. Used to exclude input files.'
+            'If None, no exclusion. The dot is part of the suffix, .tsv not tsv.'
+            'Common zip suffices (.gz, .bz2, .zip, .bz) will be ignored in obtaining the suffix.')
+    ap.add_argument("--tmpDir", type=str, default='/tmp/',
+            help='Default: %(default)s. A local folder for some jobs (MarkDup) to store temp data.'
+                '/tmp/ can be too small sometimes.')
+    ap.add_argument("--max_walltime", type=int, default=4320,
+            help='Default: %(default)s. Maximum wall time for any job, in minutes. 4320=3 days.'
+            'Used in addGenericJob(). Most clusters have upper limit for runtime.')
+    ap.add_argument("--jvmVirtualByPhysicalMemoryRatio", type=float, default=1.2,
+            help='Default: %(default)s. '
+            'If a job virtual memory (usually 1.2X of JVM resident memory) exceeds request, '
+            "it will be killed on some clusters. This will make sure your job requests enough memory.")
+    ap.add_argument("--debug", action='store_true',
+            help='Toggle debug mode.')
+    ap.add_argument("--report", action='store_true',
+            help="Toggle verbose mode. Default: %(default)s.")
+    ap.add_argument("--needSSHDBTunnel", action='store_true',
+            help="If all DB-interacting jobs need a ssh tunnel to access a database that is inaccessible to computing nodes.")
     args = ap.parse_args()
-
-    instance = Workflow(po.arguments, **po.long_option2value)
-    instance.run()
+    instance = Workflow(site_handler=args.site_handler, input_site_handler='ycondor', clusters_size=30, \
+            pegasusFolderName='folder', inputSuffixList=None, output_path=args.output_path, \
+            tmpDir='/tmp/', max_walltime=4320, jvmVirtualByPhysicalMemoryRatio=1.2,\
+            debug=False, needSSHDBTunnel=False, report=False)
+    instance.setup_run()
+    instance.end_run()
