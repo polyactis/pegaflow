@@ -895,12 +895,16 @@ class Workflow(ADAG):
                     key2ObjectForJob=key2ObjectForJob, no_of_cpus=no_of_cpus, walltime=walltime, **keywords)
         return job
 
-    def addGenericPipeCommandOutput2FileJob(self, executable=None, executableFile=None, \
+        def addGenericPipeCommandOutput2FileJob(self, executable=None, executableFile=None, \
                     outputFile=None, \
                     parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, transferOutput=False, \
                     extraArguments=None, extraArgumentList=None, sshDBTunnel=None,\
                     job_max_memory=2000, walltime=120, **keywords):
         """
+        executableFile could be None
+        use pipeCommandOutput2File to get output piped into outputF
+            shell/pipeCommandOutput2File.sh outputFname commandPath [commandArguments]
+
         Examples:
             sortedSNPID2NewCoordinateFile = File(os.path.join(reduceOutputDirJob.output, 'SNPID2NewCoordinates.sorted.tsv'))
             sortSNPID2NewCoordinatesJob = self.addGenericPipeCommandOutput2FileJob(executable=self.pipeCommandOutput2File, \
@@ -926,7 +930,7 @@ class Workflow(ADAG):
                         **keywords)
 
             sortedVCFFile = File(os.path.join(self.liftOverReduceDirJob.output, '%s.sorted.vcf'%(seqTitle)))
-            vcfSorterJob = self.addGenericPipeCommandOutput2FileJob(executable=None, executableFile=self.vcfsorterExecutableFile, \
+            vcfSorterJob = self.addGenericPipeCommandOutput2FileJob(executableFile=self.vcfsorterExecutableFile, \
                     outputFile=sortedVCFFile, \
                     parentJobLs=[selectOneChromosomeVCFJob, self.liftOverReduceDirJob], \
                     extraDependentInputLs=[self.newRegisterReferenceData.refPicardFastaDictF, selectOneChromosomeVCFJob.output], \
@@ -934,24 +938,20 @@ class Workflow(ADAG):
                     extraArguments=None, extraArgumentList=[self.newRegisterReferenceData.refPicardFastaDictF, selectOneChromosomeVCFJob.output], \
                     job_max_memory=job_max_memory, walltime=walltime)
 
-        executableFile could be None
-        use pipeCommandOutput2File to get output piped into outputF
-            no frontArgumentList exposed because the order of initial arguments are fixed.
-                ~/pymodule/shell/pipeCommandOutput2File.sh commandPath output_path [commandArguments]
-
-
         """
         if executable is None:
             executable = self.pipeCommandOutput2File
         if extraDependentInputLs is None:
             extraDependentInputLs = []
-        frontArgumentList = []
+        if not extraArgumentList:
+            extraArgumentList = []
         if executableFile:
             extraDependentInputLs.append(executableFile)
-            frontArgumentList.append(executableFile)
+            ## add in front of extra arguments
+            extraArgumentList.insert(0, executableFile)
 
         job= self.addGenericJob(executable=executable, \
-                    frontArgumentList=frontArgumentList,\
+                    frontArgumentList=None,\
                     inputFile=None, inputArgumentOption=None,\
                     outputFile=outputFile, outputArgumentOption=None,\
                 parentJobLs=parentJobLs, extraDependentInputLs=extraDependentInputLs, \
@@ -960,7 +960,7 @@ class Workflow(ADAG):
                 extraArgumentList=extraArgumentList, key2ObjectForJob=None, job_max_memory=job_max_memory, \
                 sshDBTunnel=sshDBTunnel, walltime=walltime, **keywords)
         return job
-
+    
     def setJobOutputFileTransferFlag(self, job=None, transferOutput=False, outputLs=None):
         """
         assume all output files in job.outputLs
