@@ -56,7 +56,7 @@ setup_args = dict(
     long_description_content_type="text/markdown",
     long_description=README + '\n\n' + HISTORY,
     license="Apache2",
-    url="http://www.yfish.org",
+    url="https://github.com/polyactis/pegapy3",
     keywords=["scientific workflows"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",

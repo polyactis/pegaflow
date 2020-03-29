@@ -1,11 +1,9 @@
-
 # Pegasus Workflow Management System Python3 API
+Pegapy3 contains the Python3 APIs for Pegasus WMS (http://pegasus.isi.edu/). Pegasus only offers Python2 support.
 
-This package contains the Python3 APIs for Pegasus WMS.
+Pegapy3 also contains a helper class, Workflow.py, for users to inherit. It simplifies the Pegasus workflow writing.
 
-This package's source code came directly from https://github.com/ahnitz/pegasus-wms-python3, which is based on http://pegasus.isi.edu/'s python APIs, version 4.9.1.
-
-Beside the Python3 support, this package contains a helper class, Workflow.py, for users to inherit. It simplifies the Pegasus workflow writing. Check code in examples/ to start.
+Pegasus allows a developer to connect dependent computing jobs into a DAG (Directed Acyclic Graph) and starts jobs according to the dependency.
 
 * The DAX API (Versions 3) and the helper class Workflow.py
 * The monitoring API
@@ -15,8 +13,15 @@ Beside the Python3 support, this package contains a helper class, Workflow.py, f
 * Miscellaneous Pegasus utilities
 * The Pegasus service, including the ensemble manager and dashboard
 
-# Installation
+This package's source code is adapted from https://github.com/pegasus-isi/pegasus, version 4.9.1,
 
+
+# Installation
+Prerequisites:
+
+* Pegasus https://github.com/pegasus-isi/pegasus
+
+Install pegapy3:
 
 ```python
 pip3 install pegapy3
@@ -35,3 +40,7 @@ If the user intends to use functions beyond the DAX APIs, he/she should install 
 * "pam==0.1.4",
 * "plex==2.0.0dev",
 * "future"
+
+# Examples
+
+Check [pegapy3/example/README.md](pegapy3/example/README.md).

@@ -5,6 +5,8 @@ Class Workflow is a class for other programs to inherit and helps to simplify pe
 import sys, os
 from DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, Job, Dependency
 
+src_dir = os.path.dirname(os.path.abspath(__file__))
+
 class PassingData(object):
     """
     a class to hold any data structure
@@ -51,14 +53,14 @@ def getListOutOfStr(list_in_str=None, data_type=int, separator1=',', separator2=
     list_to_return = []
     if list_in_str=='' or list_in_str is None:
         return list_to_return
-    list_in_str = list_in_str.strip()	#2013.04.09
+    list_in_str = list_in_str.strip()
     if list_in_str=='' or list_in_str is None:
         return list_to_return
     if type(list_in_str)==int:	#just one integer, put it in and return immediately
         return [list_in_str]
     index_anchor_ls = list_in_str.split(separator1)
     for index_anchor in index_anchor_ls:
-        index_anchor = index_anchor.strip()	#2013.04.09
+        index_anchor = index_anchor.strip()
         if len(index_anchor)==0:	#nothing there, skip
             continue
         if separator2:
@@ -70,7 +72,7 @@ def getListOutOfStr(list_in_str=None, data_type=int, separator1=',', separator2=
         elif len(start_stop_tup)>1:
             start_stop_tup = map(int, start_stop_tup)
             list_to_return += range(start_stop_tup[0], start_stop_tup[1]+1)
-    list_to_return = map(data_type, list_to_return)	#2008-10-27
+    list_to_return = map(data_type, list_to_return)
     return list_to_return
 
 def getRealPrefixSuffixOfFilenameWithVariableSuffix(path, fakeSuffix='.gz', fakeSuffixSet = set(['.gz', '.zip', '.bz2', '.bz'])):
@@ -280,7 +282,8 @@ class Workflow(ADAG):
         else:
             sys.stderr.write("Writing XML job to %s ..."%(out))
             ADAG.writeXML(self, out)
-            out.write('<!-- commandline: %s -->\n'%(self.commandline.replace("--", "~~")))	#2012.9.4 -- is not allowed in xml comment.
+            # -- is not allowed in xml.
+            out.write('<!-- commandline: %s -->\n'%(self.commandline.replace("--", "~~")))
             sys.stderr.write(".\n")
             self.isDAGWrittenToDisk = True
     
@@ -337,17 +340,19 @@ class Workflow(ADAG):
 
     def registerJars(self):
         """
-            register jars to be used in the worflow
+        register jars to be used in the workflow
         """
         pass
 
     def registerCustomJars(self):
         """
+        custom jars specific to the workflow, not for child classes to have.
         """
         pass
 
     def registerCustomExecutables(self):
         """
+        custom executable specific to the workflow, not for child classes to have.
         """
         pass
 
@@ -357,11 +362,23 @@ class Workflow(ADAG):
         """
         self.addExecutableFromPath(path="/bin/cp", name='cp', clusterSizeMultipler=1)
         self.addExecutableFromPath(path="/bin/mv", name='mv', clusterSizeMultipler=1)
+        self.addExecutableFromPath(path=os.path.join(src_dir, "shell/runShellCommand.sh"), \
+                name='runShellCommand', clusterSizeMultipler=1)
+        self.addExecutableFromPath(path=os.path.join(src_dir, 'shell/pipeCommandOutput2File.sh'), \
+                name='pipeCommandOutput2File', clusterSizeMultipler=1)
+        self.addExecutableFromPath(path=os.path.join(src_dir, 'shell/sortHeaderAware.sh'), \
+                name='sortHeaderAware', clusterSizeMultipler=1)
+        #to be used on pipeCommandOutput2File.sh
         self.sortExecutableFile = self.registerOneExecutableAsFile(path="/usr/bin/sort")
-
+        #mkdirWrap is different from mkdir that it doesn't report error when the directory is already there.
+        self.addExecutableFromPath(path=os.path.join(src_dir, 'shell/mkdirWrap.sh'), \
+                                        name='mkdirWrap', clusterSizeMultipler=1)
+        self.addExecutableFromPath(path=os.path.join(src_dir, "shell/gzip.sh"), 
+            name='gzip', clusterSizeMultipler=1)
+        
     def addExecutables(self, executableClusterSizeMultiplierList=[], defaultClustersSize=None):
         """
-            make sure the profile of clusters.size is not added already.
+        make sure the profile of clusters.size is not added already.
         """
         if defaultClustersSize is None:
             defaultClustersSize = self.clusters_size
@@ -440,7 +457,7 @@ class Workflow(ADAG):
     def getFilesWithSuffixFromFolderRecursive(self, inputFolder=None, suffixSet=set(['.h5']), fakeSuffix='.gz', inputFnameLs=[]):
         """
         similar to getFilesWithProperSuffixFromFolder() but recursively go through all sub-folders
-                and it uses utils.getRealPrefixSuffixOfFilenameWithVariableSuffix() to get the suffix.
+            and it uses utils.getRealPrefixSuffixOfFilenameWithVariableSuffix() to get the suffix.
         """
         sys.stderr.write("Getting files with %s as suffix (%s as fake suffix) from %s ...\n"%(repr(suffixSet), fakeSuffix, inputFolder))
         counter = 0
@@ -452,20 +469,22 @@ class Workflow(ADAG):
                 if file_suffix in suffixSet:
                     inputFnameLs.append(inputFname)
             elif os.path.isdir(inputFname):
-                self.getFilesWithSuffixFromFolderRecursive(inputFname, suffixSet=suffixSet, fakeSuffix=fakeSuffix, inputFnameLs=inputFnameLs)
+                self.getFilesWithSuffixFromFolderRecursive(inputFname, suffixSet=suffixSet, \
+                    fakeSuffix=fakeSuffix, inputFnameLs=inputFnameLs)
         sys.stderr.write("%s files out of %s total.\n"%(len(inputFnameLs), counter))
         #return inputFnameLs
 
-    def registerAllInputFiles(self, inputDir=None,  inputFnameLs=None, input_site_handler=None, \
-                        pegasusFolderName='', inputSuffixSet=None, indexFileSuffixSet=set(['.tbi', '.fai']),\
-                        **keywords):
+    def registerFilesOfInputDir(self, inputDir=None,  inputFnameLs=None, input_site_handler=None, \
+                pegasusFolderName='', inputSuffixSet=None, indexFileSuffixSet=set(['.tbi', '.fai']),\
+                **keywords):
         """
-        indexFileSuffixSet is used to attach corresponding index files to a input file.
+        This function registers all files in inputDir (if present) and inputFnameLs (if not None).
+        indexFileSuffixSet is used to add additional index files related to an input file.
             assuming index file name is original filename + indexFileSuffix.
         """
         if inputFnameLs is None:
             inputFnameLs = []
-        if inputDir and os.path.isdir(inputDir):	#2013.04.07
+        if inputDir and os.path.isdir(inputDir):
             fnameLs = os.listdir(inputDir)
             for fname in fnameLs:
                 inputFname = os.path.realpath(os.path.join(inputDir, fname))
@@ -496,8 +515,8 @@ class Workflow(ADAG):
                 indexFilename = '%s%s'%(inputFname, indexFileSuffix)
                 if os.path.isfile(indexFilename):
                     indexFile = self.registerOneInputFile(inputFname=indexFilename, \
-                                        input_site_handler=input_site_handler, folderName=pegasusFolderName, \
-                                        useAbsolutePathAsPegasusFileName=False, checkFileExistence=True)
+                                    input_site_handler=input_site_handler, folderName=pegasusFolderName, \
+                                    useAbsolutePathAsPegasusFileName=False, checkFileExistence=True)
                     jobData.fileLs.append(indexFile)
                     jobData.indexFileLs.append(indexFile)
             returnData.jobDataLs.append(jobData)
@@ -526,7 +545,7 @@ class Workflow(ADAG):
             set it to True only when you dont want to add the file to the job as INPUT dependency (as it's accessed through abs path).
         make sure the file is not registed with the workflow already
         add abspath attribute to file.
-        argument folderName: if given, it will cause the file to be put into a pegasus workflow folder.
+        folderName: if given, it will cause the file to be put into a pegasus workflow folder.
         """
         if input_site_handler is None:
             input_site_handler = self.input_site_handler
@@ -536,13 +555,13 @@ class Workflow(ADAG):
             else:
                 pegasusFileName = os.path.join(folderName, os.path.basename(inputFname))
         pegasusFile = File(pegasusFileName)
-        if checkFileExistence and not os.path.isfile(inputFname):	#2013.06.29
+        if checkFileExistence and not os.path.isfile(inputFname):
             sys.stderr.write("Error from registerOneInputFile(): %s does not exist.\n"%(inputFname))
             raise
         pegasusFile.abspath = os.path.abspath(inputFname)
         pegasusFile.absPath = pegasusFile.abspath
         pegasusFile.addPFN(PFN("file://" + pegasusFile.abspath, input_site_handler))
-        if not self.hasFile(pegasusFile):	#2013.1.10
+        if not self.hasFile(pegasusFile):
             self.addFile(pegasusFile)
         return pegasusFile
 
@@ -627,6 +646,7 @@ class Workflow(ADAG):
                     extraArguments=None, extraArgumentList=None, job_max_memory=2000,  sshDBTunnel=None, \
                     key2ObjectForJob=None, objectWithDBArguments=None, **keywords):
         """
+        a generic wrapper for jobs that "inserts" data (from file) into database
         Example:
             job = self.addGenericFile2DBJob(executable=executable, inputFile=None, inputArgumentOption="-i", \
                     outputFile=None, outputArgumentOption="-o", inputFileList=None, \
@@ -637,7 +657,6 @@ class Workflow(ADAG):
                     job_max_memory=job_max_memory,  sshDBTunnel=sshDBTunnel, walltime=walltime,\
                     key2ObjectForJob=None, objectWithDBArguments=self, **keywords)
 
-        a generic wrapper for jobs that "inserting" data (from file) into database
         """
         if extraArgumentList is None:
             extraArgumentList = []
@@ -702,26 +721,26 @@ class Workflow(ADAG):
         return addedOrNot
 
 
-    def addGenericJob(self, executable=None, inputFile=None, inputArgumentOption="-i", \
-                    outputFile=None, outputArgumentOption="-o", inputFileList=None, argumentForEachFileInInputFileList=None, \
-                    parentJob=None, parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, \
-                    frontArgumentList=None, extraArguments=None, extraArgumentList=None, \
-                    transferOutput=False, sshDBTunnel=None, \
-                    key2ObjectForJob=None, objectWithDBArguments=None, objectWithDBGenomeArguments=None,\
-                    no_of_cpus=None, job_max_memory=2000, walltime=180, \
-                    max_walltime=None, **keywords):
+    def addGenericJob(self, executable=None, inputFile=None, inputArgumentOption="", \
+            outputFile=None, outputArgumentOption="", \
+            inputFileList=None, argumentForEachFileInInputFileList=None, \
+            parentJob=None, parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, \
+            frontArgumentList=None, extraArguments=None, extraArgumentList=None, \
+            transferOutput=False, sshDBTunnel=None, \
+            key2ObjectForJob=None, objectWithDBArguments=None, objectWithDBGenomeArguments=None,\
+            no_of_cpus=None, job_max_memory=2000, walltime=180, \
+            max_walltime=None, **keywords):
         """
         A generic job adding function for other functions to use.
-        order in commandline:
+        The commandline order:
             executable [frontArgumentList] [DBArguments] [inputArgumentOption] [inputFile] [outputArgumentOption] [outputFile]
                 [extraArgumentList] [extraArguments]
 
         addJobUse() will add file to job.inputLs or job.outputLs pending Link.INPUT or Link.OUTPUT
-        added argument objectWithDBGenomeArguments
-        added argument max_walltime, maximum walltime for a cluster of jobs.
-            argument walltime controls it for single job.
-        added argument objectWithDBArguments
-        scale walltime according to clusters_size
+        max_walltime: maximum walltime for a cluster of jobs.
+            scale walltime according to clusters_size.
+        walltime: max running time for a single job.
+        objectWithDBArguments: an object that contains database arguments (host, dbname, username, etc.).
         argumentForEachFileInInputFileList: to be added in front of each file in inputFileList.
         frontArgumentList: a list of arguments to be put in front of anything else.
         parentJob: similar to parentJobLs, but only one job.
@@ -735,13 +754,13 @@ class Workflow(ADAG):
         job.outputLs: to hold more output files.
         """
         job = Job(namespace=self.namespace, name=executable.name, version=self.version)
-        job.outputLs = []	#2012.6.27 to hold more output files
+        job.outputLs = []	# to hold more output files
         job.inputLs = []
-        if frontArgumentList:	#2013.2.7
+        if frontArgumentList:
             job.addArguments(*frontArgumentList)
-        if objectWithDBArguments:	#2013.3.25 moved from addGenericDBJob()
+        if objectWithDBArguments:
             self.addDBArgumentsToOneJob(job=job, objectWithDBArguments=objectWithDBArguments)
-        if objectWithDBGenomeArguments:	#2013.07.31
+        if objectWithDBGenomeArguments:
             self.addDBGenomeArgumentsToOneJob(job=job, objectWithDBArguments=objectWithDBGenomeArguments)
 
         if inputFile:
@@ -756,7 +775,7 @@ class Workflow(ADAG):
             if outputArgumentOption:
                 job.addArguments(outputArgumentOption)
             job.addArguments(outputFile)
-            if transferOutput is not None:	#2012.8.17
+            if transferOutput is not None:
                 self.addJobUse(job, file=outputFile, transfer=transferOutput, register=True, link=Link.OUTPUT)
                 #job.uses(outputFile, transfer=transferOutput, register=True, link=Link.OUTPUT)
             job.output = outputFile
@@ -767,7 +786,7 @@ class Workflow(ADAG):
         if extraArguments:
             job.addArguments(extraArguments)
 
-        #2013.3.21 scale walltime according to clusters_size
+        # scale walltime according to clusters_size
         clusters_size = self.getExecutableClustersSize(executable)
         if clusters_size is not None and clusters_size and walltime is not None:
             clusters_size = int(clusters_size)
@@ -779,8 +798,8 @@ class Workflow(ADAG):
         setJobProperRequirement(job, job_max_memory=job_max_memory, sshDBTunnel=sshDBTunnel,\
                                     no_of_cpus=no_of_cpus, walltime=walltime)
         self.addJob(job)
-        job.parentJobLs = []	#2012.10.18
-        if parentJob:	#2012.10.15
+        job.parentJobLs = []
+        if parentJob:
             isAdded = self.addJobDependency(parentJob=parentJob, childJob=job)
             if isAdded:
                 job.parentJobLs.append(parentJob)
@@ -800,7 +819,7 @@ class Workflow(ADAG):
             for output in extraOutputLs:
                 if output:
                     job.outputLs.append(output)
-                    if transferOutput is not None:	#2012.8.17
+                    if transferOutput is not None:
                         self.addJobUse(job, file=output, transfer=transferOutput, register=True, link=Link.OUTPUT)
                         #job.uses(output, transfer=transferOutput, register=True, link=Link.OUTPUT)
         if key2ObjectForJob:
@@ -837,13 +856,15 @@ class Workflow(ADAG):
                     key2ObjectForJob=None, no_of_cpus=None, walltime=120, sshDBTunnel=None, **keywords):
         """
         a generic function to add Java jobs:
-            fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava, jarFile=CreateSequenceDictionaryJar, \
-                    inputFile=refFastaF, inputArgumentOption="REFERENCE=", \
-                    inputFileList=None, argumentForEachFileInInputFileList=None,\
-                    outputFile=refFastaDictF, outputArgumentOption="OUTPUT=",\
-                    parentJobLs=parentJobLs, transferOutput=transferOutput, job_max_memory=job_max_memory,\
-                    frontArgumentList=None, extraArguments=None, extraArgumentList=None, extraOutputLs=None, \
-                    extraDependentInputLs=None, no_of_cpus=None, walltime=walltime, sshDBTunnel=None, **keywords)
+
+            fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava, \
+                jarFile=CreateSequenceDictionaryJar, \
+                inputFile=refFastaF, inputArgumentOption="REFERENCE=", \
+                inputFileList=None, argumentForEachFileInInputFileList=None,\
+                outputFile=refFastaDictF, outputArgumentOption="OUTPUT=",\
+                parentJobLs=parentJobLs, transferOutput=transferOutput, job_max_memory=job_max_memory,\
+                frontArgumentList=None, extraArguments=None, extraArgumentList=None, extraOutputLs=None, \
+                extraDependentInputLs=None, no_of_cpus=None, walltime=walltime, sshDBTunnel=None, **keywords)
         """
         if executable is None:
             executable = self.java
@@ -942,8 +963,7 @@ class Workflow(ADAG):
 
     def setJobOutputFileTransferFlag(self, job=None, transferOutput=False, outputLs=None):
         """
-        2012.8.17
-            assume all output files in job.outputLs
+        assume all output files in job.outputLs
         """
         if outputLs is None and getattr(job, 'outputLs', None):
             outputLs = job.outputLs
@@ -987,8 +1007,9 @@ class Workflow(ADAG):
         #if a job's virtual memory (1.2X of memory request) exceeds request, it'll abort.
         return PassingData(memRequirementInStr=memRequirementInStr, memRequirement=memRequirement)
 
-    def scaleJobWalltimeOrMemoryBasedOnInput(self, realInputVolume=10, baseInputVolume=4, baseJobPropertyValue=120, \
-                                            minJobPropertyValue=120, maxJobPropertyValue=1440):
+    def scaleJobWalltimeOrMemoryBasedOnInput(self, realInputVolume=10, \
+                baseInputVolume=4, baseJobPropertyValue=120, \
+                minJobPropertyValue=120, maxJobPropertyValue=1440):
         """
         assume it's integer.
         walltime is in minutes.
@@ -1012,9 +1033,9 @@ class Workflow(ADAG):
         if executable is None:
             executable = self.mkdirWrap
 
-        return addMkDirJob(workflow=self, mkdir=executable, outputDir=outputDir, namespace=namespace, \
-                            version=version,\
-                            parentJobLs=parentJobLs, extraDependentInputLs=extraDependentInputLs)
+        return addMkDirJob(workflow=self, mkdir=executable, outputDir=outputDir, \
+            namespace=namespace, version=version,\
+            parentJobLs=parentJobLs, extraDependentInputLs=extraDependentInputLs)
 
     def setup_run(self):
         """
