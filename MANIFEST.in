@@ -1,2 +1,2 @@
-recursive-exclude pegapy3/test *
+recursive-exclude pegaflow/test *
 global-exclude *.py[cod]

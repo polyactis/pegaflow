@@ -20,7 +20,7 @@ def create_manifest_file():
     f = None
     try:
         f = open('MANIFEST.in', 'w')
-        f.write('recursive-exclude pegapy3/test *\n')
+        f.write('recursive-exclude pegaflow/test *\n')
         f.write('global-exclude *.py[cod]\n')
     finally:
         if f:
@@ -48,7 +48,7 @@ def find_package_data(dirname):
 
 
 setup_args = dict(
-    name="pegapy3",
+    name="pegaflow",
     version="0.0.1",
     author="Yu S. Huang",
     author_email="polyactis@gmail.com",
@@ -56,7 +56,7 @@ setup_args = dict(
     long_description_content_type="text/markdown",
     long_description=README + '\n\n' + HISTORY,
     license="Apache2",
-    url="https://github.com/polyactis/pegapy3",
+    url="https://github.com/polyactis/pegaflow",
     keywords=["scientific workflows"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
@@ -68,8 +68,8 @@ setup_args = dict(
         "Topic :: Utilities",
         "License :: OSI Approved :: Apache Software License",
     ],
-    packages=find_packages(exclude=['pegapy3.test*']),
-    package_data={"pegapy3.service": find_package_data("pegapy3/service/")},
+    packages=find_packages(exclude=['pegaflow.test*']),
+    package_data={"pegaflow.service": find_package_data("pegaflow/service/")},
     include_package_data=True,
     zip_safe=False,
 )
