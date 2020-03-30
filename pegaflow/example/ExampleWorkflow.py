@@ -3,8 +3,8 @@
 An example workflow that counts   is a class for other programs to inherit and helps to simplify pegasus workflow dax writing.
 """
 import sys, os
-from pegapy3.DAX3 import File, PFN, Profile, Namespace, Link, Use, Job, Dependency
-from pepapy3.Workflow import Workflow
+from pegaflow.DAX3 import File, PFN, Profile, Namespace, Link, Use, Job, Dependency
+from pegaflow.Workflow import Workflow
 
 class ExampleWorkflow(Workflow):
     __doc__ = __doc__

@@ -48,11 +48,11 @@ def find_package_data(dirname):
 
 
 setup_args = dict(
-    name="pegaflow",
+    name="Pegaflow",
     version="0.0.1",
     author="Yu S. Huang",
     author_email="polyactis@gmail.com",
-    description="Pegasus DAX Python3 API with a helper class",
+    description="Pegasus DAX Python API with a helper class",
     long_description_content_type="text/markdown",
     long_description=README + '\n\n' + HISTORY,
     license="Apache2",
