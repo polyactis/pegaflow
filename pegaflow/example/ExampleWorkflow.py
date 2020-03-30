@@ -6,6 +6,8 @@ import sys, os
 from pegaflow.DAX3 import File, PFN, Profile, Namespace, Link, Use, Job, Dependency
 from pegaflow.Workflow import Workflow
 
+sys.path.insert(0, os.path.expanduser('~/lib/python'))
+
 class ExampleWorkflow(Workflow):
     __doc__ = __doc__
     # Each entry of pathToInsertHomePathList should contain %s, i.e. '%s/bin/myprogram'
@@ -38,11 +40,12 @@ class ExampleWorkflow(Workflow):
             input_site_handler=self.input_site_handler, inputSuffixSet='.py')
         wcExecutable = self.registerOneExecutableAsFile(path="/usr/bin/wc")
         for jobData in inputData.jobDataLs:
-            wcJob = self.addGenericJob(executable=self.pipeCommandOutput2File, 
+            wcJob = self.addPipeCommandOutput2FileJob(executable=self.pipeCommandOutput2File, 
+                commandFile=wcExecutable,
                 outputFile=File(''),
                 parentJob=None, parentJobLs=None, 
-                extraDependentInputLs=[jobData.file], extraOutputLs=None, \
                 extraArgumentList=[wcExecutable, jobData.file], \
+                extraDependentInputLs=[jobData.file], extraOutputLs=None, \
                 transferOutput=False)
         sleepJob = self.addGenericJob(executable=self.sleep, extraArguments='30s')
         # end_run() will output the DAG to output_path
