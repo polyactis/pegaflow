@@ -895,7 +895,7 @@ class Workflow(ADAG):
                     key2ObjectForJob=key2ObjectForJob, no_of_cpus=no_of_cpus, walltime=walltime, **keywords)
         return job
 
-        def addGenericPipeCommandOutput2FileJob(self, executable=None, executableFile=None, \
+    def addGenericPipeCommandOutput2FileJob(self, executable=None, executableFile=None, \
                     outputFile=None, \
                     parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, transferOutput=False, \
                     extraArguments=None, extraArgumentList=None, sshDBTunnel=None,\

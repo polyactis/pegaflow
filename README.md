@@ -1,9 +1,11 @@
 # Pegasus Workflow Management System Python3 API
-Pegapy3 contains the Python3 APIs for Pegasus WMS (http://pegasus.isi.edu/). Pegasus only offers Python2 support.
+Pegapy3 is a package of the Python3 APIs for Pegasus WMS (http://pegasus.isi.edu/). Pegasus offers Python2 support only.
 
 Pegapy3 also contains a helper class, Workflow.py, for users to inherit. It simplifies the Pegasus workflow writing.
 
 Pegasus allows a developer to connect dependent computing jobs into a DAG (Directed Acyclic Graph) and starts jobs according to the dependency.
+
+Pegasus jobs do NOT support UNIX pipes. [shell/pipeCommandOutput2File.sh](pegapy3/shell/pipeCommandOutput2File.sh) is offered to redirect the output (stdout) of a program to a file. shell/ contains a few other useful shell scripts.
 
 * The DAX API (Versions 3) and the helper class Workflow.py
 * The monitoring API
@@ -20,6 +22,7 @@ This package's source code is adapted from https://github.com/pegasus-isi/pegasu
 Prerequisites:
 
 * Pegasus https://github.com/pegasus-isi/pegasus
+* HTCondor https://research.cs.wisc.edu/htcondor/, if multi-node execution is intended.
 
 Install pegapy3:
 
@@ -27,7 +30,7 @@ Install pegapy3:
 pip3 install pegapy3
 ```
 
-If the user intends to use functions beyond the DAX APIs, he/she should install the following Python packages as well.
+If a user intends to use Non-DAX Pegasus APIs, the following Python packages need to be installed as well.
 
 * "Werkzeug==0.14.1",
 * "Flask==0.12.4",
@@ -43,4 +46,4 @@ If the user intends to use functions beyond the DAX APIs, he/she should install 
 
 # Examples
 
-Check [pegapy3/example/README.md](pegapy3/example/README.md).
+Check [example/README.md](pegapy3/example/README.md).
