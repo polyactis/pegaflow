@@ -9,7 +9,7 @@ from pegaflow.Workflow import Workflow
 # path to the source code's folder
 src_dir = os.path.dirname(os.path.abspath(__file__))
 
-class ExampleWorkflow(Workflow):
+class WordCountFiles(Workflow):
     __doc__ = __doc__
     # Each entry of pathToInsertHomePathList should contain %s, i.e. '%s/bin/myprogram'
     #  and will be expanded to be '/home/user/bin/myprogram'.
@@ -118,7 +118,7 @@ if __name__ == '__main__':
         help='Default: %(default)s. Maximum run time (minutes) for any job. 4320=3 days.'
         'Used in addGenericJob().')
     args = ap.parse_args()
-    instance = ExampleWorkflow(input_folder=args.input_folder, inputSuffixList=args.inputSuffixList, \
+    instance = WordCountFiles(input_folder=args.input_folder, inputSuffixList=args.inputSuffixList, \
         output_path=args.output_path, \
         pegasusFolderName=args.pegasusFolderName, \
         site_handler=args.site_handler, input_site_handler=args.input_site_handler, \
