@@ -1,5 +1,5 @@
 # Pegasus Workflow Management System Python3 API
-Pegaflow is a package of the Python(2&3) APIs for Pegasus WMS (http://pegasus.isi.edu/). Pegasus offers Python2 support only. Pegasus allows a developer to connect dependent computing jobs into a DAG (Directed Acyclic Graph) and run jobs according to the dependency.
+Pegaflow is a package of the Python3 APIs for Pegasus WMS (http://pegasus.isi.edu/). Pegasus(<5.0) offers Python2 support only. Pegasus allows a developer to connect dependent computing jobs into a DAG (Directed Acyclic Graph) and run jobs according to the dependency.
 
 Pegaflow also contains an extra class, Workflow.py, for users to inherit and write Pegasus workflows in an Object-oriented way. It significantly reduces the amount of coding in writing a Pegasus workflow.
 
