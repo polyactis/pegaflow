@@ -57,6 +57,7 @@ setup_args = dict(
     long_description=README + '\n\n' + HISTORY,
     license="Apache2",
     url="https://github.com/polyactis/pegaflow",
+    python_requires=">=3.5",
     keywords=["scientific workflows"],
     classifiers=[
         "Development Status :: 5 - Production/Stable",
@@ -64,6 +65,7 @@ setup_args = dict(
         "Intended Audience :: Science/Research",
         "Operating System :: Unix",
         "Programming Language :: Python",
+        "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering",
         "Topic :: Utilities",
         "License :: OSI Approved :: Apache Software License",
