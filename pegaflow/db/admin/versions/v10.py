@@ -1,8 +1,8 @@
 import logging
 
-from Pegasus.db.admin.admin_loader import *
-from Pegasus.db.admin.versions.base_version import BaseVersion
-from Pegasus.db.schema import *
+from pegaflow.db.admin.admin_loader import *
+from pegaflow.db.admin.versions.base_version import BaseVersion
+from pegaflow.db.schema import *
 from sqlalchemy.exc import *
 
 DB_VERSION = 10

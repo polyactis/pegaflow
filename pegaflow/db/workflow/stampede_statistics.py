@@ -155,9 +155,9 @@ https://confluence.pegasus.isi.edu/display/pegasus/Pegasus+Statistics+Python+Ver
 """
 __author__ = "Monte Goode"
 
-from Pegasus.db import connection
-from Pegasus.db.schema import *
-from Pegasus.db.errors import StampedeDBNotFoundError
+from pegaflow.db import connection
+from pegaflow.db.schema import *
+from pegaflow.db.errors import StampedeDBNotFoundError
 
 # Main stats class.
 

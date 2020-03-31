@@ -26,8 +26,8 @@ import sys
 import time
 import warnings
 
-from Pegasus.db import connection
-from Pegasus.db.schema import *
+from pegaflow.db import connection
+from pegaflow.db.schema import *
 from sqlalchemy import func
 from sqlalchemy.orm.exc import *
 

@@ -22,9 +22,9 @@ import getpass
 import os
 import subprocess
 
-from Pegasus import user as users
-from Pegasus.tools import properties
-from Pegasus.tools import utils
+from pegaflow import user as users
+from pegaflow.tools import properties
+from pegaflow.tools import utils
 from sqlalchemy import create_engine, orm, event, exc
 from sqlalchemy.engine import Engine
 from sqlite3 import Connection as SQLite3Connection
@@ -137,7 +137,7 @@ def connect(dburi, echo=False, schema_check=True, create=False, pegasus_version=
     # Database creation
     if create:
         try:
-            from Pegasus.db.admin.admin_loader import db_create
+            from pegaflow.db.admin.admin_loader import db_create
             db_create(dburi, engine, db, pegasus_version=pegasus_version, force=force, verbose=verbose)
 
         except exc.OperationalError as e:
@@ -165,7 +165,7 @@ def connect(dburi, echo=False, schema_check=True, create=False, pegasus_version=
 
     if schema_check:
         try:
-            from Pegasus.db.admin.admin_loader import DBAdminError, db_verify
+            from pegaflow.db.admin.admin_loader import DBAdminError, db_verify
             db_verify(db, pegasus_version=pegasus_version, force=force)
         except DBAdminError as e:
             e.db_type = db_type

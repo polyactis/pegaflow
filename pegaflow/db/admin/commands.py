@@ -4,10 +4,10 @@ __author__ = "Rafael Ferreira da Silva"
 import logging
 import sys
 
-from Pegasus.command import LoggingCommand, CompoundCommand
-from Pegasus.db import connection
-from Pegasus.db.admin.admin_loader import *
-from Pegasus.db.admin.versions import *
+from pegaflow.command import LoggingCommand, CompoundCommand
+from pegaflow.db import connection
+from pegaflow.db.admin.admin_loader import *
+from pegaflow.db.admin.versions import *
 
 log = logging.getLogger(__name__)
 

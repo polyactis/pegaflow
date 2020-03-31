@@ -6,7 +6,7 @@ from flask import url_for, g
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import sql
 
-from Pegasus import db, user
+from pegaflow import db, user
 
 def timestamp(dt):
     return (dt - datetime(1970, 1, 1)).total_seconds()

@@ -25,13 +25,13 @@ import traceback
 import json
 import re
 
-from Pegasus.tools import utils
-from Pegasus.tools import properties
-from Pegasus.netlogger import nlapi
-from Pegasus.db.workflow_loader import WorkflowLoader
-from Pegasus.db.dashboard_loader import DashboardLoader
-from Pegasus.db import expunge
-from Pegasus.db import connection
+from pegaflow.tools import utils
+from pegaflow.tools import properties
+from pegaflow.netlogger import nlapi
+from pegaflow.db.workflow_loader import WorkflowLoader
+from pegaflow.db.dashboard_loader import DashboardLoader
+from pegaflow.db import expunge
+from pegaflow.db import connection
 
 log = logging.getLogger(__name__)
 

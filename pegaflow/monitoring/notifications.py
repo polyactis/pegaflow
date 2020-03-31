@@ -29,7 +29,7 @@ import logging
 import tempfile
 import subprocess
 
-from Pegasus.tools import utils
+from pegaflow.tools import utils
 
 NOTIFICATION_FILE = "monitord-notifications.log" # filename for writing the output of notification scripts
 WAIT_CHILD_FINISH = 5                            # in seconds

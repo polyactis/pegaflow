@@ -1,7 +1,7 @@
 import decimal
 import time
 
-from Pegasus.service import app
+from pegaflow.service import app
 
 
 @app.template_filter('lstrip')

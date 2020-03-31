@@ -8,9 +8,9 @@ import logging
 import zipfile
 from optparse import OptionParser
 
-from Pegasus.command import Command, CompoundCommand, LoggingCommand
-from Pegasus.service.ensembles import emapp, manager
-from Pegasus.db.ensembles import EnsembleStates, EnsembleWorkflowStates
+from pegaflow.command import Command, CompoundCommand, LoggingCommand
+from pegaflow.service.ensembles import emapp, manager
+from pegaflow.db.ensembles import EnsembleStates, EnsembleWorkflowStates
 
 log = logging.getLogger(__name__)
 

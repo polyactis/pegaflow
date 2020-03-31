@@ -27,7 +27,7 @@ from __future__ import print_function
 # Import Python modules
 
 from xml.parsers import expat
-from Pegasus.monitoring.metadata import FileMetadata
+from pegaflow.monitoring.metadata import FileMetadata
 import re
 import sys
 import logging

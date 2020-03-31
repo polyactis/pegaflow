@@ -18,8 +18,8 @@ import json
 import logging
 
 from flask import g
-from Pegasus.service.base import OrderedDict, OrderedSet
-from Pegasus.service.monitoring.serializer import PegasusServiceJSONEncoder
+from pegaflow.service.base import OrderedDict, OrderedSet
+from pegaflow.service.monitoring.serializer import PegasusServiceJSONEncoder
 
 log = logging.getLogger(__name__)
 

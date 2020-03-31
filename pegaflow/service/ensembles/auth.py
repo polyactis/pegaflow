@@ -4,8 +4,8 @@ import logging
 from flask import request, Response, g, abort
 import pam
 
-from Pegasus import user
-from Pegasus.service.ensembles import emapp
+from pegaflow import user
+from pegaflow.service.ensembles import emapp
 
 log = logging.getLogger(__name__)
 

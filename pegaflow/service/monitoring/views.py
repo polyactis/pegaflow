@@ -20,13 +20,13 @@ import logging
 import StringIO
 
 from flask import current_app, g, make_response, request
-from Pegasus.service import cache
-from Pegasus.service.base import InvalidJSONError, OrderedDict
-from Pegasus.service.monitoring import monitoring_routes
-from Pegasus.service.monitoring.queries import (
+from pegaflow.service import cache
+from pegaflow.service.base import InvalidJSONError, OrderedDict
+from pegaflow.service.monitoring import monitoring_routes
+from pegaflow.service.monitoring.queries import (
     MasterWorkflowQueries, StampedeWorkflowQueries
 )
-from Pegasus.service.monitoring.utils import jsonify
+from pegaflow.service.monitoring.utils import jsonify
 
 log = logging.getLogger(__name__)
 

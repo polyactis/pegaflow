@@ -32,7 +32,7 @@ import shutil
 
 logger = logging.getLogger(__name__)
 
-from Pegasus.plots_stats import utils as plot_utils
+from pegaflow.plots_stats import utils as plot_utils
 from datetime import timedelta
 from datetime import datetime
 

@@ -18,9 +18,9 @@ from flask import Blueprint
 
 monitoring_routes = Blueprint('monitoring_routes', __name__)
 
-from Pegasus.service.monitoring import views, errors
+from pegaflow.service.monitoring import views, errors
 
-from Pegasus.service import app
+from pegaflow.service import app
 
 app.register_blueprint(
     monitoring_routes, url_prefix='/api/v1/user/<string:username>'

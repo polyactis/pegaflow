@@ -30,8 +30,8 @@ import optparse
 
 logger = logging.getLogger(__name__)
 
-from Pegasus.plots_stats import utils as plot_utils
-from Pegasus.tools import utils
+from pegaflow.plots_stats import utils as plot_utils
+from pegaflow.tools import utils
 
 #Global variables----
 prog_base = os.path.split(sys.argv[0])[1]	# Name of this program

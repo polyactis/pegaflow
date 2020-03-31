@@ -27,8 +27,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from Pegasus.tools import utils
-from Pegasus.plots_stats import utils as plot_utils
+from pegaflow.tools import utils
+from pegaflow.plots_stats import utils as plot_utils
 from . import populate
 from datetime import timedelta
 from datetime import datetime

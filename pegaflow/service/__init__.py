@@ -43,7 +43,7 @@ cache = Cache(app)
 # Flask URL variables support int, float, and path converters.
 # Adding support for a boolean converter.
 #
-from Pegasus.service.base import BooleanConverter
+from pegaflow.service.base import BooleanConverter
 app.url_map.converters['boolean'] = BooleanConverter
 
 #
@@ -51,4 +51,4 @@ app.url_map.converters['boolean'] = BooleanConverter
 #
 app.url_map.strict_slashes = False
 
-from Pegasus.service import auth, filters, dashboard, monitoring
+from pegaflow.service import auth, filters, dashboard, monitoring

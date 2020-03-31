@@ -12,16 +12,16 @@ import commands
 
 logger = logging.getLogger(__name__)
 
-from Pegasus.db import connection
-from Pegasus.db.admin.admin_loader import DBAdminError
-from Pegasus.tools import utils
-from Pegasus.plots_stats import utils as plot_utils
+from pegaflow.db import connection
+from pegaflow.db.admin.admin_loader import DBAdminError
+from pegaflow.tools import utils
+from pegaflow.plots_stats import utils as plot_utils
 from .workflow_info import WorkflowInfo, JobInfo , TransformationInfo
 from . import pegasus_gantt
 from . import pegasus_host_over_time
 import traceback
 
-from Pegasus.db.workflow.stampede_statistics import StampedeStatistics
+from pegaflow.db.workflow.stampede_statistics import StampedeStatistics
 from datetime import timedelta
 from datetime import datetime
 

@@ -17,11 +17,11 @@ __author__ = 'Rajiv Mayani'
 import logging
 
 from flask import make_response
-from Pegasus.service.base import (
+from pegaflow.service.base import (
     ErrorResponse, InvalidJSONError, InvalidOrderError, InvalidQueryError
 )
-from Pegasus.service.monitoring import monitoring_routes
-from Pegasus.service.monitoring.utils import jsonify
+from pegaflow.service.monitoring import monitoring_routes
+from pegaflow.service.monitoring.utils import jsonify
 from sqlalchemy.orm.exc import NoResultFound
 
 log = logging.getLogger(__name__)

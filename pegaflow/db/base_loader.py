@@ -1,7 +1,7 @@
 import time
 import logging
 
-from Pegasus.db import connection
+from pegaflow.db import connection
 from sqlalchemy import exc
 
 class BaseLoader(object):

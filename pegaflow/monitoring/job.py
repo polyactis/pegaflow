@@ -28,7 +28,7 @@ import logging
 from StringIO import StringIO
 import json
 
-from Pegasus.tools import utils
+from pegaflow.tools import utils
 
 logger = logging.getLogger(__name__)
 
@@ -584,7 +584,7 @@ class Job:
         try:
             ERR = open(my_err_file, 'r')
             # PM-1274 parse any monitoring events such as integrity related
-            # from PegasusLite .err file
+            # from pegaflowLite .err file
             job_stderr = self.split_task_output(ERR.read())
             buf = job_stderr.user_data
             if len(buf) > my_max_encoded_length:

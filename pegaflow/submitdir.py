@@ -6,10 +6,10 @@ import glob
 import tarfile
 import shutil
 
-from Pegasus.db import connection
-from Pegasus.tools import utils
-from Pegasus.command import LoggingCommand, CompoundCommand
-from Pegasus.db.schema import *
+from pegaflow.db import connection
+from pegaflow.tools import utils
+from pegaflow.command import LoggingCommand, CompoundCommand
+from pegaflow.db.schema import *
 
 log = logging.getLogger(__name__)
 

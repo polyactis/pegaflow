@@ -12,9 +12,9 @@ import time
 import traceback
 import types
 #
-from Pegasus.netlogger import nlapi
-from Pegasus.netlogger.nlapi import Level
-from Pegasus.netlogger.version import *
+from pegaflow.netlogger import nlapi
+from pegaflow.netlogger.nlapi import Level
+from pegaflow.netlogger.version import *
 
 # extra logging levels
 TRACE = logging.DEBUG -1
@@ -159,7 +159,7 @@ class BPLogger(logging.Logger):
             event = self._qualname + '.' + event
         # replace '__' with '.'
         kwargs = dict([(key.replace('__', '.'), value)
-                       for key, value in kwargs.iteritems()])
+                       for key, value in kwargs.items()])
         # format as BP
         msg = self._format(event, ts, nl_level, **kwargs)
         logging.Logger.log(self, level, msg, exc_info=exc_info)
@@ -260,7 +260,7 @@ class RawBPLogger(logging.Logger):
             event = self._qualname + '.' + event
         # replace '__' with '.'
         kwargs = dict([(key.replace('__', '.'), value)
-                       for key, value in kwargs.iteritems()])
+                       for key, value in kwargs.items()])
         # build msg dictionary
         msg = { 'event': event, 'ts': ts, 'level' : nl_level }
         msg.update(kwargs)

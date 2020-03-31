@@ -1,7 +1,7 @@
 import os
 import zipfile
 
-from Pegasus.tools import properties
+from pegaflow.tools import properties
 
 PROPERTIES_NAME = "pegasus.properties"
 

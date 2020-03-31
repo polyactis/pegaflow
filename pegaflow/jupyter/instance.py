@@ -22,11 +22,11 @@ import sys
 import time
 from datetime import datetime
 
-from Pegasus.catalogs.replica_catalog import *
-from Pegasus.catalogs.sites_catalog import *
-from Pegasus.catalogs.transformation_catalog import *
-from Pegasus.DAX3 import *
-from Pegasus.init import *
+from pegaflow.catalogs.replica_catalog import *
+from pegaflow.catalogs.sites_catalog import *
+from pegaflow.catalogs.transformation_catalog import *
+from pegaflow.DAX3 import *
+from pegaflow.init import *
 
 from future import standard_library
 standard_library.install_aliases()

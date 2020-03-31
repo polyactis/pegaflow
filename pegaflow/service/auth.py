@@ -3,8 +3,8 @@ import os
 
 import pam
 from flask import Response, abort, g, make_response, request, url_for
-from Pegasus import user
-from Pegasus.service import app
+from pegaflow import user
+from pegaflow.service import app
 
 log = logging.getLogger(__name__)
 

@@ -30,8 +30,8 @@ import commands
 import shutil
 from datetime import datetime
 
-from Pegasus.tools import properties
-from Pegasus.tools import utils
+from pegaflow.tools import properties
+from pegaflow.tools import utils
 
 logger = logging.getLogger(__name__)
 

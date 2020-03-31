@@ -3,7 +3,7 @@
 Class Workflow is a class for other programs to inherit and helps to simplify pegasus workflow dax writing.
 """
 import sys, os
-from DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, Job, Dependency
+from pegaflow.DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, Job, Dependency
 
 src_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -15,7 +15,7 @@ class PassingData(object):
         """
         add keyword handling
         """
-        for argument_key, argument_value in keywords.iteritems():
+        for argument_key, argument_value in keywords.items():
             setattr(self, argument_key, argument_value)
     
     def __str__(self):
@@ -115,16 +115,16 @@ def addMkDirJob(workflow=None, mkdir=None, outputDir=None, namespace=None, versi
         workflow.no_of_jobs += 1
     return job
 
-def setJobToProperMemoryRequirement(job=None, job_max_memory=500, no_of_cpus=1, walltime=180, sshDBTunnel=0):
+def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1, walltime=180, sshDBTunnel=0):
     """
-    job_max_memory is in MB.
-    if job_max_memory is None, then skip setting memory requirement.
-    if job_max_memory is "" or 0 or "0", then assign 500 (mb) to it.
+    job_max_memory: integer, unit in MB.
+        if job_max_memory is None, then skip setting memory requirement.
+        if job_max_memory is "" or 0 or "0", then assign 500 (MB) to it.
     sshDBTunnel:
         =1: this job needs a ssh tunnel to access an external database server.
         =anything else: no need for that.
-    set walltime default to 180 minutes (3 hours).
-    walltime is in minutes.
+    walltime: integer, unit in minutes.
+        set walltime default to 180 minutes (3 hours).
     """
     condorJobRequirementLs = []
     if job_max_memory == "" or job_max_memory == 0 or job_max_memory =="0":
@@ -147,7 +147,7 @@ def setJobToProperMemoryRequirement(job=None, job_max_memory=500, no_of_cpus=1, 
     #key='requirements' could only be added once for the condor profile
     job.addProfile(Profile(Namespace.CONDOR, key="requirements", value=" && ".join(condorJobRequirementLs) ))
 
-setJobProperRequirement = setJobToProperMemoryRequirement
+setJobProperRequirement = setJobResourceRequirement
 
 def registerFile(workflow, filename):
     """
@@ -193,8 +193,9 @@ class Workflow(ADAG):
     #  and will be expanded to be '/home/user/bin/myprogram'.
     # Child classes can add stuff into this list.
     pathToInsertHomePathList = []
-    def __init__(self, site_handler=None, input_site_handler=None, clusters_size=30, \
-            pegasusFolderName='folder', inputSuffixList=None, output_path=None, \
+    def __init__(self, inputSuffixList=None, \
+            pegasusFolderName='folder', output_path=None, \
+            site_handler=None, input_site_handler=None, clusters_size=30, \
             tmpDir='/tmp/', max_walltime=4320, \
             javaPath=None, jvmVirtualByPhysicalMemoryRatio=1.2,\
             debug=False, needSSHDBTunnel=False, report=False):
@@ -220,17 +221,19 @@ class Workflow(ADAG):
         needSSHDBTunnel: 'If all DB-interacting jobs need a ssh tunnel to access a database that is inaccessible to computing nodes.'
         report: 'toggle verbose output.'
         """
-        self.site_handler = site_handler
-        self.input_site_handler = input_site_handler
-        self.clusters_size = clusters_size
-        self.pegasusFolderName = pegasusFolderName
         self.inputSuffixList = getListOutOfStr(list_in_str=inputSuffixList, data_type=str, 
             separator1=',', separator2='-')
         self.inputSuffixSet = set(self.inputSuffixList)
-
+        self.pegasusFolderName = pegasusFolderName
         self.output_path = output_path
+        self.site_handler = site_handler
+        self.input_site_handler = input_site_handler
+        if not self.input_site_handler:
+            self.input_site_handler = self.site_handler
+        self.clusters_size = clusters_size
         self.tmpDir = tmpDir
         self.max_walltime = max_walltime
+        self.javaPath = javaPath
         self.jvmVirtualByPhysicalMemoryRatio = jvmVirtualByPhysicalMemoryRatio
         self.debug = debug
         self.needSSHDBTunnel = needSSHDBTunnel
@@ -277,13 +280,13 @@ class Workflow(ADAG):
         call ADAG.writeXML() and then add my commandline comment.
         """
         if self.isDAGWrittenToDisk:
-            sys.stderr.write("Warning: the dag has been written to a file already (writeXML() has been called). No more calling.\n")
+            print("Warning: the dag has been written to a file already (writeXML() has been called). No more calling.", flush=True)
         else:
-            sys.stderr.write("Writing XML job to %s ..."%(out))
+            print(f"Writing XML job to {out} ... ", flush=True, end='')
             ADAG.writeXML(self, out)
             # -- is not allowed in xml.
             out.write('<!-- commandline: %s -->\n'%(self.commandline.replace("--", "~~")))
-            sys.stderr.write(".\n")
+            print("Done", flush=True)
             self.isDAGWrittenToDisk = True
     
     def constructOneExecutableObject(self, path=None, name=None, checkPathExecutable=True, version=None, namespace=None,\
@@ -359,7 +362,7 @@ class Workflow(ADAG):
     def registerExecutables(self):
         """
         """
-        if self.javaPath:
+        if hasattr(self, 'javaPath') and self.javaPath:
             self.addExecutableFromPath(path=self.javaPath, name='java', clusterSizeMultipler=1)
         self.addExecutableFromPath(path="/bin/cp", name='cp', clusterSizeMultipler=1)
         self.addExecutableFromPath(path="/bin/mv", name='mv', clusterSizeMultipler=1)
@@ -493,7 +496,8 @@ class Workflow(ADAG):
 
         if inputSuffixSet is None:
             inputSuffixSet = self.inputSuffixSet
-        sys.stderr.write("Registering %s input files with %s possible sufficies ..."%(len(inputFnameLs), len(inputSuffixSet)))
+        print(f"Registering {len(inputFnameLs)} input files with {len(inputSuffixSet)} possible sufficies ({inputSuffixSet}) ... ", \
+            flush=True, end='')
         returnData = PassingData(jobDataLs = [])
         counter = 0
         for inputFname in inputFnameLs:
@@ -521,7 +525,7 @@ class Workflow(ADAG):
                     jobData.fileLs.append(indexFile)
                     jobData.indexFileLs.append(indexFile)
             returnData.jobDataLs.append(jobData)
-        sys.stderr.write(" %s out of %s files registered.\n"%(len(returnData.jobDataLs), len(inputFnameLs)))
+        print(f"{len(returnData.jobDataLs)} out of {len(inputFnameLs)} files registered. Done.", flush=True)
         return returnData
 
     def registerFilesAsInputToJob(self, job, inputFileList):
@@ -608,8 +612,8 @@ class Workflow(ADAG):
         """
         This function adds inputF or parentJobLs[i].output (if inputF is not given) as input to mergeJob.
         inputArgumentOption (like '-i') is added in front of each input file.
-        extraDependentInputLs is a list of dependent files to mergeJob.
-            They will NOT be added to the commandline of mergeJob.
+        extraDependentInputLs is a list of dependent files to mergeJob,
+            which will NOT be added to the commandline of mergeJob.
         i.e.
             self.addInputToMergeJob(mergeJob=mergeDataJob, inputF=input_file])
             self.addInputToMergeJob(mergeJob=gatkUnionJob, parentJobLs=[gatk_job], \
@@ -639,14 +643,13 @@ class Workflow(ADAG):
                     self.addJobDependency(parentJob=parentJob, childJob=mergeJob)
 
     def addSortJob(self, executable=None, commandFile=None, \
-                    inputFile=None, outputFile=None, noOfHeaderLines=0, \
-                    parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, transferOutput=False, \
-                    extraArguments=None, extraArgumentList=None, sshDBTunnel=None,\
-                    job_max_memory=2000, walltime=120, **keywords):
+            inputFile=None, outputFile=None, noOfHeaderLines=0, \
+            parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, transferOutput=False, \
+            extraArgumentList=None, extraArguments=None, sshDBTunnel=None,\
+            job_max_memory=2000, walltime=120, **keywords):
         """
         use sortHeaderAware executable (from pymodule/shell).
         Examples:
-
             sortedSNPID2NewCoordinateFile = File(os.path.join(reduceOutputDirJob.output, 'SNPID2NewCoordinates.sorted.tsv.gz'))
             sortSNPID2NewCoordinatesJob = self.addSortJob(inputFile=reduceJob.output, \
                         outputFile=sortedSNPID2NewCoordinateFile, noOfHeaderLines=1, \
@@ -671,11 +674,11 @@ class Workflow(ADAG):
         job = self.addGenericJob(executable=executable, \
                     inputFile=inputFile, inputArgumentOption="", \
                     outputFile=outputFile, outputArgumentOption="",
+                    extraOutputLs=extraOutputLs, transferOutput=transferOutput, \
                     parentJobLs=parentJobLs, \
                     extraDependentInputLs=extraDependentInputLs, \
-                    extraOutputLs=extraOutputLs, transferOutput=transferOutput, \
-                    extraArguments=extraArguments, \
                     extraArgumentList=extraArgumentList, \
+                    extraArguments=extraArguments, \
                     sshDBTunnel=sshDBTunnel,\
                     job_max_memory=job_max_memory, walltime=walltime)
         return job
@@ -810,10 +813,10 @@ class Workflow(ADAG):
             job.addArguments("--port=%s"%(objectWithDBArguments.port))
         return job
     
-    def addGenericJob(self, executable=None, inputFile=None, inputArgumentOption="", \
-            outputFile=None, outputArgumentOption="", \
+    def addGenericJob(self, executable=None, inputArgumentOption="", inputFile=None, \
+            outputArgumentOption="", outputFile=None, \
             inputFileList=None, argumentForEachFileInInputFileList=None, \
-            frontArgumentList=None, extraArguments=None, extraArgumentList=None, \
+            frontArgumentList=None, extraArgumentList=None, extraArguments=None, \
             parentJob=None, parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, \
             transferOutput=False, sshDBTunnel=None, \
             key2ObjectForJob=None, objectWithDBArguments=None, objectWithDBGenomeArguments=None,\
@@ -825,8 +828,8 @@ class Workflow(ADAG):
             executable [frontArgumentList] [DBArguments] [inputArgumentOption] [inputFile] [outputArgumentOption] [outputFile]
                 [extraArgumentList] [extraArguments]
 
-        addJobUse() will add file to job.inputLs or job.outputLs pending Link.INPUT or Link.OUTPUT
-        max_walltime: maximum possible walltime for one or a cluster of jobs.
+        job_max_memory: integer, unit in MB.
+        max_walltime: integer, in minutes. maximum possible walltime for one or a cluster of jobs.
         walltime: walltime (max running time) for a single job. 
             For a clustered job, walltime is multiplied by the clusters_size, but less than max_walltime.
         objectWithDBArguments: an object that contains database arguments (host, dbname, username, etc.).
@@ -836,11 +839,11 @@ class Workflow(ADAG):
         inputFileList: a list of input files to be added to commandline as the last arguments
             they would also be added as the job's dependent input.
             Difference from extraDependentInputLs: the latter is purely for dependency purpose, not added as input arguments.
-                So if files have been put in inputFileList, then they shouldn't be in extraDependentInputLs.
-        if transferOutput is None, do not register output files as OUTPUT with transfer flag
+                So if a file has been put in inputFileList, then it shouldn't be in extraDependentInputLs.
+        If transferOutput is None, do not register output files as OUTPUT with transfer flag
         key2ObjectForJob: which is a dictionary with strings as key, to set key:object for each job
-        if job.output is not set, set it to the 1st entry of job.outputLs
         job.outputLs: to hold more output files.
+            If job.output is not set, set it to the 1st entry of job.outputLs
         """
         job = Job(namespace=self.namespace, name=executable.name, version=self.version)
         job.outputLs = []	# to hold more output files
@@ -857,7 +860,6 @@ class Workflow(ADAG):
                 job.addArguments(inputArgumentOption)
             job.addArguments(inputFile)
             isAdded = self.addJobUse(job, file=inputFile, transfer=True, register=True, link=Link.INPUT)
-            #job.uses(inputFile, transfer=True, register=True, link=Link.INPUT)
             job.input = inputFile
             #job.inputLs.append(inputFile)
         if outputFile:
@@ -866,7 +868,6 @@ class Workflow(ADAG):
             job.addArguments(outputFile)
             if transferOutput is not None:
                 self.addJobUse(job, file=outputFile, transfer=transferOutput, register=True, link=Link.OUTPUT)
-                #job.uses(outputFile, transfer=transferOutput, register=True, link=Link.OUTPUT)
             job.output = outputFile
             #job.outputLs.append(outputFile)
         if extraArgumentList:
@@ -885,7 +886,7 @@ class Workflow(ADAG):
                 walltime = min(walltime*clusters_size, max_walltime)
 
         setJobProperRequirement(job, job_max_memory=job_max_memory, sshDBTunnel=sshDBTunnel,\
-                                    no_of_cpus=no_of_cpus, walltime=walltime)
+                            no_of_cpus=no_of_cpus, walltime=walltime)
         self.addJob(job)
         job.parentJobLs = []
         if parentJob:
@@ -910,9 +911,8 @@ class Workflow(ADAG):
                     job.outputLs.append(output)
                     if transferOutput is not None:
                         self.addJobUse(job, file=output, transfer=transferOutput, register=True, link=Link.OUTPUT)
-                        #job.uses(output, transfer=transferOutput, register=True, link=Link.OUTPUT)
         if key2ObjectForJob:
-            for key, objectForJob in key2ObjectForJob.iteritems():
+            for key, objectForJob in key2ObjectForJob.items():
                 setattr(job, key, objectForJob)	#key should be a string.
 
         #add all input files to the last (after db arguments,) otherwise, it'll mask others (cuz these don't have options).
@@ -985,46 +985,48 @@ class Workflow(ADAG):
         return job
 
     def addPipeCommandOutput2FileJob(self, executable=None, commandFile=None, \
-                    outputFile=None, \
-                    parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, transferOutput=False, \
-                    extraArguments=None, extraArgumentList=None, sshDBTunnel=None,\
+                    outputFile=None, extraOutputLs=None, transferOutput=False, \
+                    parentJobLs=None, extraDependentInputLs=None, \
+                    extraArgumentList=None, sshDBTunnel=None,\
                     job_max_memory=2000, walltime=120, **keywords):
         """
         Call shell/pipeCommandOutput2File to redirect stdout output to outputFile.
             shell/pipeCommandOutput2File.sh outputFile commandFile [commandArguments]
+        executable can be None (Default: self.pipeCommandOutput2File).
         commandFile could be None.
 
         Examples:
+            bwaCommand = self.registerOneExecutableAsFile(path="/usr/bin/bwa")
+            extraArgumentList=[alignment_method.command]	#add mem first
+            extraArgumentList.extend(["-a -M", refFastaFile] + fastqFileList)
+            alignmentJob = self.addGenericPipeCommandOutput2FileJob(executable=self.BWA_Mem, commandFile=bwaCommand, \
+                        outputFile=alignmentSamF, \
+                        extraOutputLs=None, transferOutput=transferOutput, \
+                        parentJobLs=parentJobLs, extraDependentInputLs=[refFastaFile] + fastqFileList, \
+                        extraArgumentList=extraArgumentList, \
+                        sshDBTunnel=None,\
+                        job_max_memory=aln_job_max_memory, walltime=aln_job_walltime, no_of_cpus=no_of_aln_threads, \
+                        **keywords)
+            
             sortedSNPID2NewCoordinateFile = File(os.path.join(reduceOutputDirJob.output, 'SNPID2NewCoordinates.sorted.tsv'))
             sortSNPID2NewCoordinatesJob = self.addGenericPipeCommandOutput2FileJob(executable=self.pipeCommandOutput2File, \
                     commandFile=self.sortExecutableFile, \
                     outputFile=sortedSNPID2NewCoordinateFile, \
+                    extraOutputLs=None, transferOutput=False, \
                     parentJobLs=[reduceJob], \
                     extraDependentInputLs=[reduceJob.output], \
-                    extraOutputLs=None, transferOutput=False, \
-                    extraArguments=None, \
                     extraArgumentList=["-k 3,3 -k4,4n -t$'\t'", reduceJob.output], \
                     sshDBTunnel=None,\
                     job_max_memory=4000, walltime=120)
-
-            extraArgumentList.append(alignment_method.command)	#add mem first
-            extraArgumentList.extend(["-a -M", refFastaFile] + fastqFileList)
-            alignmentJob = self.addGenericPipeCommandOutput2FileJob(executable=self.BWA_Mem, commandFile=self.bwa, \
-                        outputFile=alignmentSamF, \
-                        parentJobLs=parentJobLs, extraDependentInputLs=[refFastaFile] + fastqFileList, \
-                        extraOutputLs=None, transferOutput=transferOutput, \
-                        extraArguments=None, extraArgumentList=extraArgumentList, \
-                        sshDBTunnel=None,\
-                        job_max_memory=aln_job_max_memory, walltime=aln_job_walltime, no_of_cpus=no_of_aln_threads, \
-                        **keywords)
-
+            
+            #skip executable
             sortedVCFFile = File(os.path.join(self.liftOverReduceDirJob.output, '%s.sorted.vcf'%(seqTitle)))
             vcfSorterJob = self.addGenericPipeCommandOutput2FileJob(commandFile=self.vcfsorterExecutableFile, \
                     outputFile=sortedVCFFile, \
+                    extraOutputLs=None, transferOutput=False, \
                     parentJobLs=[selectOneChromosomeVCFJob, self.liftOverReduceDirJob], \
                     extraDependentInputLs=[self.newRegisterReferenceData.refPicardFastaDictF, selectOneChromosomeVCFJob.output], \
-                    extraOutputLs=None, transferOutput=False, \
-                    extraArguments=None, extraArgumentList=[self.newRegisterReferenceData.refPicardFastaDictF, selectOneChromosomeVCFJob.output], \
+                    extraArgumentList=[self.newRegisterReferenceData.refPicardFastaDictF, selectOneChromosomeVCFJob.output], \
                     job_max_memory=job_max_memory, walltime=walltime)
 
         """
@@ -1036,17 +1038,17 @@ class Workflow(ADAG):
             extraArgumentList = []
         if commandFile:
             extraDependentInputLs.append(commandFile)
-            ## add in front of extra arguments
+            #add commandFile in front of all other arguments
             extraArgumentList.insert(0, commandFile)
-
+        
         job= self.addGenericJob(executable=executable, \
                     frontArgumentList=None,\
                     inputFile=None, inputArgumentOption=None,\
                     outputFile=outputFile, outputArgumentOption=None,\
                 parentJobLs=parentJobLs, extraDependentInputLs=extraDependentInputLs, \
-                extraOutputLs=extraOutputLs, extraArguments=extraArguments, \
-                transferOutput=transferOutput, \
-                extraArgumentList=extraArgumentList, key2ObjectForJob=None, job_max_memory=job_max_memory, \
+                extraOutputLs=extraOutputLs, transferOutput=transferOutput, \
+                extraArgumentList=extraArgumentList, extraArguments=None, \
+                key2ObjectForJob=None, job_max_memory=job_max_memory, \
                 sshDBTunnel=sshDBTunnel, walltime=walltime, **keywords)
         return job
     
@@ -1179,10 +1181,12 @@ if __name__ == '__main__':
             help="The name of the computing site where the jobs run and executables are stored. "
             "Check your Pegasus configuration in submit.sh.")
     ap.add_argument("-j", "--input_site_handler", type=str,
-            help="It is the name of the site that has all the input files."
-            "Possible values can be 'local' or same as site_handler."
-            "If not given, it is asssumed to be the same as site_handler and the input files will be symlinked into the running folder."
-            "If input_site_handler=local, the input files will be transferred to the computing site by pegasus-transfer.")
+        help="It is the name of the site that has all the input files."
+        "Possible values can be 'local' or the same as site_handler. If not sure, leave it alone."
+        "If not given, it is asssumed to be the same as site_handler "
+        " and the input files will be symlinked into the running folder."
+        "If the job submission node does not share a file system with the computing site, input_site_handler=local,"
+        " and the input files will be transferred to the computing site by pegasus-transfer (need setup).")
     ap.add_argument("-C", "--clusters_size", type=int, default=30,
             help="Default: %(default)s. "
             "This number decides how many of pegasus jobs should be clustered into one job. "
@@ -1198,7 +1202,7 @@ if __name__ == '__main__':
             'If empty or None, everything is in the pegasus root.')
     ap.add_argument("--inputSuffixList", type=str,
             help='Coma-separated list of input file suffices. Used to exclude input files.'
-            'If None, no exclusion. The dot is part of the suffix, .tsv not tsv.'
+            'If None, no exclusion. Please include the dot to the suffix, .tsv, not tsv.'
             'Common zip suffices (.gz, .bz2, .zip, .bz) will be ignored in obtaining the suffix.')
     ap.add_argument("--tmpDir", type=str, default='/tmp/',
             help='Default: %(default)s. A local folder for some jobs (MarkDup) to store temp data.'
@@ -1219,10 +1223,12 @@ if __name__ == '__main__':
     ap.add_argument("--needSSHDBTunnel", action='store_true',
             help="If all DB-interacting jobs need a ssh tunnel to access a database that is inaccessible to computing nodes.")
     args = ap.parse_args()
-    instance = Workflow(site_handler=args.site_handler, input_site_handler='ycondor', clusters_size=30, \
-            pegasusFolderName='folder', inputSuffixList=None, output_path=args.output_path, \
-            tmpDir='/tmp/', max_walltime=4320, \
-            javaPath=args.javaPath, jvmVirtualByPhysicalMemoryRatio=1.2,\
-            debug=False, needSSHDBTunnel=False, report=False)
+    instance = Workflow(inputSuffixList=args.inputSuffixList,  pegasusFolderName=args.pegasusFolderName, \
+        output_path=args.output_path, \
+        site_handler=args.site_handler, input_site_handler=args.input_site_handler, \
+        clusters_size=args.clusters_size,\
+        tmpDir=args.tmpDir, max_walltime=args.max_walltime, \
+        javaPath=args.javaPath, jvmVirtualByPhysicalMemoryRatio=args.jvmVirtualByPhysicalMemoryRatio,\
+        debug=args.debug, needSSHDBTunnel=args.needSSHDBTunnel, report=args.report)
     instance.setup_run()
     instance.end_run()

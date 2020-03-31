@@ -3,8 +3,8 @@ import os
 import random
 
 from OpenSSL import SSL, crypto
-from Pegasus.command import LoggingCommand
-from Pegasus.service import app
+from pegaflow.command import LoggingCommand
+from pegaflow.service import app
 
 log = logging.getLogger(__name__)
 

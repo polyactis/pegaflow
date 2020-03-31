@@ -1,8 +1,8 @@
 __author__ = "Monte Goode"
 __author__ = "Karan Vahi"
 
-from Pegasus.db.schema import *
-from Pegasus.db.base_loader import BaseLoader
+from pegaflow.db.schema import *
+from pegaflow.db.base_loader import BaseLoader
 from sqlalchemy import exc
 import time
 

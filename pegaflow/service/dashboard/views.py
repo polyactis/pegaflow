@@ -22,16 +22,16 @@ from time import localtime, strftime
 from flask import (
     g, json, redirect, render_template, request, send_from_directory, url_for
 )
-from Pegasus.db.admin.admin_loader import DBAdminError
-from Pegasus.db.errors import StampedeDBNotFoundError
-from Pegasus.service import filters
-from Pegasus.service.base import ErrorResponse, ServiceError
-from Pegasus.service.dashboard import dashboard_routes
-from Pegasus.service.dashboard.dashboard import (
+from pegaflow.db.admin.admin_loader import DBAdminError
+from pegaflow.db.errors import StampedeDBNotFoundError
+from pegaflow.service import filters
+from pegaflow.service.base import ErrorResponse, ServiceError
+from pegaflow.service.dashboard import dashboard_routes
+from pegaflow.service.dashboard.dashboard import (
     Dashboard, NoWorkflowsFoundError
 )
-from Pegasus.service.dashboard.queries import MasterDBNotFoundError
-from Pegasus.tools import utils
+from pegaflow.service.dashboard.queries import MasterDBNotFoundError
+from pegaflow.tools import utils
 from sqlalchemy.orm.exc import NoResultFound
 
 log = logging.getLogger(__name__)

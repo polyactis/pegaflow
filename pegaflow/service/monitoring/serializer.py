@@ -18,11 +18,11 @@ from decimal import Decimal
 
 from flask import url_for
 from flask.json import JSONEncoder
-from Pegasus.db.schema import *
-from Pegasus.service.base import (
+from pegaflow.db.schema import *
+from pegaflow.service.base import (
     ErrorResponse, OrderedDict, OrderedSet, PagedResponse
 )
-from Pegasus.service.monitoring.resources import (
+from pegaflow.service.monitoring.resources import (
     HostResource, InvocationResource, JobInstanceResource,
     JobResource, JobstateResource, RCLFNResource, RCMetaResource,
     RCPFNResource, RootWorkflowResource, RootWorkflowstateResource,

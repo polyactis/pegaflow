@@ -9,7 +9,7 @@ import tempfile
 
 logger = logging.getLogger(__name__)
 
-from Pegasus.plots_stats import utils as stats_utils
+from pegaflow.plots_stats import utils as stats_utils
 
 transformation_stats_col_name =["Transformation","Count","Succeeded" , "Failed", "Min","Max","Mean","Total"]
 job_stats_col_name =['Job','Try','Site','Kickstart','Post' ,'CondorQTime','Resource','Runtime','Seqexec','Seqexec-Delay']

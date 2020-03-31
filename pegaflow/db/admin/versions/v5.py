@@ -1,8 +1,8 @@
 import logging
 import warnings
 
-from Pegasus.db.admin.versions.base_version import BaseVersion
-from Pegasus.db.schema import *
+from pegaflow.db.admin.versions.base_version import BaseVersion
+from pegaflow.db.schema import *
 from sqlalchemy import *
 from sqlalchemy.exc import *
 
