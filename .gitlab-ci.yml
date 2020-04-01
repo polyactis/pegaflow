@@ -18,10 +18,8 @@ test_workflow:
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
     - ./submit.sh ./wc.python.code.xml condor
     - pegasus-status work/wc.python.code.*
-    # the workflow should finish within 3 minutes.
-    - sleep 3m
+    - ../test/run_til_workflow_end.sh work/wc.python.code.*/jobstate.log
     - pegasus-status work/wc.python.code.*
-    - grep DAGMAN_FINISHED work/wc.python.code.*/jobstate.log
     - mv wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"

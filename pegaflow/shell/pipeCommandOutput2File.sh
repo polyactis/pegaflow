@@ -1,6 +1,7 @@
 #!/bin/bash
 if test $# -lt 2
 then
+	echo
 	echo "Usage: $0 outputFname commandPath [commandArguments]"
 	echo
 	echo "Note:"
