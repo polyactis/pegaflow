@@ -1,5 +1,6 @@
 # Pegasus Workflow Management System Python3 API
-Pegaflow is a package of the Python3 APIs for Pegasus WMS (http://pegasus.isi.edu/). Pegasus(<5.0) offers Python2 support only. Pegasus allows a developer to connect dependent computing jobs into a DAG (Directed Acyclic Graph) and run jobs according to the dependency.
+
+Pegaflow, https://github.com/polyactis/pegaflow, is a package of the Python3 APIs for Pegasus WMS (http://pegasus.isi.edu/). Pegasus(<5.0) offers Python2 support only. Pegasus allows a developer to connect dependent computing jobs into a DAG (Directed Acyclic Graph) and run jobs according to the dependency.
 
 [Workflow.py](pegaflow/Workflow.py) is the key difference from the official Pegasus Python APIs. Inheriting [Workflow.py](pegaflow/Workflow.py), users can write Pegasus workflows in an Object-Oriented way. It significantly reduces the amount of coding in writing a Pegasus workflow.
 
@@ -17,16 +18,19 @@ This package's source code is adapted from https://github.com/pegasus-isi/pegasu
 
 
 # Installation
-Prerequisites:
-
-* Pegasus https://github.com/pegasus-isi/pegasus
-* HTCondor https://research.cs.wisc.edu/htcondor/, the underlying job scheduler.
 
 Install pegaflow:
 
 ```python
 pip3 install pegaflow
 ```
+
+Pegasus and HTCondor (Condor) are only required on computers where you intend to submit and run workflows. 
+
+On computers where only DAX (DAG xml file) writing will be practiced, no need to install them.
+
+* Pegasus https://github.com/pegasus-isi/pegasus
+* HTCondor https://research.cs.wisc.edu/htcondor/, the underlying job scheduler.
 
 If a user intends to use Non-DAX Pegasus APIs, the following Python packages need to be installed as well.
 
