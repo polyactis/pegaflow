@@ -5,6 +5,8 @@
 pegaflow/example/scratch/**
 pegaflow/example/work/**
 pegaflow/example/sites.xml
+pegaflow/example/*.dag
+pegaflow/example/runningWorkflows.txt
 .autotools
 .cproject
 .depend
