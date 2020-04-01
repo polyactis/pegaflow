@@ -147,12 +147,12 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1, wallti
     #key='requirements' could only be added once for the condor profile
     job.addProfile(Profile(Namespace.CONDOR, key="requirements", value=" && ".join(condorJobRequirementLs) ))
 
-def registerFile(workflow, filename):
+def registerFile(workflow, filepath):
     """
     function to register any file to the workflow.input_site_handler, 
     """
-    file = File(os.path.basename(filename))
-    file.addPFN(PFN("file://" + os.path.abspath(filename), \
+    file = File(os.path.basename(filepath))
+    file.addPFN(PFN("file://" + os.path.abspath(filepath), \
                                 workflow.input_site_handler))
     workflow.addFile(file)
     return file
@@ -523,22 +523,22 @@ class Workflow(ADAG):
                             pegasusFileName=None, checkFileExistence=True):
         """
         Examples:
-            pegasusFile = self.registerOneInputFile(inputFname=path, input_site_handler=site_handler, \
-                                            folderName=folderName, useAbsolutePathAsPegasusFileName=useAbsolutePathAsPegasusFileName)
-        raise if inputFname is not a file.
+            pegasusFile = self.registerOneInputFile(inputFname='/tmp/abc.txt')
+        
         useAbsolutePathAsPegasusFileName:
             This would render the file to be referred as the absolute path on the running computer.
-            And pegasus will not seek to symlink or copy/transfer the file.
-            set it to True only when you dont want to add the file to the job as INPUT dependency (as it's accessed through abs path).
-        make sure the file is not registed with the workflow already
-        add abspath attribute to file.
-        folderName: if given, it will cause the file to be put into a pegasus workflow folder.
+            And pegasus will not symlink or copy/transfer the file.
+            Set it to True only if you don't want to add the file to the job as an INPUT dependency (as it's accessed through abs path).
+        folderName: if given, it will cause the file to be put into that folder (relative path) within the pegasus workflow running folder.
+            This folder needs to be created by a mkdir job.
+        Return: pegasusFile.abspath or pegasusFile.absPath is the absolute path of the file.
         """
         if input_site_handler is None:
             input_site_handler = self.input_site_handler
         if not pegasusFileName:
             if useAbsolutePathAsPegasusFileName:
-                pegasusFileName = os.path.abspath(inputFname)	#this will stop symlinking/transferring , and also no need to indicate them as file dependency for jobs.
+                #this will stop symlinking/transferring , and also no need to indicate them as file dependency for jobs.
+                pegasusFileName = os.path.abspath(inputFname)
             else:
                 pegasusFileName = os.path.join(folderName, os.path.basename(inputFname))
         pegasusFile = File(pegasusFileName)
@@ -549,6 +549,7 @@ class Workflow(ADAG):
         pegasusFile.absPath = pegasusFile.abspath
         pegasusFile.addPFN(PFN("file://" + pegasusFile.abspath, input_site_handler))
         if not self.hasFile(pegasusFile):
+            # check if the file is already added to the workflow.
             self.addFile(pegasusFile)
         return pegasusFile
 
