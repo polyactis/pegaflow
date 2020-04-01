@@ -390,10 +390,10 @@ class Workflow(ADAG):
                 clusterSizeMultipler = 1
             else:
                 clusterSizeMultipler = executableClusterSizeMultiplierTuple[1]
-            self.setOrChangeExecutableClusterSize(executable=executable, \
+            self.setExecutableClusterSize(executable=executable, \
                 clusterSizeMultipler=clusterSizeMultipler, defaultClusterSize=defaultClusterSize)
     
-    def setOrChangeExecutableClusterSize(self, executable=None, clusterSizeMultipler=1, defaultClusterSize=None):
+    def setExecutableClusterSize(self, executable=None, clusterSizeMultipler=1, defaultClusterSize=None):
         """
         it will remove the clustering profile if the new clusterSize is <1
         """
@@ -412,12 +412,12 @@ class Workflow(ADAG):
 
     def addExecutableFromPath(self, path=None, name=None, clusterSizeMultipler=1, noVersion=False):
         """
-        combination of constructOneExecutableObject() & addExecutableWClusterSize()
+        combination of constructOneExecutableObject() & setExecutableClusterSize()
         """
         if clusterSizeMultipler is None:
             clusterSizeMultipler = 1
         executable = self.constructOneExecutableObject(path=path, name=name, noVersion=noVersion)
-        self.addExecutableWClusterSize(executable=executable, clusterSizeMultipler=clusterSizeMultipler)
+        self.setExecutableClusterSize(executable=executable, clusterSizeMultipler=clusterSizeMultipler)
         return executable
 
     def getExecutableClusterSize(self, executable=None):
@@ -478,7 +478,7 @@ class Workflow(ADAG):
 
         if inputSuffixSet is None:
             inputSuffixSet = self.inputSuffixSet
-        print(f"Registering {len(inputFnameLs)} input files with {len(inputSuffixSet)} possible sufficies ({inputSuffixSet}) ... ", \
+        print(f"Registering {len(inputFnameLs)} input files with suffix in {inputSuffixSet} ... ", \
             flush=True, end='')
         returnData = PassingData(jobDataLs = [])
         counter = 0
@@ -507,7 +507,7 @@ class Workflow(ADAG):
                     jobData.fileLs.append(indexFile)
                     jobData.indexFileLs.append(indexFile)
             returnData.jobDataLs.append(jobData)
-        print(f"{len(returnData.jobDataLs)} out of {len(inputFnameLs)} files registered. Done.", flush=True)
+        print(f"{len(returnData.jobDataLs)} out of {len(inputFnameLs)} possible files registered. Done.", flush=True)
         return returnData
 
     def registerFilesAsInputToJob(self, job, inputFileList):
