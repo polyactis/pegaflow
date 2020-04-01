@@ -1,14 +1,15 @@
-# This folder contains examples to use Workflow.py.
+# This folder contains an example to inherit Workflow.py.
 
-`submit.sh` is a workflow submit script that invokes pegasus-plan. It also generates `sites.xml`, a configuration file specific to your workflow (where to store job files, where to run jobs, where to transfer final output). `sites.xml` will be copied into the workflow work folder (work/...), once a workflow is planned and submitted. Overwriting it is OK.
+[WordCountFiles.py](WordCountFiles.py) is an example Pegasus workflow that runs `wc` (word-count) on all files with a given suffix in an input folder.
 
-`pegasusrc` contains a few pre-set Pegasus settings that `submit.sh` will read from.
+[submit.sh](submit.sh) is a workflow submit script that invokes pegasus-plan. It also generates `sites.xml`, a configuration file specific to your workflow (where to store job files, where to run jobs, where to transfer final output). `sites.xml` will be copied into the workflow work folder (work/...), once a workflow is planned and submitted. Overwriting it is OK.
 
-A user should copy both `submit.sh` and `pegasusrc` to his/her running environment.
+[pegasusrc](pegasusrc) contains a few pre-set Pegasus settings that [submit.sh](submit.sh) will read from.
 
-`WordCountFiles.py` is an example Pegasus workflow that runs `wc` (word-count) on all files with a given suffix in an input folder.
+A user should copy both [submit.sh](submit.sh) and [pegasusrc](pegasusrc) to his/her running environment.
 
-To get help on the arguments of `WordCountFiles.py`:
+
+To get help on the arguments of [WordCountFiles.py](WordCountFiles.py):
 ```bash
 ./WordCountFiles.py -h
 ```

@@ -1,9 +1,9 @@
 # Pegasus Workflow Management System Python3 API
 Pegaflow is a package of the Python3 APIs for Pegasus WMS (http://pegasus.isi.edu/). Pegasus(<5.0) offers Python2 support only. Pegasus allows a developer to connect dependent computing jobs into a DAG (Directed Acyclic Graph) and run jobs according to the dependency.
 
-One key difference from the official Pegasus Python APIs, Pegaflow offers an extra class, Workflow.py, for users to inherit and write Pegasus workflows in an Object-oriented way. It significantly reduces the amount of coding in writing a Pegasus workflow.
+[Workflow.py](pegaflow/Workflow.py) is the key difference from the official Pegasus Python APIs. Inheriting Workflow.py, users can write Pegasus workflows in an Object-Oriented way. It significantly reduces the amount of coding in writing a Pegasus workflow.
 
-Pegasus jobs do NOT support UNIX pipes. [pegaflow/shell/pipeCommandOutput2File.sh](pegaflow/shell/pipeCommandOutput2File.sh) is offered to redirect the output (stdout) of a program to a file. shell/ contains a few other useful shell scripts.
+Pegasus jobs do NOT support UNIX pipes while many UNIX programs can only output to stdout. A shell wrapper, [pegaflow/shell/pipeCommandOutput2File.sh](pegaflow/shell/pipeCommandOutput2File.sh), is offered to redirect the output (stdout) of a program to a file. [pegaflow/shell/]([pegaflow/shell/) contains a few other useful shell scripts.
 
 * The DAX API (v3) and the helper class Workflow.py
 * The monitoring API
@@ -44,4 +44,4 @@ If a user intends to use Non-DAX Pegasus APIs, the following Python packages nee
 
 # Examples
 
-Check [pegaflow/example/README.md](pegaflow/example/README.md) on how to write and run Pegasus workflows.
+Check [pegaflow/example/](pegaflow/example/) for examples how to inherit [Workflow.py](pegaflow/Workflow.py) and run Pegasus workflows.
