@@ -44,4 +44,4 @@ If a user intends to use Non-DAX Pegasus APIs, the following Python packages nee
 
 # Examples
 
-Check [pegaflow/example/README.md](pegaflow/example/README.md).
+Check [pegaflow/example/README.md](pegaflow/example/README.md) on how to write and run Pegasus workflows.

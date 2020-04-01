@@ -628,7 +628,7 @@ class Workflow(ADAG):
             inputFile=None, outputFile=None, noOfHeaderLines=0, \
             parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, transferOutput=False, \
             extraArgumentList=None, extraArguments=None, sshDBTunnel=None,\
-            job_max_memory=2000, walltime=120, **keywords):
+            job_max_memory=200, walltime=120, **keywords):
         """
         use sortHeaderAware executable (from pymodule/shell).
         Examples:
@@ -669,7 +669,7 @@ class Workflow(ADAG):
                     inputFileList=None, argumentForEachFileInInputFileList=None,\
                     outputFile=None, outputArgumentOption="-o", \
                     parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, transferOutput=False, \
-                    extraArguments=None, extraArgumentList=None, job_max_memory=2000,  sshDBTunnel=None, \
+                    extraArguments=None, extraArgumentList=None, job_max_memory=200,  sshDBTunnel=None, \
                     key2ObjectForJob=None, objectWithDBArguments=None, walltime=None, **keywords):
         """
         similar to addGenericJob but these are jobs that need db-interacting arguments.
@@ -702,7 +702,7 @@ class Workflow(ADAG):
                     outputFile=None, outputArgumentOption="-o", \
                     data_dir=None, logFile=None, commit=False,\
                     parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, transferOutput=False, \
-                    extraArguments=None, extraArgumentList=None, job_max_memory=2000,  sshDBTunnel=None, \
+                    extraArguments=None, extraArgumentList=None, job_max_memory=200,  sshDBTunnel=None, \
                     key2ObjectForJob=None, objectWithDBArguments=None, **keywords):
         """
         a generic wrapper for jobs that "inserts" data (from file) into database
@@ -802,7 +802,7 @@ class Workflow(ADAG):
             parentJob=None, parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None, \
             transferOutput=False, sshDBTunnel=None, \
             key2ObjectForJob=None, objectWithDBArguments=None, objectWithDBGenomeArguments=None,\
-            no_of_cpus=None, job_max_memory=2000, walltime=180, \
+            no_of_cpus=None, job_max_memory=200, walltime=180, \
             max_walltime=None, **keywords):
         """
         A generic job adding function for other functions to use.
@@ -923,7 +923,7 @@ class Workflow(ADAG):
                     outputFile=None, outputArgumentOption=None,\
                     frontArgumentList=None, extraArguments=None, extraArgumentList=None, extraOutputLs=None, \
                     extraDependentInputLs=None, \
-                    parentJobLs=None, transferOutput=True, job_max_memory=2000,\
+                    parentJobLs=None, transferOutput=True, job_max_memory=1000,\
                     key2ObjectForJob=None, no_of_cpus=None, walltime=120, sshDBTunnel=None, **keywords):
         """
         a generic function to add Java jobs:
@@ -970,7 +970,7 @@ class Workflow(ADAG):
                     outputFile=None, extraOutputLs=None, transferOutput=False, \
                     parentJobLs=None, extraDependentInputLs=None, \
                     extraArgumentList=None, sshDBTunnel=None,\
-                    job_max_memory=2000, walltime=120, **keywords):
+                    job_max_memory=200, walltime=120, **keywords):
         """
         Call shell/pipeCommandOutput2File to redirect stdout output to outputFile.
             shell/pipeCommandOutput2File.sh outputFile commandFile [commandArguments]
@@ -1044,7 +1044,7 @@ class Workflow(ADAG):
         for output in outputLs:
             job.uses(output, transfer=transferOutput, register=True, link=Link.OUTPUT)
 
-    def getJVMMemRequirment(self, job_max_memory=5000, minMemory=2000, permSizeFraction=0,
+    def getJVMMemRequirment(self, job_max_memory=5000, minMemory=500, permSizeFraction=0,
                         MaxPermSizeUpperBound=35000):
         """
         Java 8 does not support PermSize anymore. set permSizeFraction to 0.
@@ -1061,7 +1061,7 @@ class Workflow(ADAG):
         if job_max_memory is None:
             job_max_memory = 5000
         if minMemory is None:
-            minMemory = 2000
+            minMemory = 500
         #permSizeFraction is set to 0 due to newer Java no longer needs it.
         permSizeFraction = 0
         #MaxPermSize_user = int(job_max_memory*permSizeFraction)

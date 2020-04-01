@@ -4,8 +4,8 @@
 **/.*.swp
 pegaflow/example/scratch/**
 pegaflow/example/work/**
-pegaflow/example/sites.xml
 pegaflow/example/*.dag
+pegaflow/example/*.xml
 pegaflow/example/runningWorkflows.txt
 .autotools
 .cproject

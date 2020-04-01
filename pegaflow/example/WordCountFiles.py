@@ -34,7 +34,7 @@ class WordCountFiles(Workflow):
         """
         """
         Workflow.registerExecutables(self)
-        # self.sleep will be the corresponding Pegasus Executable after self.addExecutableFromPath().
+        # self.sleep can be used as an Pegasus Executable after self.addExecutableFromPath().
         self.addExecutableFromPath(path="/bin/sleep", name='sleep', clusterSizeMultipler=1)
 
     def run(self):
@@ -46,7 +46,7 @@ class WordCountFiles(Workflow):
             input_site_handler=self.input_site_handler, inputSuffixSet=self.inputSuffixSet)
         
         # Pegasus jobs do NOT allow pipes. So use pipeCommandOutput2File (already registered in Workflow.py).
-        # register wc and cat as they will be used by the pipeCommandOutput2File program.
+        # register wc and cat as they will be used by pipeCommandOutput2File.
         wcCommand = self.registerOneExecutableAsFile(path="/usr/bin/wc")
         catCommand = self.registerOneExecutableAsFile(path="/bin/cat")
         
@@ -68,14 +68,16 @@ class WordCountFiles(Workflow):
                 extraArgumentList=[jobData.file], \
                 extraDependentInputLs=[jobData.file], extraOutputLs=None, \
                 transferOutput=False)
-            # add wcJob's output to the input of mergeJob (it simply adds input to the end of a job's exising arguments)
-            # also wcJob will be parent of mergeJob.
+            # add wcJob.output (outputFile passed to addPipeCommandOutput2FileJob() above) as the input of mergeJob.
+            #   It appends input to the end of a job's exising arguments).
+            #   wcJob.output will be a dependent input of mergeJob.
+            # addInputToMergeJob() also adds wcJob as a parent of mergeJob.
             self.addInputToMergeJob(mergeJob=mergeJob, inputF=wcJob.output, inputArgumentOption="",\
                             parentJobLs=[wcJob])
         # a sleep job to slow down the workflow for 30 seconds
-        sleepJob = self.addGenericJob(executable=self.sleep, extraArguments='30s')
-        # sleepJob does not generates any output.
-        #  addInputToMergeJob() adds sleepJob as mergeJob's parent.
+        # sleepJob has no output.
+        sleepJob = self.addGenericJob(executable=self.sleep, extraArgumentList=['30s'])
+        # add sleepJob as mergeJob's parent.
         self.addInputToMergeJob(mergeJob=mergeJob, parentJobLs=[sleepJob])
 
         # end_run() will output the DAG to output_path
