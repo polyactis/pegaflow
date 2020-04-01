@@ -19,6 +19,9 @@ To run on a condor cluster (https://research.cs.wisc.edu/htcondor/ must be setup
 # Count all .py files in /usr/lib/python3.6
 # "-C 10" enables job clustering. 10 jobs into one job. 'wc' runs fast. Better to cluster them.
 $ ./WordCountFiles.py -i /usr/lib/python3.6/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
+
+# Plan and submit the workflow.
+# Try "./submit.sh condor ./wc.python.code.xml 1" if you want to keep intermediate files.
 $ ./submit.sh condor ./wc.python.code.xml
 
 # A work folder work/... is created to house job description/submit files, job status files, etc.
@@ -26,7 +29,8 @@ $ ./submit.sh condor ./wc.python.code.xml
 # A running folder scratch/... is created.
 #  All input files will be symlinked or copied into this folder.
 #  All pegasus jobs will run inside that folder and also output in that folder.
-#  If the workflow succeeds in the end, final output will be copied into a new folder, ./..., in the current directory.
+
+# If the workflow succeeds in the end, final output will be copied into a new folder, ./..., in the current directory.
 
 # Check the status of the workflow:
 $ pegasus_status work/...
