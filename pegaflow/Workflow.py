@@ -195,7 +195,7 @@ class Workflow(ADAG):
     pathToInsertHomePathList = []
     def __init__(self, inputSuffixList=None, \
             pegasusFolderName='folder', output_path=None, \
-            site_handler=None, input_site_handler=None, clusters_size=30, \
+            site_handler=None, input_site_handler=None, clusters_size=1, \
             tmpDir='/tmp/', max_walltime=4320, \
             javaPath=None, jvmVirtualByPhysicalMemoryRatio=1.2,\
             debug=False, needSSHDBTunnel=False, report=False):
@@ -204,7 +204,7 @@ class Workflow(ADAG):
         input_site_handler: 'local or same as site_handler. It is the name of the site that has all the input files.'
             'If it is the same as site_handler, the input files will be symlinked.'
             'If input_site_handler=local, input files will be transferred to the computing cluster by pegasus-transfer.'
-        clusters_size: 'This number decides how many of pegasus jobs should be clustered into one job. '
+        clusters_size: 'The number of pegasus jobs that should be clustered into one job. '
             'Good if your workflow contains many quick jobs. It will reduce Pegasus monitor I/O.'
         pegasusFolderName: 'the path relative to the pegasus workflow root. This folder will contains pegasus input & output.'
             'It will be created during the pegasus staging process. It is useful to separate multiple sub-workflows.'
@@ -1187,7 +1187,7 @@ if __name__ == '__main__':
         " and the input files will be symlinked into the running folder."
         "If the job submission node does not share a file system with the computing site, input_site_handler=local,"
         " and the input files will be transferred to the computing site by pegasus-transfer (need setup).")
-    ap.add_argument("-C", "--clusters_size", type=int, default=30,
+    ap.add_argument("-C", "--clusters_size", type=int, default=1,
             help="Default: %(default)s. "
             "This number decides how many of pegasus jobs should be clustered into one job. "
             "Good if your workflow contains many quick jobs. "

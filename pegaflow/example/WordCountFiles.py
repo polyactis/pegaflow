@@ -18,7 +18,7 @@ class WordCountFiles(Workflow):
     def __init__(self, input_folder=None, inputSuffixList=None, output_path=None, \
         pegasusFolderName=None, \
         site_handler=None, input_site_handler=None, \
-        max_walltime=4320, clusters_size=30,\
+        max_walltime=4320, clusters_size=1,\
         ):
         #call the parent class first
         Workflow.__init__(self, inputSuffixList=inputSuffixList, output_path=output_path, \
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         " and the input files will be symlinked into the running folder."
         "If the job submission node does not share a file system with the computing site, input_site_handler=local,"
         " and the input files will be transferred to the computing site by pegasus-transfer (need setup).")
-    ap.add_argument("-C", "--clusters_size", type=int, default=30,
+    ap.add_argument("-C", "--clusters_size", type=int, default=1,
         help="Default: %(default)s. "
         "This number decides how many of pegasus jobs should be clustered into one job. "
         "Good if your workflow contains many quick jobs. "
