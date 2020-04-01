@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-An example workflow that counts   is a class for other programs to inherit and helps to simplify pegasus workflow dax writing.
+An example workflow that word-counts files.
 """
 import sys, os
-from pegaflow.DAX3 import File, PFN, Profile, Namespace, Link, Use, Job, Dependency
+from pegaflow.DAX3 import File
 from pegaflow.Workflow import Workflow, getAbsPathOutOfExecutable
 
-# path to the source code's folder
+# path to the source code's folder.
+# a convenient variable to add executables from the same folder.
 src_dir = os.path.dirname(os.path.abspath(__file__))
 
 class WordCountFiles(Workflow):
