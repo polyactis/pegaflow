@@ -28,5 +28,5 @@ test_workflow:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos
     paths:
-    - wc.python.code.*/
+    - pegaflow/example/wc.python.code.*/
 
