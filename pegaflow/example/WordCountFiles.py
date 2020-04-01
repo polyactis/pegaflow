@@ -18,13 +18,13 @@ class WordCountFiles(Workflow):
     def __init__(self, input_folder=None, inputSuffixList=None, output_path=None, \
         pegasusFolderName=None, \
         site_handler=None, input_site_handler=None, \
-        max_walltime=4320, clusters_size=1,\
+        max_walltime=4320, cluster_size=1,\
         ):
         #call the parent class first
         Workflow.__init__(self, inputSuffixList=inputSuffixList, output_path=output_path, \
             pegasusFolderName=pegasusFolderName, \
             site_handler=site_handler, input_site_handler=input_site_handler,\
-            clusters_size=clusters_size, \
+            cluster_size=cluster_size, \
             tmpDir='/tmp/', max_walltime=max_walltime, \
             javaPath=None, jvmVirtualByPhysicalMemoryRatio=1.2,\
             debug=False, needSSHDBTunnel=False, report=False)
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         " and the input files will be symlinked into the running folder."
         "If the job submission node does not share a file system with the computing site, input_site_handler=local,"
         " and the input files will be transferred to the computing site by pegasus-transfer (need setup).")
-    ap.add_argument("-C", "--clusters_size", type=int, default=1,
+    ap.add_argument("-C", "--cluster_size", type=int, default=1,
         help="Default: %(default)s. "
         "This number decides how many of pegasus jobs should be clustered into one job. "
         "Good if your workflow contains many quick jobs. "
@@ -122,7 +122,7 @@ if __name__ == '__main__':
         output_path=args.output_path, \
         pegasusFolderName=args.pegasusFolderName, \
         site_handler=args.site_handler, input_site_handler=args.input_site_handler, \
-        clusters_size=args.clusters_size, \
+        cluster_size=args.cluster_size, \
         max_walltime=args.max_walltime, \
         )
     instance.run()

@@ -7,7 +7,7 @@ TOPDIR=`pwd`
 storageSiteNameDefault="local"
 submitOptionDefault="--submit"
 scratchTypeDefault="1"
-cleanupClustersSizeDefault=15
+cleanupClusterSizeDefault=15
 workDir="work"
 
 ## two files to store the names of the successfully-submitted and submit-failed workflows respectively.
@@ -35,7 +35,7 @@ freeSpace="50000G"
 
 if test $# -lt 2 ; then
 	echo "Usage:"
-	echo "  $0 dagFile computingSiteName [keepIntermediateFiles] [cleanupClustersSize] "
+	echo "  $0 dagFile computingSiteName [keepIntermediateFiles] [cleanupClusterSize] "
 	echo "             [submitOption] [storageSiteName] [finalOutputDir] [relativeWorkDir]"
 	echo ""
 	echo "Note:"
@@ -45,8 +45,8 @@ if test $# -lt 2 ; then
 	echo "  - keepIntermediateFiles: 1 means no intermediate-file cleanup. Anything else (default) means cleanup."
 	echo "     1 will change the default submit option ($submitOptionDefault) to --submit --cleanup none."
 	echo "     This is useful if you want to keep all intermediate files."
-	echo "  - cleanupClustersSize: how many jobs get clustered into one job on each level."
-	echo "     Default is $cleanupClustersSizeDefault."
+	echo "  - cleanupClusterSize: how many jobs get clustered into one job on each level."
+	echo "     Default is $cleanupClusterSizeDefault."
 	echo "  - submitOption: options passed to pegasus-plan. Default is $submitOptionDefault. "
 	echo "     '--submit' means pegasus will plan & submit the workflow."
 	echo "     '--submit --cleanup none' means pegasus will not add intermediate-file cleanup jobs."
@@ -86,7 +86,7 @@ fi
 dagFile=$1
 computingSiteName=$2
 keepIntermediateFiles=$3
-cleanupClustersSize=$4
+cleanupClusterSize=$4
 submitOption=$5
 storageSiteName=$6
 finalOutputDir=$7
@@ -97,12 +97,12 @@ if test "$keepIntermediateFiles" = "1"; then
 	submitOptionDefault="--submit --cleanup none"
 fi
 
-if test -z "$cleanupClustersSize"
+if test -z "$cleanupClusterSize"
 then
-	cleanupClustersSize=$cleanupClustersSizeDefault
+	cleanupClusterSize=$cleanupClusterSizeDefault
 fi
 
-echo cleanupClustersSize is $cleanupClustersSize.
+echo cleanupClusterSize is $cleanupClusterSize.
 
 
 echo "Default submitOption is changed to $submitOptionDefault."
@@ -236,7 +236,7 @@ export CLASSPATH=.:$PEGASUS_HOME/lib/pegasus.jar:$CLASSPATH
 echo Java CLASSPATH is $CLASSPATH
 
 #2013.03.30 "--force " was once added due to a bug. it'll stop file reuse.
-commandLine="pegasus-plan -Dpegasus.file.cleanup.clusters.size=$cleanupClustersSize --conf pegasusrc \
+commandLine="pegasus-plan -Dpegasus.file.cleanup.clusters.size=$cleanupClusterSize --conf pegasusrc \
 	--sites $computingSiteName --dax $dagFile --dir ${workDir} \
 	--relative-dir $relativeWorkDir --output-site $storageSiteName --cluster horizontal $submitOption "
 

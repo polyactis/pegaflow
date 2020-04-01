@@ -3,7 +3,7 @@
 Class Workflow is a class for other programs to inherit and helps to simplify pegasus workflow dax writing.
 """
 import sys, os
-from pegaflow.DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, Job, Dependency
+from . DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, Job, Dependency
 
 src_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -140,14 +140,12 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1, wallti
         job.addProfile(Profile(Namespace.CONDOR, key="request_cpus", value="%s"%(no_of_cpus)) )	#for dynamic slots
     
     if walltime is not None:
-        #scale walltime according to clusters_size
+        #scale walltime according to cluster_size
         job.addProfile(Profile(Namespace.GLOBUS, key="maxwalltime", value="%s"%(walltime)) )
         #TimeToLive is in seconds
         condorJobRequirementLs.append("(Target.TimeToLive>=%s)"%(int(walltime)*60) )
     #key='requirements' could only be added once for the condor profile
     job.addProfile(Profile(Namespace.CONDOR, key="requirements", value=" && ".join(condorJobRequirementLs) ))
-
-setJobProperRequirement = setJobResourceRequirement
 
 def registerFile(workflow, filename):
     """
@@ -175,16 +173,16 @@ def getAbsPathOutOfFile(file):
     """
     return getAbsPathOutOfExecutable(file)
 
-def getExecutableClustersSize(executable=None):
+def getExecutableClusterSize(executable=None):
     """
     default is None
     """
-    clusters_size = None
+    cluster_size = None
     clusteringProf = Profile(Namespace.PEGASUS, key="clusters.size", value="1")
     for profile in executable.profiles:
         if clusteringProf.__hash__() == profile.__hash__():	#__hash__ only involves namespace + key 
-            clusters_size = profile.value
-    return clusters_size
+            cluster_size = profile.value
+    return cluster_size
 
 
 class Workflow(ADAG):
@@ -195,7 +193,7 @@ class Workflow(ADAG):
     pathToInsertHomePathList = []
     def __init__(self, inputSuffixList=None, \
             pegasusFolderName='folder', output_path=None, \
-            site_handler=None, input_site_handler=None, clusters_size=1, \
+            site_handler=None, input_site_handler=None, cluster_size=1, \
             tmpDir='/tmp/', max_walltime=4320, \
             javaPath=None, jvmVirtualByPhysicalMemoryRatio=1.2,\
             debug=False, needSSHDBTunnel=False, report=False):
@@ -204,7 +202,7 @@ class Workflow(ADAG):
         input_site_handler: 'local or same as site_handler. It is the name of the site that has all the input files.'
             'If it is the same as site_handler, the input files will be symlinked.'
             'If input_site_handler=local, input files will be transferred to the computing cluster by pegasus-transfer.'
-        clusters_size: 'The number of pegasus jobs that should be clustered into one job. '
+        cluster_size: 'The number of pegasus jobs that should be clustered into one job. '
             'Good if your workflow contains many quick jobs. It will reduce Pegasus monitor I/O.'
         pegasusFolderName: 'the path relative to the pegasus workflow root. This folder will contains pegasus input & output.'
             'It will be created during the pegasus staging process. It is useful to separate multiple sub-workflows.'
@@ -230,7 +228,7 @@ class Workflow(ADAG):
         self.input_site_handler = input_site_handler
         if not self.input_site_handler:
             self.input_site_handler = self.site_handler
-        self.clusters_size = clusters_size
+        self.cluster_size = cluster_size
         self.tmpDir = tmpDir
         self.max_walltime = max_walltime
         self.javaPath = javaPath
@@ -380,50 +378,36 @@ class Workflow(ADAG):
         self.addExecutableFromPath(path=os.path.join(src_dir, "shell/gzip.sh"), 
             name='gzip', clusterSizeMultipler=1)
         
-    def addExecutables(self, executableClusterSizeMultiplierList=[], defaultClustersSize=None):
+    def setExecutablesClusterSize(self, executableClusterSizeMultiplierList=[], defaultClusterSize=None):
         """
         make sure the profile of clusters.size is not added already.
         """
-        if defaultClustersSize is None:
-            defaultClustersSize = self.clusters_size
+        if defaultClusterSize is None:
+            defaultClusterSize = self.cluster_size
         for executableClusterSizeMultiplierTuple in executableClusterSizeMultiplierList:
             executable = executableClusterSizeMultiplierTuple[0]
             if len(executableClusterSizeMultiplierTuple)==1:
                 clusterSizeMultipler = 1
             else:
                 clusterSizeMultipler = executableClusterSizeMultiplierTuple[1]
-            self.addExecutableWClusterSize(executable=executable, \
-                                        clusterSizeMultipler=clusterSizeMultipler, defaultClustersSize=defaultClustersSize)
+            self.setOrChangeExecutableClusterSize(executable=executable, \
+                clusterSizeMultipler=clusterSizeMultipler, defaultClusterSize=defaultClusterSize)
     
-    addExecutableAndAssignProperClusterSize = addExecutables
-
-    def addExecutableWClusterSize(self, executable=None, clusterSizeMultipler=1, defaultClustersSize=None):
+    def setOrChangeExecutableClusterSize(self, executable=None, clusterSizeMultipler=1, defaultClusterSize=None):
         """
-        clusterSizeMultipler could be any real value >=0. 0 means no clustering, 1=default clustering size.
-
-        i.e.
-            self.addExecutableWClusterSize(executable=CompareTwoGWAssociationLocusByPhenotypeVector, clusterSizeMultipler=0)
+        it will remove the clustering profile if the new clusterSize is <1
         """
-        executable = self.setOrChangeExecutableClusterSize(executable=executable, \
-                                            clusterSizeMultipler=clusterSizeMultipler, defaultClustersSize=defaultClustersSize)
-        if not self.hasExecutable(executable):
-            self.addExecutable(executable)	#removeExecutable() is its counterpart
-            setattr(self, executable.name, executable)
-        return executable
-    addOneExecutableAndAssignProperClusterSize = addExecutableWClusterSize
-
-    def setOrChangeExecutableClusterSize(self, executable=None, clusterSizeMultipler=1, defaultClustersSize=None):
-        """
-        it'll remove the clustering profile if the new clusterSize is <1
-        """
-        if defaultClustersSize is None:
-            defaultClustersSize = self.clusters_size
-        clusterSize = int(defaultClustersSize*clusterSizeMultipler)
+        if defaultClusterSize is None:
+            defaultClusterSize = self.cluster_size
+        clusterSize = int(defaultClusterSize*clusterSizeMultipler)
         clusteringProf = Profile(Namespace.PEGASUS, key="clusters.size", value="%s"%clusterSize)
         if executable.hasProfile(clusteringProf):
             executable.removeProfile(clusteringProf)
         if clusterSize>1:
             executable.addProfile(clusteringProf)
+        if not self.hasExecutable(executable):
+            self.addExecutable(executable)	#removeExecutable() is its counterpart
+            setattr(self, executable.name, executable)
         return executable
 
     def addExecutableFromPath(self, path=None, name=None, clusterSizeMultipler=1, noVersion=False):
@@ -436,13 +420,11 @@ class Workflow(ADAG):
         self.addExecutableWClusterSize(executable=executable, clusterSizeMultipler=clusterSizeMultipler)
         return executable
 
-    addOneExecutableFromPathAndAssignProperClusterSize = addExecutableFromPath
-
-    def getExecutableClustersSize(self, executable=None):
+    def getExecutableClusterSize(self, executable=None):
         """
         default is None
         """
-        return getExecutableClustersSize(executable)
+        return getExecutableClusterSize(executable)
 
     def getFilesWithProperSuffixFromFolder(self, inputFolder=None, suffix='.h5'):
         """
@@ -831,7 +813,7 @@ class Workflow(ADAG):
         job_max_memory: integer, unit in MB.
         max_walltime: integer, in minutes. maximum possible walltime for one or a cluster of jobs.
         walltime: walltime (max running time) for a single job. 
-            For a clustered job, walltime is multiplied by the clusters_size, but less than max_walltime.
+            For a clustered job, walltime is multiplied by the cluster_size, but less than max_walltime.
         objectWithDBArguments: an object that contains database arguments (host, dbname, username, etc.).
         argumentForEachFileInInputFileList: to be added in front of each file in inputFileList.
         frontArgumentList: a list of arguments to be put in front of anything else.
@@ -876,16 +858,16 @@ class Workflow(ADAG):
         if extraArguments:
             job.addArguments(extraArguments)
 
-        # scale walltime according to clusters_size
-        clusters_size = self.getExecutableClustersSize(executable)
-        if clusters_size is not None and clusters_size and walltime is not None:
-            clusters_size = int(clusters_size)
-            if clusters_size>1:
+        # scale walltime according to cluster_size
+        cluster_size = self.getExecutableClusterSize(executable)
+        if cluster_size is not None and cluster_size and walltime is not None:
+            cluster_size = int(cluster_size)
+            if cluster_size>1:
                 if max_walltime is None:
                     max_walltime = self.max_walltime
-                walltime = min(walltime*clusters_size, max_walltime)
+                walltime = min(walltime*cluster_size, max_walltime)
 
-        setJobProperRequirement(job, job_max_memory=job_max_memory, sshDBTunnel=sshDBTunnel,\
+        setJobResourceRequirement(job, job_max_memory=job_max_memory, sshDBTunnel=sshDBTunnel,\
                             no_of_cpus=no_of_cpus, walltime=walltime)
         self.addJob(job)
         job.parentJobLs = []
@@ -1187,7 +1169,7 @@ if __name__ == '__main__':
         " and the input files will be symlinked into the running folder."
         "If the job submission node does not share a file system with the computing site, input_site_handler=local,"
         " and the input files will be transferred to the computing site by pegasus-transfer (need setup).")
-    ap.add_argument("-C", "--clusters_size", type=int, default=1,
+    ap.add_argument("-C", "--cluster_size", type=int, default=1,
             help="Default: %(default)s. "
             "This number decides how many of pegasus jobs should be clustered into one job. "
             "Good if your workflow contains many quick jobs. "
@@ -1226,7 +1208,7 @@ if __name__ == '__main__':
     instance = Workflow(inputSuffixList=args.inputSuffixList,  pegasusFolderName=args.pegasusFolderName, \
         output_path=args.output_path, \
         site_handler=args.site_handler, input_site_handler=args.input_site_handler, \
-        clusters_size=args.clusters_size,\
+        cluster_size=args.cluster_size,\
         tmpDir=args.tmpDir, max_walltime=args.max_walltime, \
         javaPath=args.javaPath, jvmVirtualByPhysicalMemoryRatio=args.jvmVirtualByPhysicalMemoryRatio,\
         debug=args.debug, needSSHDBTunnel=args.needSSHDBTunnel, report=args.report)
