@@ -4,7 +4,7 @@ An example workflow that counts   is a class for other programs to inherit and h
 """
 import sys, os
 from pegaflow.DAX3 import File, PFN, Profile, Namespace, Link, Use, Job, Dependency
-from pegaflow.Workflow import Workflow
+from pegaflow.Workflow import Workflow, getAbsPathOutOfExecutable
 
 # path to the source code's folder
 src_dir = os.path.dirname(os.path.abspath(__file__))
@@ -36,12 +36,24 @@ class WordCountFiles(Workflow):
         Workflow.registerExecutables(self)
         # self.sleep can be used as an Pegasus Executable after self.addExecutableFromPath().
         self.addExecutableFromPath(path="/bin/sleep", name='sleep', clusterSizeMultipler=1)
+        # You can also give a different name to the same executable.
+        # The Pegasus jobs are named after the executables.
+        # Useful when you want to give the jobs different names.
+        # For example:
+        #  Java jobs need the same java executable but may be doing very different things.
+        self.addExecutableFromPath(path="/bin/sleep", name='siesta', clusterSizeMultipler=1)
+
+        # Add a 2nd pipeCommandOutput2File executable with a different name.
+        #   This one will run "cat" to merge all output.
+        self.addExecutableFromPath(path=getAbsPathOutOfExecutable(self.pipeCommandOutput2File), \
+                name='mergeWC', clusterSizeMultipler=1)
 
     def run(self):
         ## setup_run() will call registerExecutables()
         self.setup_run()
         
-        # find all .py files from the input folder
+        # Register all .py files from the input folder
+        #  self.registerOneInputFile('/tmp/abc.txt') can be used to register one input file.
         inputData = self.registerFilesOfInputDir(inputDir=self.input_folder, \
             input_site_handler=self.input_site_handler, inputSuffixSet=self.inputSuffixSet)
         
@@ -51,16 +63,19 @@ class WordCountFiles(Workflow):
         catCommand = self.registerOneExecutableAsFile(path="/bin/cat")
         
         mergedOutputFile = File("merged.txt")
-        #request 500MB memory, 30 minutes run time (walltime).
-        mergeJob= self.addPipeCommandOutput2FileJob(commandFile=catCommand,\
-                outputFile=mergedOutputFile, \
-                transferOutput=True, \
-                job_max_memory=500, \
-                walltime=30)
+        # request 500MB memory, 30 minutes run time (walltime).
+        # executable=self.mergeWC tells this function to use a different executable.
+        #  In order to give this job a different name.
+        #  If executable=None or not given, self.pipeCommandOutput2File is used.
+        mergeJob= self.addPipeCommandOutput2FileJob(executable=self.mergeWC,\
+            commandFile=catCommand, outputFile=mergedOutputFile, \
+            transferOutput=True, 
+            job_max_memory=500, walltime=30)
 
         for jobData in inputData.jobDataLs:
             outputFile = File(f'{jobData.file.name}.wc.output.txt')
             ## wc each input file
+            # Argument "executable" is not given, use self.pipeCommandOutput2File.
             wcJob = self.addPipeCommandOutput2FileJob(
                 commandFile=wcCommand,
                 outputFile=outputFile,
