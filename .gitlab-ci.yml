@@ -17,10 +17,10 @@ test_workflow:
     - cd pegaflow/example/
     - pwd
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
-    - ./submit.sh condor ./wc.python.code.xml
+    - ./submit.sh ./wc.python.code.xml condor
     - pegasus-status work/wc.python.code.*
-    # the workflow should finish within 2 minutes.
-    - sleep 2m
+    # the workflow should finish within 3 minutes.
+    - sleep 3m
     - pegasus-status work/wc.python.code.*
     - grep DAGMAN_FINISHED work/wc.python.code.*/jobstate.log
     - pip3 uninstall -y pegaflow
