@@ -1,13 +1,18 @@
-.idea
+*.egg-info
 **/*.pyc
 **/__pycache__
 **/.*.swp
+pegaflow/example/scratch/**
+pegaflow/example/work/**
+pegaflow/example/sites.xml
 .autotools
 .cproject
 .depend
+.idea
 .project
 .pydevproject
 .settings
+.spyderproject
 .tags
 .tags1
 .vscode
@@ -15,7 +20,5 @@ build
 Debug
 data
 dist
-*.egg-info
 tags
 target
-.spyderproject
