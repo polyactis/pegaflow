@@ -1,0 +1,32 @@
+before_script:
+  - echo "before script"
+
+after_script:
+  - echo "after script"
+
+stages:
+  - test
+
+test_workflow:
+  stage: test
+  script:
+    - echo "Install, pegasus-plan, uninstall."
+    - pwd
+    - export
+    - pip3 install -e ./
+    - cd pegaflow/example/
+    - pwd
+    - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
+    - ./submit.sh condor ./wc.python.code.xml
+    - pegasus-status work/wc.python.code.*
+    # the workflow should finish within 2 minutes.
+    - sleep 2m
+    - pegasus-status work/wc.python.code.*
+    - grep DAGMAN_FINISHED work/wc.python.code.*/jobstate.log
+    - pip3 uninstall -y pegaflow
+  artifacts:
+    name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
+    expire_in: 3 mos
+    paths:
+    - wc.python.code.*/
+
