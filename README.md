@@ -4,7 +4,7 @@ Pegaflow, https://github.com/polyactis/pegaflow, is a package of the Python3 API
 
 [Workflow.py](pegaflow/Workflow.py) is the key difference from the official Pegasus Python APIs. Inheriting [Workflow.py](pegaflow/Workflow.py), users can write Pegasus workflows in an Object-Oriented way. It significantly reduces the amount of coding in writing a Pegasus workflow.
 
-Pegasus jobs do NOT support UNIX pipes while many UNIX programs can only output to stdout. A shell wrapper, [pegaflow/shell/pipeCommandOutput2File.sh](pegaflow/shell/pipeCommandOutput2File.sh), is offered to redirect the output (stdout) of a program to a file. [pegaflow/shell/](pegaflow/shell/) contains a few other useful shell scripts.
+Pegasus jobs do NOT support UNIX pipes while many UNIX programs can only output to stdout. A shell wrapper, [pegaflow/tools/pipeCommandOutput2File.sh](pegaflow/tools/pipeCommandOutput2File.sh), is offered to redirect the output (stdout) of a program to a file. [pegaflow/tools/](pegaflow/tools/) contains a few other useful shell scripts.
 
 * The DAX API (v3) and the helper class Workflow.py
 * The monitoring API
