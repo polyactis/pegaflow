@@ -361,22 +361,22 @@ class Workflow(ADAG):
         """
         """
         if hasattr(self, 'javaPath') and self.javaPath:
-            self.addExecutableFromPath(path=self.javaPath, name='java', clusterSizeMultipler=1)
-        self.addExecutableFromPath(path="/bin/cp", name='cp', clusterSizeMultipler=1)
-        self.addExecutableFromPath(path="/bin/mv", name='mv', clusterSizeMultipler=1)
+            self.addExecutableFromPath(path=self.javaPath, name='java', clusterSizeMultiplier=1)
+        self.addExecutableFromPath(path="/bin/cp", name='cp', clusterSizeMultiplier=1)
+        self.addExecutableFromPath(path="/bin/mv", name='mv', clusterSizeMultiplier=1)
         self.addExecutableFromPath(path=os.path.join(src_dir, "shell/runShellCommand.sh"), \
-                name='runShellCommand', clusterSizeMultipler=1)
+                name='runShellCommand', clusterSizeMultiplier=1)
         self.addExecutableFromPath(path=os.path.join(src_dir, 'shell/pipeCommandOutput2File.sh'), \
-                name='pipeCommandOutput2File', clusterSizeMultipler=1)
+                name='pipeCommandOutput2File', clusterSizeMultiplier=1)
         self.addExecutableFromPath(path=os.path.join(src_dir, 'shell/sortHeaderAware.sh'), \
-                name='sortHeaderAware', clusterSizeMultipler=1)
+                name='sortHeaderAware', clusterSizeMultiplier=1)
         #to be used on pipeCommandOutput2File.sh
         self.sortExecutableFile = self.registerOneExecutableAsFile(path="/usr/bin/sort")
         #mkdirWrap is different from mkdir that it doesn't report error when the directory is already there.
         self.addExecutableFromPath(path=os.path.join(src_dir, 'shell/mkdirWrap.sh'), \
-                                        name='mkdirWrap', clusterSizeMultipler=1)
+                                        name='mkdirWrap', clusterSizeMultiplier=1)
         self.addExecutableFromPath(path=os.path.join(src_dir, "shell/gzip.sh"), 
-            name='gzip', clusterSizeMultipler=1)
+            name='gzip', clusterSizeMultiplier=1)
         
     def setExecutablesClusterSize(self, executableClusterSizeMultiplierList=[], defaultClusterSize=None):
         """
@@ -387,19 +387,19 @@ class Workflow(ADAG):
         for executableClusterSizeMultiplierTuple in executableClusterSizeMultiplierList:
             executable = executableClusterSizeMultiplierTuple[0]
             if len(executableClusterSizeMultiplierTuple)==1:
-                clusterSizeMultipler = 1
+                clusterSizeMultiplier = 1
             else:
-                clusterSizeMultipler = executableClusterSizeMultiplierTuple[1]
+                clusterSizeMultiplier = executableClusterSizeMultiplierTuple[1]
             self.setExecutableClusterSize(executable=executable, \
-                clusterSizeMultipler=clusterSizeMultipler, defaultClusterSize=defaultClusterSize)
+                clusterSizeMultiplier=clusterSizeMultiplier, defaultClusterSize=defaultClusterSize)
     
-    def setExecutableClusterSize(self, executable=None, clusterSizeMultipler=1, defaultClusterSize=None):
+    def setExecutableClusterSize(self, executable=None, clusterSizeMultiplier=1, defaultClusterSize=None):
         """
         it will remove the clustering profile if the new clusterSize is <1
         """
         if defaultClusterSize is None:
             defaultClusterSize = self.cluster_size
-        clusterSize = int(defaultClusterSize*clusterSizeMultipler)
+        clusterSize = int(defaultClusterSize*clusterSizeMultiplier)
         clusteringProf = Profile(Namespace.PEGASUS, key="clusters.size", value="%s"%clusterSize)
         if executable.hasProfile(clusteringProf):
             executable.removeProfile(clusteringProf)
@@ -410,14 +410,14 @@ class Workflow(ADAG):
             setattr(self, executable.name, executable)
         return executable
 
-    def addExecutableFromPath(self, path=None, name=None, clusterSizeMultipler=1, noVersion=False):
+    def addExecutableFromPath(self, path=None, name=None, clusterSizeMultiplier=1, noVersion=False):
         """
         combination of constructOneExecutableObject() & setExecutableClusterSize()
         """
-        if clusterSizeMultipler is None:
-            clusterSizeMultipler = 1
+        if clusterSizeMultiplier is None:
+            clusterSizeMultiplier = 1
         executable = self.constructOneExecutableObject(path=path, name=name, noVersion=noVersion)
-        self.setExecutableClusterSize(executable=executable, clusterSizeMultipler=clusterSizeMultipler)
+        self.setExecutableClusterSize(executable=executable, clusterSizeMultiplier=clusterSizeMultiplier)
         return executable
 
     def getExecutableClusterSize(self, executable=None):

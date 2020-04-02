@@ -36,18 +36,18 @@ class WordCountFiles(Workflow):
         """
         Workflow.registerExecutables(self)
         # self.sleep can be used as an Pegasus Executable after self.addExecutableFromPath().
-        self.addExecutableFromPath(path="/bin/sleep", name='sleep', clusterSizeMultipler=1)
+        self.addExecutableFromPath(path="/bin/sleep", name='sleep', clusterSizeMultiplier=1)
         # You can also give a different name to the same executable.
         # The Pegasus jobs are named after the executables.
         # Useful when you want to give the jobs different names.
         # For example:
         #  Java jobs need the same java executable but may be doing very different things.
-        self.addExecutableFromPath(path="/bin/sleep", name='siesta', clusterSizeMultipler=1)
+        self.addExecutableFromPath(path="/bin/sleep", name='siesta', clusterSizeMultiplier=1)
 
         # Add a 2nd pipeCommandOutput2File executable with a different name.
         #   This one will run "cat" to merge all output.
         self.addExecutableFromPath(path=getAbsPathOutOfExecutable(self.pipeCommandOutput2File), \
-                name='mergeWC', clusterSizeMultipler=1)
+                name='mergeWC', clusterSizeMultiplier=1)
 
     def run(self):
         ## setup_run() will call registerExecutables()

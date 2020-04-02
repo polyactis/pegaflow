@@ -87,7 +87,7 @@ class WordCountFiles(Workflow):
     def registerExecutables(self):
         Workflow.registerExecutables(self)
         # self.sleep can be used as an Pegasus Executable after self.addExecutableFromPath().
-        self.addExecutableFromPath(path="/bin/sleep", name='sleep', clusterSizeMultipler=1)
+        self.addExecutableFromPath(path="/bin/sleep", name='sleep', clusterSizeMultiplier=1)
         ...
 
     def run(self):
