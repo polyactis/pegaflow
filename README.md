@@ -22,7 +22,7 @@ This package's source code is adapted from https://github.com/pegasus-isi/pegasu
 Install pegaflow:
 
 ```python
-pip3 install pegaflow
+pip3 install --upgrade pegaflow
 ```
 
 Pegasus and HTCondor (Condor) are only required on computers where you intend to submit and run workflows. 
