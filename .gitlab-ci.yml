@@ -1,5 +1,7 @@
 before_script:
   - echo "before script"
+  # let users can modify its own files. git object files are 444 (read-only for everyone.)
+  - chmod u+w -R .git/
   - pip3 install --user ./
 
 after_script:

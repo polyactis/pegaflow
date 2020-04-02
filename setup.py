@@ -20,6 +20,8 @@ def create_manifest_file():
     f = None
     try:
         f = open('MANIFEST.in', 'w')
+        #include all files in pegaflow/example
+        f.write('recursive-include pegaflow/example *\n')
         f.write('global-exclude *.py[cod]\n')
     finally:
         if f:
