@@ -364,18 +364,18 @@ class Workflow(ADAG):
             self.addExecutableFromPath(path=self.javaPath, name='java', clusterSizeMultiplier=1)
         self.addExecutableFromPath(path="/bin/cp", name='cp', clusterSizeMultiplier=1)
         self.addExecutableFromPath(path="/bin/mv", name='mv', clusterSizeMultiplier=1)
-        self.addExecutableFromPath(path=os.path.join(src_dir, "shell/runShellCommand.sh"), \
+        self.addExecutableFromPath(path=os.path.join(src_dir, "tools/runShellCommand.sh"), \
                 name='runShellCommand', clusterSizeMultiplier=1)
-        self.addExecutableFromPath(path=os.path.join(src_dir, 'shell/pipeCommandOutput2File.sh'), \
+        self.addExecutableFromPath(path=os.path.join(src_dir, 'tools/pipeCommandOutput2File.sh'), \
                 name='pipeCommandOutput2File', clusterSizeMultiplier=1)
-        self.addExecutableFromPath(path=os.path.join(src_dir, 'shell/sortHeaderAware.sh'), \
+        self.addExecutableFromPath(path=os.path.join(src_dir, 'tools/sortHeaderAware.sh'), \
                 name='sortHeaderAware', clusterSizeMultiplier=1)
         #to be used on pipeCommandOutput2File.sh
         self.sortExecutableFile = self.registerOneExecutableAsFile(path="/usr/bin/sort")
         #mkdirWrap is different from mkdir that it doesn't report error when the directory is already there.
-        self.addExecutableFromPath(path=os.path.join(src_dir, 'shell/mkdirWrap.sh'), \
+        self.addExecutableFromPath(path=os.path.join(src_dir, 'tools/mkdirWrap.sh'), \
                                         name='mkdirWrap', clusterSizeMultiplier=1)
-        self.addExecutableFromPath(path=os.path.join(src_dir, "shell/gzip.sh"), 
+        self.addExecutableFromPath(path=os.path.join(src_dir, "tools/gzip.sh"), 
             name='gzip', clusterSizeMultiplier=1)
         
     def setExecutablesClusterSize(self, executableClusterSizeMultiplierList=[], defaultClusterSize=None):

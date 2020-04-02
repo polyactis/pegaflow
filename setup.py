@@ -20,7 +20,6 @@ def create_manifest_file():
     f = None
     try:
         f = open('MANIFEST.in', 'w')
-        f.write('recursive-exclude pegaflow/test *\n')
         f.write('global-exclude *.py[cod]\n')
     finally:
         if f:
@@ -71,7 +70,10 @@ setup_args = dict(
         "License :: OSI Approved :: Apache Software License",
     ],
     packages=find_packages(exclude=['pegaflow.test*']),
-    package_data={"pegaflow.service": find_package_data("pegaflow/service/")},
+    package_data={
+        # If any package contains *.sh files, include them:
+        "": ["*.sh", "*.md", "pegasusrc"],
+    },
     include_package_data=True,
     zip_safe=False,
 )

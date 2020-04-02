@@ -22,5 +22,6 @@ build
 Debug
 data
 dist
+MANIFEST.in
 tags
 target

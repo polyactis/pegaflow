@@ -1,6 +1,6 @@
 before_script:
   - echo "before script"
-  - pip3 install ./
+  - pip3 install --user ./
 
 after_script:
   - echo "after script"
