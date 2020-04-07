@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-Class Workflow is a class for other programs to inherit and helps to simplify pegasus workflow dax writing.
+1. Class Workflow is a class for other programs to inherit and helps to simplify pegasus workflow dax writing.
+2. Functions that help to simplify coding:
+   setJobResourceRequirement()
+   addMkDirJob()
+   registerFile()
 """
 import sys, os
 from . DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, Job, Dependency
@@ -526,10 +530,12 @@ class Workflow(ADAG):
             pegasusFile = self.registerOneInputFile(inputFname='/tmp/abc.txt')
         
         useAbsolutePathAsPegasusFileName:
-            This would render the file to be referred as the absolute path on the running computer.
+            This would render the file to be referred as the absolute path on the running nodes.
             And pegasus will not symlink or copy/transfer the file.
-            Set it to True only if you don't want to add the file to the job as an INPUT dependency (as it's accessed through abs path).
-        folderName: if given, it will cause the file to be put into that folder (relative path) within the pegasus workflow running folder.
+            Set it to True only if you don't want to add the file to the job
+              as an INPUT dependency (as it's accessed through abs path).
+        folderName: if given, it will cause the file to be put into that folder
+              (relative path) within the pegasus workflow running folder.
             This folder needs to be created by a mkdir job.
         Return: pegasusFile.abspath or pegasusFile.absPath is the absolute path of the file.
         """
