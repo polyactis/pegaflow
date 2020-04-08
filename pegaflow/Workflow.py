@@ -11,6 +11,36 @@ from . DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, J
 
 src_dir = os.path.dirname(os.path.abspath(__file__))
 
+namespace = "pegasus"
+version = "1.0"
+architecture = "x86_64"
+operatingSystem = "linux"
+
+def setExecutableClusterSize(workflow, executable=None, cluster_size=10):
+    """
+    it will remove the clustering profile if the new cluster_size is <1.
+    """
+    if cluster_size is not None and cluster_size>1:
+        clusteringProf = Profile(Namespace.PEGASUS, key="clusters.size", value="%s"%cluster_size)
+        if executable.hasProfile(clusteringProf):
+            executable.removeProfile(clusteringProf)
+        executable.addProfile(clusteringProf)
+    if not workflow.hasExecutable(executable):
+        workflow.addExecutable(executable)	#removeExecutable() is its counterpart
+        setattr(workflow, executable.name, executable)
+    return executable
+
+def registerExecutable(workflow, path=None, cluster_size=10, \
+        site_handler=None, executableName=None):
+    if executableName is None:
+        executableName = os.path.basename(path)
+    executable = Executable(namespace=namespace, name=executableName,
+                         os=operatingSystem, arch=architecture,
+                         installed=True, version=version)
+    executable.addPFN(PFN("file://" + os.path.abspath(path), site_handler))
+    workflow.addExecutable(executable)
+    setExecutableClusterSize(workflow, executable=executable, cluster_size=cluster_size)
+    return executable
 class PassingData(object):
     """
     a class to hold any data structure
@@ -188,6 +218,92 @@ def getExecutableClusterSize(executable=None):
             cluster_size = profile.value
     return cluster_size
 
+def registerOneInputFile(workflow=None, inputFname=None, site_handler=None, folderName="", \
+                    useAbsolutePathAsPegasusFileName=False,\
+                    pegasusFileName=None, checkFileExistence=True):
+    """
+    Register a single input file to pegasus.
+
+    Examples:
+        pegasusFile = registerOneInputFile(inputFname='/tmp/abc.txt')
+        
+    useAbsolutePathAsPegasusFileName:
+        This would render the file to be referred as the absolute path on the running nodes.
+        And pegasus will not symlink or copy/transfer the file.
+        Set it to True only if you don't want to add the file to the job 
+            as an INPUT dependency (as it's accessed through abs path).
+    folderName: if given, it will cause the file to be put into that folder
+         (relative path) within the pegasus workflow running folder.
+        This folder needs to be created by a mkdir job.
+    Return: pegasusFile.abspath or pegasusFile.absPath is the absolute path of the file.
+    """
+    if not pegasusFileName:
+        if useAbsolutePathAsPegasusFileName:
+           	#this will stop symlinking/transferring,
+            # and also no need to indicate them as file dependency for jobs.
+            pegasusFileName = os.path.abspath(inputFname)
+        else:
+            pegasusFileName = os.path.join(folderName, os.path.basename(inputFname))
+    pegasusFile = File(pegasusFileName)
+    if checkFileExistence and not os.path.isfile(inputFname):
+        sys.stderr.write("Error from registerOneInputFile(): %s does not exist.\n"%(inputFname))
+        raise
+    pegasusFile.abspath = os.path.abspath(inputFname)
+    pegasusFile.absPath = pegasusFile.abspath
+    pegasusFile.addPFN(PFN("file://" + pegasusFile.abspath, site_handler))
+    if not workflow.hasFile(pegasusFile):
+        workflow.addFile(pegasusFile)
+    return pegasusFile
+
+def registerFilesOfInputDir(workflow=None, inputDir=None,  inputFnameLs=None, \
+            inputSuffixSet=None, site_handler=None, pegasusFolderName='', \
+            **keywords):
+    """
+    This function registers all files in inputDir (if present) and inputFnameLs (if not None).
+    """
+    if inputFnameLs is None:
+        inputFnameLs = []
+    if inputDir and os.path.isdir(inputDir):
+        fnameLs = os.listdir(inputDir)
+        for fname in fnameLs:
+            inputFname = os.path.realpath(os.path.join(inputDir, fname))
+            inputFnameLs.append(inputFname)
+
+    print(f"Registering {len(inputFnameLs)} input files with suffix in {inputSuffixSet} ... ", \
+        flush=True, end='')
+    inputFileList = []
+    counter = 0
+    for inputFname in inputFnameLs:
+        counter += 1
+        # file.fastq.gz's suffix is .fastq, not .gz.
+        suffix = getRealPrefixSuffixOfFilenameWithVariableSuffix(inputFname)[1]
+        if inputSuffixSet is not None and len(inputSuffixSet)>0 and suffix not in inputSuffixSet:
+            #skip input whose suffix is not in inputSuffixSet if inputSuffixSet is a non-empty set.
+            continue
+        inputFile = File(os.path.join(pegasusFolderName, os.path.basename(inputFname)))
+        inputFile.addPFN(PFN("file://" + inputFname, site_handler))
+        inputFile.abspath = inputFname
+        workflow.addFile(inputFile)
+        inputFileList.append(inputFile)
+    print(f"{len(inputFileList)} out of {len(inputFnameLs)} files registered. Done.", flush=True)
+    return inputFileList
+
+def addJob2workflow(workflow, executable, input_file_list, output_file_transfer_list,
+                output_file_notransfer_list, argv):
+    the_job = Job(namespace=namespace, name=executable.name, version=version)
+    if argv:
+        the_job.addArguments(*argv)
+    if input_file_list:
+        for input_file in input_file_list:
+            the_job.uses(input_file, link=Link.INPUT, transfer=True, register=True)
+    
+    if output_file_transfer_list:
+        for output_file in output_file_transfer_list:
+            the_job.uses(output_file, link=Link.OUTPUT, transfer=True)
+    if output_file_notransfer_list:
+        for output_file in output_file_notransfer_list:
+            the_job.uses(output_file, link=Link.OUTPUT, transfer=False)
+    return the_job
 
 class Workflow(ADAG):
     __doc__ = __doc__

@@ -11,7 +11,7 @@ after_script:
 stages:
   - test
 
-test_workflow:
+test_OO:
   stage: test
   script:
     - echo "Generate and submit the workflow ... "
@@ -29,3 +29,21 @@ test_workflow:
     paths:
     - pegaflow/example/merged.txt
 
+
+test_function:
+  stage: test
+  script:
+    - echo "Generate and submit the workflow ... "
+    - pwd
+    - cd pegaflow/example/
+    - ./WCFiles_Function.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
+    - ./submit.sh ./wc.python.code.xml condor
+    - pegasus-status work/wc.python.code.*
+    - ../test/run_til_workflow_end.sh work/wc.python.code.*/jobstate.log
+    - pegasus-status work/wc.python.code.*
+    - mv wc.python.code.*/merged.txt ./
+  artifacts:
+    name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
+    expire_in: 3 mos
+    paths:
+    - pegaflow/example/merged.txt
