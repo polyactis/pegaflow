@@ -1221,7 +1221,6 @@ class Workflow(ADAG):
             i.e.
             simulateOutputDirJob = self.addMkDirJob(outputDir=simulateOutputDir)
         """
-        from pymodule.pegasus import yh_pegasus
         if namespace is None:
             namespace = self.namespace
         if version is None:
