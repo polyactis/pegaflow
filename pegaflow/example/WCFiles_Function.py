@@ -38,11 +38,11 @@ if __name__ == '__main__':
         inputSuffixSet=inputSuffixSet, site_handler=args.site_handler, \
         checkFileExistence=True)
     # use this shell wrapper
-    pipeCommandOutput2File_path = os.path.join(src_dir, '../tools/pipeCommandOutput2File.sh')
+    pipe2File_path = os.path.join(src_dir, '../tools/pipe2File.sh')
     
-    pipeCommandOutput2File = Workflow.registerExecutable(wflow, pipeCommandOutput2File_path, \
+    pipe2File = Workflow.registerExecutable(wflow, pipe2File_path, \
                 cluster_size=args.cluster_size, site_handler=args.site_handler)
-    mergeWC = Workflow.registerExecutable(wflow, pipeCommandOutput2File_path, \
+    mergeWC = Workflow.registerExecutable(wflow, pipe2File_path, \
                 cluster_size=args.cluster_size, site_handler=args.site_handler,
                 executableName='mergeWC')
     sleep = Workflow.registerExecutable(wflow, path="/bin/sleep", cluster_size=args.cluster_size,\
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     for input_file in input_file_list:
         ## wc each input file
         output_file = File(f'{input_file.name}.wc.output.txt')
-        wcJob = Workflow.addJob2workflow(workflow=wflow, executable=pipeCommandOutput2File,
+        wcJob = Workflow.addJob2workflow(workflow=wflow, executable=pipe2File,
                     input_file_list=[input_file],
                     output_file_transfer_list=None,
                     output_file_notransfer_list=[output_file],

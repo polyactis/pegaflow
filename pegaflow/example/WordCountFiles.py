@@ -44,9 +44,9 @@ class WordCountFiles(Workflow):
         #  Java jobs need the same java executable but may be doing very different things.
         self.addExecutableFromPath(path="/bin/sleep", name='siesta', clusterSizeMultiplier=1)
 
-        # Add a 2nd pipeCommandOutput2File executable with a different name.
+        # Add a 2nd pipe2File executable with a different name.
         #   This one will run "cat" to merge all output.
-        self.addExecutableFromPath(path=getAbsPathOutOfExecutable(self.pipeCommandOutput2File), \
+        self.addExecutableFromPath(path=getAbsPathOutOfExecutable(self.pipe2File), \
                 name='mergeWC', clusterSizeMultiplier=1)
 
     def run(self):
@@ -58,8 +58,8 @@ class WordCountFiles(Workflow):
         inputData = self.registerFilesOfInputDir(inputDir=self.input_folder, \
             input_site_handler=self.input_site_handler, inputSuffixSet=self.inputSuffixSet)
         
-        # Pegasus jobs do NOT allow pipes. So use pipeCommandOutput2File (already registered in Workflow.py).
-        # register wc and cat as they will be used by pipeCommandOutput2File.
+        # Pegasus jobs do NOT allow pipes. So use pipe2File (already registered in Workflow.py).
+        # register wc and cat as they will be used by pipe2File.
         wcCommand = self.registerOneExecutableAsFile(path="/usr/bin/wc")
         catCommand = self.registerOneExecutableAsFile(path="/bin/cat")
         
@@ -67,8 +67,8 @@ class WordCountFiles(Workflow):
         # request 500MB memory, 30 minutes run time (walltime).
         # executable=self.mergeWC tells this function to use a different executable.
         #  In order to give this job a different name.
-        #  If executable=None or not given, self.pipeCommandOutput2File is used.
-        mergeJob= self.addPipeCommandOutput2FileJob(executable=self.mergeWC,\
+        #  If executable=None or not given, self.pipe2File is used.
+        mergeJob= self.addPipe2FileJob(executable=self.mergeWC,\
             commandFile=catCommand, outputFile=mergedOutputFile, \
             transferOutput=True, 
             job_max_memory=500, walltime=30)
@@ -76,15 +76,15 @@ class WordCountFiles(Workflow):
         for jobData in inputData.jobDataLs:
             outputFile = File(f'{jobData.file.name}.wc.output.txt')
             ## wc each input file
-            # Argument "executable" is not given, use self.pipeCommandOutput2File.
-            wcJob = self.addPipeCommandOutput2FileJob(
+            # Argument "executable" is not given, use self.pipe2File.
+            wcJob = self.addPipe2FileJob(
                 commandFile=wcCommand,
                 outputFile=outputFile,
                 parentJob=None, parentJobLs=None, 
                 extraArgumentList=[jobData.file], \
                 extraDependentInputLs=[jobData.file], extraOutputLs=None, \
                 transferOutput=False)
-            # add wcJob.output (outputFile passed to addPipeCommandOutput2FileJob() above) as the input of mergeJob.
+            # add wcJob.output (outputFile passed to addPipe2FileJob() above) as the input of mergeJob.
             #   It appends input to the end of a job's exising arguments).
             #   wcJob.output will be a dependent input of mergeJob.
             # addInputToMergeJob() also adds wcJob as a parent of mergeJob.

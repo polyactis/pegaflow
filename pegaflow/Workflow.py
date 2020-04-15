@@ -486,11 +486,11 @@ class Workflow(ADAG):
         self.addExecutableFromPath(path="/bin/mv", name='mv', clusterSizeMultiplier=1)
         self.addExecutableFromPath(path=os.path.join(src_dir, "tools/runShellCommand.sh"), \
                 name='runShellCommand', clusterSizeMultiplier=1)
-        self.addExecutableFromPath(path=os.path.join(src_dir, 'tools/pipeCommandOutput2File.sh'), \
-                name='pipeCommandOutput2File', clusterSizeMultiplier=1)
+        self.addExecutableFromPath(path=os.path.join(src_dir, 'tools/pipe2File.sh'), \
+                name='pipe2File', clusterSizeMultiplier=1)
         self.addExecutableFromPath(path=os.path.join(src_dir, 'tools/sortHeaderAware.sh'), \
                 name='sortHeaderAware', clusterSizeMultiplier=1)
-        #to be used on pipeCommandOutput2File.sh
+        #to be used on pipe2File.sh
         self.sortExecutableFile = self.registerOneExecutableAsFile(path="/usr/bin/sort")
         #mkdirWrap is different from mkdir that it doesn't report error when the directory is already there.
         self.addExecutableFromPath(path=os.path.join(src_dir, 'tools/mkdirWrap.sh'), \
@@ -1089,22 +1089,22 @@ class Workflow(ADAG):
                     key2ObjectForJob=key2ObjectForJob, no_of_cpus=no_of_cpus, walltime=walltime, **keywords)
         return job
 
-    def addPipeCommandOutput2FileJob(self, executable=None, commandFile=None, \
+    def addPipe2FileJob(self, executable=None, commandFile=None, \
                     outputFile=None, extraOutputLs=None, transferOutput=False, \
                     parentJobLs=None, extraDependentInputLs=None, \
                     extraArgumentList=None, sshDBTunnel=None,\
                     job_max_memory=200, walltime=120, **keywords):
         """
-        Call shell/pipeCommandOutput2File to redirect stdout output to outputFile.
-            shell/pipeCommandOutput2File.sh outputFile commandFile [commandArguments]
-        executable can be None (Default: self.pipeCommandOutput2File).
+        Call shell/pipe2File to redirect stdout output to outputFile.
+            shell/pipe2File.sh outputFile commandFile [commandArguments]
+        executable can be None (Default: self.pipe2File).
         commandFile could be None.
 
         Examples:
             bwaCommand = self.registerOneExecutableAsFile(path="/usr/bin/bwa")
             extraArgumentList=[alignment_method.command]	#add mem first
             extraArgumentList.extend(["-a -M", refFastaFile] + fastqFileList)
-            alignmentJob = self.addGenericPipeCommandOutput2FileJob(executable=self.BWA_Mem, commandFile=bwaCommand, \
+            alignmentJob = self.addPipe2FileJob(executable=self.BWA_Mem, commandFile=bwaCommand, \
                         outputFile=alignmentSamF, \
                         extraOutputLs=None, transferOutput=transferOutput, \
                         parentJobLs=parentJobLs, extraDependentInputLs=[refFastaFile] + fastqFileList, \
@@ -1114,7 +1114,7 @@ class Workflow(ADAG):
                         **keywords)
             
             sortedSNPID2NewCoordinateFile = File(os.path.join(reduceOutputDirJob.output, 'SNPID2NewCoordinates.sorted.tsv'))
-            sortSNPID2NewCoordinatesJob = self.addGenericPipeCommandOutput2FileJob(executable=self.pipeCommandOutput2File, \
+            sortSNPID2NewCoordinatesJob = self.addPipe2FileJob(executable=self.pipe2File, \
                     commandFile=self.sortExecutableFile, \
                     outputFile=sortedSNPID2NewCoordinateFile, \
                     extraOutputLs=None, transferOutput=False, \
@@ -1126,7 +1126,7 @@ class Workflow(ADAG):
             
             #skip executable
             sortedVCFFile = File(os.path.join(self.liftOverReduceDirJob.output, '%s.sorted.vcf'%(seqTitle)))
-            vcfSorterJob = self.addGenericPipeCommandOutput2FileJob(commandFile=self.vcfsorterExecutableFile, \
+            vcfSorterJob = self.addPipe2FileJob(commandFile=self.vcfsorterExecutableFile, \
                     outputFile=sortedVCFFile, \
                     extraOutputLs=None, transferOutput=False, \
                     parentJobLs=[selectOneChromosomeVCFJob, self.liftOverReduceDirJob], \
@@ -1136,7 +1136,7 @@ class Workflow(ADAG):
 
         """
         if executable is None:
-            executable = self.pipeCommandOutput2File
+            executable = self.pipe2File
         if extraDependentInputLs is None:
             extraDependentInputLs = []
         if not extraArgumentList:

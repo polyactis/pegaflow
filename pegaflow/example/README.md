@@ -45,16 +45,16 @@ $ ./submit.sh condor ./wc.python.code.xml
 $ pegasus_status work/...
 STAT  IN_STATE  JOB                                                                                                           
 Run      00:13  wc_python_condor_2-0 ( /home/user/src/pegaflow/pegaflow/example/work/wc.python.code.2020.Apr.1T113305 )       
-Idle     00:08   ┣━merge_pegasus-pipeCommandOutput2File-1_0_PID1_ID27                                                         
-Idle     00:08   ┣━merge_pegasus-pipeCommandOutput2File-1_0_PID1_ID26                                                     
-Idle     00:08   ┣━merge_pegasus-pipeCommandOutput2File-1_0_PID1_ID29                                    
-Idle     00:08   ┣━merge_pegasus-pipeCommandOutput2File-1_0_PID1_ID28                                  
-Idle     00:08   ┣━merge_pegasus-pipeCommandOutput2File-1_0_PID1_ID23                                                  
-Idle     00:03   ┣━merge_pegasus-pipeCommandOutput2File-1_0_PID1_ID22                         
-Idle     00:03   ┣━merge_pegasus-pipeCommandOutput2File-1_0_PID1_ID25                                                  
-Idle     00:03   ┣━merge_pegasus-pipeCommandOutput2File-1_0_PID1_ID24                                                         
-Idle     00:03   ┣━merge_pegasus-pipeCommandOutput2File-1_0_PID1_ID1                                                          
-Idle     00:03   ┗━merge_pegasus-pipeCommandOutput2File-1_0_PID1_ID2                                     
+Idle     00:08   ┣━merge_pegasus-pipe2File-1_0_PID1_ID27                                                         
+Idle     00:08   ┣━merge_pegasus-pipe2File-1_0_PID1_ID26                                                     
+Idle     00:08   ┣━merge_pegasus-pipe2File-1_0_PID1_ID29                                    
+Idle     00:08   ┣━merge_pegasus-pipe2File-1_0_PID1_ID28                                  
+Idle     00:08   ┣━merge_pegasus-pipe2File-1_0_PID1_ID23                                                  
+Idle     00:03   ┣━merge_pegasus-pipe2File-1_0_PID1_ID22                         
+Idle     00:03   ┣━merge_pegasus-pipe2File-1_0_PID1_ID25                                                  
+Idle     00:03   ┣━merge_pegasus-pipe2File-1_0_PID1_ID24                                                         
+Idle     00:03   ┣━merge_pegasus-pipe2File-1_0_PID1_ID1                                                          
+Idle     00:03   ┗━merge_pegasus-pipe2File-1_0_PID1_ID2                                     
 Summary: 11 Condor jobs total (I:10 R:1)                                                               
                                                                                                                
 UNREADY   READY     PRE  QUEUED    POST SUCCESS FAILURE %DONE                                            
