@@ -75,8 +75,6 @@ test_local:
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l local -o wc.python.code.xml -C 1
     - ./submit.sh ./wc.python.code.xml local
     - pegasus-status work/wc.python.code.*
-    - ../test/run_til_workflow_end.sh work/wc.python.code.*/jobstate.log
-    - pegasus-status work/wc.python.code.*
     - mv wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
