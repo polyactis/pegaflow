@@ -2,20 +2,37 @@ before_script:
   - echo "before script"
   # let users can modify its own files. git object files are 444 (read-only for everyone.)
   - chmod u+w -R .git/
-  - pip3 install --user ./
+  - pwd
 
 after_script:
   - echo "after script"
-  - pip3 uninstall -y pegaflow
+
 
 stages:
+  - install
   - test
+  - uninstall
+
+install:
+  stage: install
+  script:
+    - pip3 install --user ./
+
+uninstall:
+  stage: uninstall
+  script:
+    - pip3 uninstall -y pegaflow
+
+test_version:
+  stage: test
+  script:
+    - echo "Checking the installed version"
+    - python3 -c "import pegaflow; print(pegaflow.version)"
 
 test_OO:
   stage: test
   script:
     - echo "Generate and submit the workflow ... "
-    - pwd
     - cd pegaflow/example/
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
     - ./submit.sh ./wc.python.code.xml condor
@@ -34,7 +51,6 @@ test_function:
   stage: test
   script:
     - echo "Generate and submit the workflow ... "
-    - pwd
     - cd pegaflow/example/
     - ./WCFiles_Function.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
     - ./submit.sh ./wc.python.code.xml condor
@@ -47,3 +63,4 @@ test_function:
     expire_in: 3 mos
     paths:
     - pegaflow/example/merged.txt
+
