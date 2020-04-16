@@ -217,14 +217,14 @@ def getExecutableClusterSize(executable=None):
     return cluster_size
 
 
-def registerOneInputFile(workflow, inputFname, site_handler, folderName="", \
+def registerOneInputFile(workflow, input_path, site_handler, folderName="", \
                     useAbsolutePathAsPegasusFileName=False,\
                     pegasusFileName=None, checkFileExistence=True):
     """
     Register a single input file to pegasus.
 
     Examples:
-        pegasusFile = registerOneInputFile(inputFname='/tmp/abc.txt')
+        pegasusFile = registerOneInputFile(input_path='/tmp/abc.txt')
         
     useAbsolutePathAsPegasusFileName:
         This would render the file to be referred as the absolute path on the running nodes.
@@ -240,14 +240,14 @@ def registerOneInputFile(workflow, inputFname, site_handler, folderName="", \
         if useAbsolutePathAsPegasusFileName:
            	#this will stop symlinking/transferring,
             # and also no need to indicate them as file dependency for jobs.
-            pegasusFileName = os.path.abspath(inputFname)
+            pegasusFileName = os.path.abspath(input_path)
         else:
-            pegasusFileName = os.path.join(folderName, os.path.basename(inputFname))
+            pegasusFileName = os.path.join(folderName, os.path.basename(input_path))
     pegasusFile = File(pegasusFileName)
-    if checkFileExistence and not os.path.isfile(inputFname):
-        sys.stderr.write("Error from registerOneInputFile(): %s does not exist.\n"%(inputFname))
+    if checkFileExistence and not os.path.isfile(input_path):
+        sys.stderr.write("Error from registerOneInputFile(): %s does not exist.\n"%(input_path))
         raise
-    pegasusFile.abspath = os.path.abspath(inputFname)
+    pegasusFile.abspath = os.path.abspath(input_path)
     pegasusFile.absPath = pegasusFile.abspath
     pegasusFile.addPFN(PFN("file://" + pegasusFile.abspath, site_handler))
     if not workflow.hasFile(pegasusFile):
@@ -255,37 +255,37 @@ def registerOneInputFile(workflow, inputFname, site_handler, folderName="", \
     return pegasusFile
 
 
-def registerFilesOfInputDir(workflow, inputDir, inputFnameLs=None, \
+def registerFilesOfInputDir(workflow, inputDir, input_path_list=None, \
             inputSuffixSet=None, site_handler=None, pegasusFolderName='', \
             **keywords):
     """
-    This function registers all files in inputDir (if present) and inputFnameLs (if not None).
+    This function registers all files in inputDir (if present) and input_path_list (if not None).
     """
-    if inputFnameLs is None:
-        inputFnameLs = []
+    if input_path_list is None:
+        input_path_list = []
     if inputDir and os.path.isdir(inputDir):
         fnameLs = os.listdir(inputDir)
         for fname in fnameLs:
-            inputFname = os.path.realpath(os.path.join(inputDir, fname))
-            inputFnameLs.append(inputFname)
+            input_path = os.path.realpath(os.path.join(inputDir, fname))
+            input_path_list.append(input_path)
 
-    print(f"Registering {len(inputFnameLs)} input files with suffix in {inputSuffixSet} ... ", \
+    print(f"Registering {len(input_path_list)} input files with suffix in {inputSuffixSet} ... ", \
         flush=True, end='')
     inputFileList = []
     counter = 0
-    for inputFname in inputFnameLs:
+    for input_path in input_path_list:
         counter += 1
         # file.fastq.gz's suffix is .fastq, not .gz.
-        suffix = getRealPrefixSuffixOfFilenameWithVariableSuffix(inputFname)[1]
+        suffix = getRealPrefixSuffixOfFilenameWithVariableSuffix(input_path)[1]
         if inputSuffixSet is not None and len(inputSuffixSet)>0 and suffix not in inputSuffixSet:
             #skip input whose suffix is not in inputSuffixSet if inputSuffixSet is a non-empty set.
             continue
-        inputFile = File(os.path.join(pegasusFolderName, os.path.basename(inputFname)))
-        inputFile.addPFN(PFN("file://" + inputFname, site_handler))
-        inputFile.abspath = inputFname
+        inputFile = File(os.path.join(pegasusFolderName, os.path.basename(input_path)))
+        inputFile.addPFN(PFN("file://" + input_path, site_handler))
+        inputFile.abspath = input_path
         workflow.addFile(inputFile)
         inputFileList.append(inputFile)
-    print(f"{len(inputFileList)} out of {len(inputFnameLs)} files registered. Done.", flush=True)
+    print(f"{len(inputFileList)} out of {len(input_path_list)} files registered. Done.", flush=True)
     return inputFileList
 
 
@@ -551,17 +551,17 @@ class Workflow(ADAG):
         """
         """
         sys.stderr.write("Getting files with %s as suffix from %s ..."%(suffix, inputFolder))
-        inputFnameLs = []
+        input_path_list = []
         counter = 0
         for filename in os.listdir(inputFolder):
             prefix, file_suffix = os.path.splitext(filename)
             counter += 1
             if file_suffix==suffix:
-                inputFnameLs.append(os.path.join(inputFolder, filename))
-        sys.stderr.write("%s files out of %s total.\n"%(len(inputFnameLs), counter))
-        return inputFnameLs
+                input_path_list.append(os.path.join(inputFolder, filename))
+        sys.stderr.write("%s files out of %s total.\n"%(len(input_path_list), counter))
+        return input_path_list
 
-    def getFilesWithSuffixFromFolderRecursive(self, inputFolder=None, suffixSet=set(['.h5']), fakeSuffix='.gz', inputFnameLs=[]):
+    def getFilesWithSuffixFromFolderRecursive(self, inputFolder=None, suffixSet=set(['.h5']), fakeSuffix='.gz', input_path_list=[]):
         """
         similar to getFilesWithProperSuffixFromFolder() but recursively go through all sub-folders
             and it uses utils.getRealPrefixSuffixOfFilenameWithVariableSuffix() to get the suffix.
@@ -569,66 +569,66 @@ class Workflow(ADAG):
         sys.stderr.write("Getting files with %s as suffix (%s as fake suffix) from %s ...\n"%(repr(suffixSet), fakeSuffix, inputFolder))
         counter = 0
         for filename in os.listdir(inputFolder):
-            inputFname = os.path.join(inputFolder, filename)
+            input_path = os.path.join(inputFolder, filename)
             counter += 1
-            if os.path.isfile(inputFname):
+            if os.path.isfile(input_path):
                 prefix, file_suffix = getRealPrefixSuffixOfFilenameWithVariableSuffix(filename, fakeSuffix=fakeSuffix)
                 if file_suffix in suffixSet:
-                    inputFnameLs.append(inputFname)
-            elif os.path.isdir(inputFname):
-                self.getFilesWithSuffixFromFolderRecursive(inputFname, suffixSet=suffixSet, \
-                    fakeSuffix=fakeSuffix, inputFnameLs=inputFnameLs)
-        sys.stderr.write("%s files out of %s total.\n"%(len(inputFnameLs), counter))
-        #return inputFnameLs
+                    input_path_list.append(input_path)
+            elif os.path.isdir(input_path):
+                self.getFilesWithSuffixFromFolderRecursive(input_path, suffixSet=suffixSet, \
+                    fakeSuffix=fakeSuffix, input_path_list=input_path_list)
+        sys.stderr.write("%s files out of %s total.\n"%(len(input_path_list), counter))
+        #return input_path_list
 
-    def registerFilesOfInputDir(self, inputDir=None,  inputFnameLs=None, input_site_handler=None, \
+    def registerFilesOfInputDir(self, inputDir=None,  input_path_list=None, input_site_handler=None, \
                 pegasusFolderName='', inputSuffixSet=None, indexFileSuffixSet=set(['.tbi', '.fai']),\
                 **keywords):
         """
-        This function registers all files in inputDir (if present) and inputFnameLs (if not None).
+        This function registers all files in inputDir (if present) and input_path_list (if not None).
         indexFileSuffixSet is used to add additional index files related to an input file.
             assuming index file name is original filename + indexFileSuffix.
         """
-        if inputFnameLs is None:
-            inputFnameLs = []
+        if input_path_list is None:
+            input_path_list = []
         if inputDir and os.path.isdir(inputDir):
             fnameLs = os.listdir(inputDir)
             for fname in fnameLs:
-                inputFname = os.path.realpath(os.path.join(inputDir, fname))
-                inputFnameLs.append(inputFname)
+                input_path = os.path.realpath(os.path.join(inputDir, fname))
+                input_path_list.append(input_path)
 
         if inputSuffixSet is None:
             inputSuffixSet = self.inputSuffixSet
-        print(f"Registering {len(inputFnameLs)} input files with suffix in {inputSuffixSet} ... ", \
+        print(f"Registering {len(input_path_list)} input files with suffix in {inputSuffixSet} ... ", \
             flush=True, end='')
         returnData = PassingData(jobDataLs = [])
         counter = 0
-        for inputFname in inputFnameLs:
+        for input_path in input_path_list:
             counter += 1
-            suffix = getRealPrefixSuffixOfFilenameWithVariableSuffix(inputFname)[1]	#default fakeSuffixSet includes .gz
+            suffix = getRealPrefixSuffixOfFilenameWithVariableSuffix(input_path)[1]	#default fakeSuffixSet includes .gz
             if inputSuffixSet is not None and len(inputSuffixSet)>0 and suffix not in inputSuffixSet:
                 #skip input whose suffix is not in inputSuffixSet if inputSuffixSet is a non-empty set.
                 continue
             if indexFileSuffixSet is not None and len(indexFileSuffixSet)>0 and suffix in indexFileSuffixSet:
                 #skip index files, they are affiliates of real input data files.
                 continue
-            inputFile = File(os.path.join(pegasusFolderName, os.path.basename(inputFname)))
-            inputFile.addPFN(PFN("file://" + inputFname, input_site_handler))
-            inputFile.abspath = inputFname
+            inputFile = File(os.path.join(pegasusFolderName, os.path.basename(input_path)))
+            inputFile.addPFN(PFN("file://" + input_path, input_site_handler))
+            inputFile.abspath = input_path
             self.addFile(inputFile)
             jobData = PassingData(output=inputFile, job=None, jobLs=[], \
                                 file=inputFile, fileLs=[inputFile], indexFileLs=[])
             #find all index files.
             for indexFileSuffix in indexFileSuffixSet:
-                indexFilename = '%s%s'%(inputFname, indexFileSuffix)
+                indexFilename = '%s%s'%(input_path, indexFileSuffix)
                 if os.path.isfile(indexFilename):
-                    indexFile = self.registerOneInputFile(inputFname=indexFilename, \
+                    indexFile = self.registerOneInputFile(input_path=indexFilename, \
                                     input_site_handler=input_site_handler, folderName=pegasusFolderName, \
                                     useAbsolutePathAsPegasusFileName=False, checkFileExistence=True)
                     jobData.fileLs.append(indexFile)
                     jobData.indexFileLs.append(indexFile)
             returnData.jobDataLs.append(jobData)
-        print(f"{len(returnData.jobDataLs)} out of {len(inputFnameLs)} possible files registered. Done.", flush=True)
+        print(f"{len(returnData.jobDataLs)} out of {len(input_path_list)} possible files registered. Done.", flush=True)
         return returnData
 
     def registerFilesAsInputToJob(self, job, inputFileList):
@@ -639,12 +639,12 @@ class Workflow(ADAG):
             self.addJobUse(job=job, file=inputFile, transfer=True, register=True, link=Link.INPUT)
             #job.uses(inputFile, transfer=True, register=True, link=Link.INPUT)
 
-    def registerOneInputFile(self, inputFname=None, input_site_handler=None, folderName="", \
+    def registerOneInputFile(self, input_path=None, input_site_handler=None, folderName="", \
                             useAbsolutePathAsPegasusFileName=False,\
                             pegasusFileName=None, checkFileExistence=True):
         """
         Examples:
-            pegasusFile = self.registerOneInputFile(inputFname='/tmp/abc.txt')
+            pegasusFile = self.registerOneInputFile(input_path='/tmp/abc.txt')
         
         useAbsolutePathAsPegasusFileName:
             This would render the file to be referred as the absolute path on the running nodes.
@@ -661,14 +661,14 @@ class Workflow(ADAG):
         if not pegasusFileName:
             if useAbsolutePathAsPegasusFileName:
                 #this will stop symlinking/transferring , and also no need to indicate them as file dependency for jobs.
-                pegasusFileName = os.path.abspath(inputFname)
+                pegasusFileName = os.path.abspath(input_path)
             else:
-                pegasusFileName = os.path.join(folderName, os.path.basename(inputFname))
+                pegasusFileName = os.path.join(folderName, os.path.basename(input_path))
         pegasusFile = File(pegasusFileName)
-        if checkFileExistence and not os.path.isfile(inputFname):
-            sys.stderr.write("Error from registerOneInputFile(): %s does not exist.\n"%(inputFname))
+        if checkFileExistence and not os.path.isfile(input_path):
+            sys.stderr.write("Error from registerOneInputFile(): %s does not exist.\n"%(input_path))
             raise
-        pegasusFile.abspath = os.path.abspath(inputFname)
+        pegasusFile.abspath = os.path.abspath(input_path)
         pegasusFile.absPath = pegasusFile.abspath
         pegasusFile.addPFN(PFN("file://" + pegasusFile.abspath, input_site_handler))
         if not self.hasFile(pegasusFile):
@@ -684,7 +684,7 @@ class Workflow(ADAG):
             site_handler = self.site_handler	#usually they are same
         if not folderName:
             folderName = "jar"
-        pegasusFile = self.registerOneInputFile(inputFname=path, input_site_handler=site_handler, 
+        pegasusFile = self.registerOneInputFile(input_path=path, input_site_handler=site_handler, 
                             folderName=folderName, 
                             useAbsolutePathAsPegasusFileName=useAbsolutePathAsPegasusFileName)
         setattr(self, name, pegasusFile)
@@ -710,7 +710,7 @@ class Workflow(ADAG):
             folderName = "executable"
         if not pythonVariableName:
             pythonVariableName = f'{os.path.basename(path)}ExecutableFile'
-        pegasusFile = self.registerOneInputFile(inputFname=path, input_site_handler=site_handler, \
+        pegasusFile = self.registerOneInputFile(input_path=path, input_site_handler=site_handler, \
                                 folderName=folderName, \
                                 useAbsolutePathAsPegasusFileName=useAbsolutePathAsPegasusFileName)
         setattr(self, pythonVariableName, pegasusFile)

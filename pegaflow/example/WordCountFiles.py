@@ -77,7 +77,8 @@ class WordCountFiles(Workflow):
         outputDir = 'output'
         outputDirJob = self.addMkDirJob(outputDir=outputDir)
         for jobData in inputData.jobDataLs:
-            outputFile = File(os.path.join(outputDir, f'{jobData.file.name}.wc.output.txt'))
+            outputFile = File(os.path.join(outputDir, 
+                f'{os.path.basename(jobData.file.name)}.wc.output.txt'))
             ## wc each input file
             # Argument "executable" is not given, use self.pipe2File.
             wcJob = self.addPipe2FileJob(

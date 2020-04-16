@@ -49,9 +49,9 @@ if __name__ == '__main__':
 
     mergedOutputFile = File("merged.txt")
     mergeJob= Workflow.addJob2workflow(wflow, mergeWC,
-                    input_file_list=[],
+                    input_file_list=None,
                     output_file_transfer_list=[mergedOutputFile],
-                    output_file_notransfer_list=[],
+                    output_file_notransfer_list=None,
                     argv=[mergedOutputFile, '/bin/cat'])
     wflow.addJob(mergeJob)
     # request 500MB memory, 30 minutes run time (walltime).
@@ -61,9 +61,10 @@ if __name__ == '__main__':
     outputDir = 'output'
     outputDirJob = Workflow.addMkDirJob(wflow, mkdir, outputDir)
 
+    ## wc each input file
     for input_file in input_file_list:
-        ## wc each input file
-        output_file = File(os.path.join(outputDir, f'{input_file.name}.wc.output.txt'))
+        output_file = File(os.path.join(outputDir, 
+            f'{os.path.basename(input_file.name)}.wc.output.txt'))
         wcJob = Workflow.addJob2workflow(workflow=wflow, executable=pipe2File,
                     input_file_list=[input_file],
                     output_file_transfer_list=None,
