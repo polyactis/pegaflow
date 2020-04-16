@@ -2,9 +2,6 @@
 """
 1. Class Workflow is a class for other programs to inherit and helps to simplify pegasus workflow dax writing.
 2. Functions that help to simplify coding:
-   setJobResourceRequirement()
-   addMkDirJob()
-   registerFile()
 """
 import sys, os
 from . DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, Job, Dependency
@@ -16,7 +13,7 @@ version = "1.0"
 architecture = "x86_64"
 operatingSystem = "linux"
 
-def setExecutableClusterSize(workflow, executable=None, cluster_size=10):
+def setExecutableClusterSize(workflow, executable, cluster_size=1):
     """
     it will remove the clustering profile if the new cluster_size is <1.
     """
@@ -30,8 +27,9 @@ def setExecutableClusterSize(workflow, executable=None, cluster_size=10):
         setattr(workflow, executable.name, executable)
     return executable
 
-def registerExecutable(workflow, path=None, cluster_size=10, \
-        site_handler=None, executableName=None):
+
+def registerExecutable(workflow, path, site_handler, 
+        executableName=None, cluster_size=1):
     if executableName is None:
         executableName = os.path.basename(path)
     executable = Executable(namespace=namespace, name=executableName,
@@ -39,8 +37,10 @@ def registerExecutable(workflow, path=None, cluster_size=10, \
                          installed=True, version=version)
     executable.addPFN(PFN("file://" + os.path.abspath(path), site_handler))
     workflow.addExecutable(executable)
-    setExecutableClusterSize(workflow, executable=executable, cluster_size=cluster_size)
+    setExecutableClusterSize(workflow, executable, cluster_size=cluster_size)
     return executable
+
+
 class PassingData(object):
     """
     a class to hold any data structure
@@ -71,6 +71,7 @@ class PassingData(object):
             i.e. pdata.chromosome or pdata['chromosome'] is equivalent if attribute 0 is chromosome.
         """
         return self.__getattribute__(key)
+
 
 def getListOutOfStr(list_in_str=None, data_type=int, separator1=',', separator2='-'):
     """
@@ -108,7 +109,9 @@ def getListOutOfStr(list_in_str=None, data_type=int, separator1=',', separator2=
     list_to_return = map(data_type, list_to_return)
     return list_to_return
 
-def getRealPrefixSuffixOfFilenameWithVariableSuffix(path, fakeSuffix='.gz', fakeSuffixSet = set(['.gz', '.zip', '.bz2', '.bz'])):
+
+def getRealPrefixSuffixOfFilenameWithVariableSuffix(path, fakeSuffix='.gz', 
+    fakeSuffixSet = set(['.gz', '.zip', '.bz2', '.bz'])):
     """
     The purpose of this function is to get the prefix, suffix of a filename regardless of whether it
         has two suffices (gzipped) or one. 
@@ -126,16 +129,15 @@ def getRealPrefixSuffixOfFilenameWithVariableSuffix(path, fakeSuffix='.gz', fake
     return fname_prefix, fname_suffix
 
 
-def addMkDirJob(workflow=None, mkdir=None, outputDir=None, namespace=None, version=None,\
-            parentJobLs=None, extraDependentInputLs=None):
+def addMkDirJob(workflow, executable, outputDir, parentJobLs=None, extraDependentInputLs=None):
     """
     """
     # Add a mkdir job for any directory.
-    job = Job(namespace=getattr(workflow, 'namespace', namespace), name=mkdir.name, \
-                version=getattr(workflow, 'version', version))
+    job = Job(name=executable.name, namespace=namespace, version=version)
     job.addArguments(outputDir)
-    job.folder = outputDir	#custom attribute
-    job.output = outputDir	#custom attribute
+    #two attributes for child jobs to get the output directory.
+    job.folder = outputDir
+    job.output = outputDir
     workflow.addJob(job)
     if parentJobLs:
         for parentJob in parentJobLs:
@@ -165,13 +167,16 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1, wallti
         job_max_memory = 500
     if job_max_memory is not None: 
         job.addProfile(Profile(Namespace.GLOBUS, key="maxmemory", value="%s"%(job_max_memory)))
-        job.addProfile(Profile(Namespace.CONDOR, key="request_memory", value="%s"%(job_max_memory)))	#for dynamic slots
+       	#for dynamic slots
+        job.addProfile(Profile(Namespace.CONDOR, key="request_memory", value="%s"%(job_max_memory)))
         condorJobRequirementLs.append("(memory>=%s)"%(job_max_memory))
     if sshDBTunnel==1:
-        condorJobRequirementLs.append("(sshDBTunnel==%s)"%(sshDBTunnel))	#use ==, not =.
+       	#use ==, not =.
+        condorJobRequirementLs.append("(sshDBTunnel==%s)"%(sshDBTunnel))
     
     if no_of_cpus is not None:
-        job.addProfile(Profile(Namespace.CONDOR, key="request_cpus", value="%s"%(no_of_cpus)) )	#for dynamic slots
+       	#for dynamic slots
+        job.addProfile(Profile(Namespace.CONDOR, key="request_cpus", value="%s"%(no_of_cpus)) )
     
     if walltime is not None:
         #scale walltime according to cluster_size
@@ -179,17 +184,9 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1, wallti
         #TimeToLive is in seconds
         condorJobRequirementLs.append("(Target.TimeToLive>=%s)"%(int(walltime)*60) )
     #key='requirements' could only be added once for the condor profile
-    job.addProfile(Profile(Namespace.CONDOR, key="requirements", value=" && ".join(condorJobRequirementLs) ))
+    job.addProfile(Profile(Namespace.CONDOR, key="requirements", 
+        value=" && ".join(condorJobRequirementLs) ))
 
-def registerFile(workflow, filepath):
-    """
-    function to register any file to the workflow.input_site_handler, 
-    """
-    file = File(os.path.basename(filepath))
-    file.addPFN(PFN("file://" + os.path.abspath(filepath), \
-                                workflow.input_site_handler))
-    workflow.addFile(file)
-    return file
 
 def getAbsPathOutOfExecutable(executable):
     """
@@ -214,11 +211,13 @@ def getExecutableClusterSize(executable=None):
     cluster_size = None
     clusteringProf = Profile(Namespace.PEGASUS, key="clusters.size", value="1")
     for profile in executable.profiles:
-        if clusteringProf.__hash__() == profile.__hash__():	#__hash__ only involves namespace + key 
+        #__hash__ only involves namespace + key 
+        if clusteringProf.__hash__() == profile.__hash__():
             cluster_size = profile.value
     return cluster_size
 
-def registerOneInputFile(workflow=None, inputFname=None, site_handler=None, folderName="", \
+
+def registerOneInputFile(workflow, inputFname, site_handler, folderName="", \
                     useAbsolutePathAsPegasusFileName=False,\
                     pegasusFileName=None, checkFileExistence=True):
     """
@@ -255,7 +254,8 @@ def registerOneInputFile(workflow=None, inputFname=None, site_handler=None, fold
         workflow.addFile(pegasusFile)
     return pegasusFile
 
-def registerFilesOfInputDir(workflow=None, inputDir=None,  inputFnameLs=None, \
+
+def registerFilesOfInputDir(workflow, inputDir, inputFnameLs=None, \
             inputSuffixSet=None, site_handler=None, pegasusFolderName='', \
             **keywords):
     """
@@ -287,6 +287,7 @@ def registerFilesOfInputDir(workflow=None, inputDir=None,  inputFnameLs=None, \
         inputFileList.append(inputFile)
     print(f"{len(inputFileList)} out of {len(inputFnameLs)} files registered. Done.", flush=True)
     return inputFileList
+
 
 def addJob2workflow(workflow, executable, input_file_list, output_file_transfer_list,
                 output_file_notransfer_list, argv):
@@ -481,21 +482,21 @@ class Workflow(ADAG):
         """
         """
         if hasattr(self, 'javaPath') and self.javaPath:
-            self.addExecutableFromPath(path=self.javaPath, name='java', clusterSizeMultiplier=1)
-        self.addExecutableFromPath(path="/bin/cp", name='cp', clusterSizeMultiplier=1)
-        self.addExecutableFromPath(path="/bin/mv", name='mv', clusterSizeMultiplier=1)
-        self.addExecutableFromPath(path=os.path.join(src_dir, "tools/runShellCommand.sh"), \
+            self.registerOneExecutable(path=self.javaPath, name='java', clusterSizeMultiplier=1)
+        self.registerOneExecutable(path="/bin/cp", name='cp', clusterSizeMultiplier=1)
+        self.registerOneExecutable(path="/bin/mv", name='mv', clusterSizeMultiplier=1)
+        self.registerOneExecutable(path=os.path.join(src_dir, "tools/runShellCommand.sh"), \
                 name='runShellCommand', clusterSizeMultiplier=1)
-        self.addExecutableFromPath(path=os.path.join(src_dir, 'tools/pipe2File.sh'), \
+        self.registerOneExecutable(path=os.path.join(src_dir, 'tools/pipe2File.sh'), \
                 name='pipe2File', clusterSizeMultiplier=1)
-        self.addExecutableFromPath(path=os.path.join(src_dir, 'tools/sortHeaderAware.sh'), \
+        self.registerOneExecutable(path=os.path.join(src_dir, 'tools/sortHeaderAware.sh'), \
                 name='sortHeaderAware', clusterSizeMultiplier=1)
         #to be used on pipe2File.sh
         self.sortExecutableFile = self.registerOneExecutableAsFile(path="/usr/bin/sort")
         #mkdirWrap is different from mkdir that it doesn't report error when the directory is already there.
-        self.addExecutableFromPath(path=os.path.join(src_dir, 'tools/mkdirWrap.sh'), \
+        self.registerOneExecutable(path=os.path.join(src_dir, 'tools/mkdirWrap.sh'), \
                                         name='mkdirWrap', clusterSizeMultiplier=1)
-        self.addExecutableFromPath(path=os.path.join(src_dir, "tools/gzip.sh"), 
+        self.registerOneExecutable(path=os.path.join(src_dir, "tools/gzip.sh"), 
             name='gzip', clusterSizeMultiplier=1)
         
     def setExecutablesClusterSize(self, executableClusterSizeMultiplierList=[], defaultClusterSize=None):
@@ -530,7 +531,7 @@ class Workflow(ADAG):
             setattr(self, executable.name, executable)
         return executable
 
-    def addExecutableFromPath(self, path=None, name=None, clusterSizeMultiplier=1, noVersion=False):
+    def registerOneExecutable(self, path=None, name=None, clusterSizeMultiplier=1, noVersion=False):
         """
         combination of constructOneExecutableObject() & setExecutableClusterSize()
         """
@@ -683,31 +684,35 @@ class Workflow(ADAG):
             site_handler = self.site_handler	#usually they are same
         if not folderName:
             folderName = "jar"
-        pegasusFile = self.registerOneInputFile(inputFname=path, input_site_handler=site_handler, \
-                                            folderName=folderName, useAbsolutePathAsPegasusFileName=useAbsolutePathAsPegasusFileName)
+        pegasusFile = self.registerOneInputFile(inputFname=path, input_site_handler=site_handler, 
+                            folderName=folderName, 
+                            useAbsolutePathAsPegasusFileName=useAbsolutePathAsPegasusFileName)
         setattr(self, name, pegasusFile)
         return pegasusFile
 
-    def registerOneExecutableAsFile(self, pythonVariableName=None, path=None, site_handler=None, \
-                                folderName="", useAbsolutePathAsPegasusFileName=False):
+    def registerOneExecutableAsFile(self, path=None, site_handler=None, pythonVariableName=None,
+                    folderName=None, useAbsolutePathAsPegasusFileName=False):
         """
+        This function is used when an executable will be the input of another program.
+        It is rarely needed.
+
         Examples:
             self.samtoolsExecutableFile = self.registerOneExecutableAsFile(path=self.samtools_path,\
-                                                    input_site_handler=self.input_site_handler)
+                                    input_site_handler=self.input_site_handler)
             self.registerOneExecutableAsFile(pythonVariableName="bwaExecutableFile", path=self.bwa_path)
 
-        pythonVariableName is used for access like self.pythonVariableName within python dag generator.
-        useAbsolutePathAsPegasusFileName=True if you do not plan to add the file as INPUT dependency for jobs.
+        Set pythonVariableName to overwrite the default. 
+        Set useAbsolutePathAsPegasusFileName=True if you do NOT plan to add the file as INPUT dependency for jobs.
         """
         if site_handler is None:
             site_handler = self.site_handler
         if not folderName:
             folderName = "executable"
         if not pythonVariableName:
-            pythonVariableName = '%sExecutableFile'%(os.path.basename(path))
+            pythonVariableName = f'{os.path.basename(path)}ExecutableFile'
         pegasusFile = self.registerOneInputFile(inputFname=path, input_site_handler=site_handler, \
-                                            folderName=folderName, \
-                                            useAbsolutePathAsPegasusFileName=useAbsolutePathAsPegasusFileName)
+                                folderName=folderName, \
+                                useAbsolutePathAsPegasusFileName=useAbsolutePathAsPegasusFileName)
         setattr(self, pythonVariableName, pegasusFile)
         return pegasusFile
 
@@ -1228,7 +1233,7 @@ class Workflow(ADAG):
         if executable is None:
             executable = self.mkdirWrap
 
-        return addMkDirJob(workflow=self, mkdir=executable, outputDir=outputDir, \
+        return addMkDirJob(workflow=self, executable=executable, outputDir=outputDir, \
             namespace=namespace, version=version,\
             parentJobLs=parentJobLs, extraDependentInputLs=extraDependentInputLs)
 

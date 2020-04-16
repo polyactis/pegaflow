@@ -35,18 +35,18 @@ class WordCountFiles(Workflow):
         """
         """
         Workflow.registerExecutables(self)
-        # self.sleep can be used as an Pegasus Executable after self.addExecutableFromPath().
-        self.addExecutableFromPath(path="/bin/sleep", name='sleep', clusterSizeMultiplier=1)
+        # self.sleep can be used as an Pegasus Executable after self.registerOneExecutable().
+        self.registerOneExecutable(path="/bin/sleep", name='sleep', clusterSizeMultiplier=1)
         # You can also give a different name to the same executable.
         # The Pegasus jobs are named after the executables.
         # Useful when you want to give the jobs different names.
         # For example:
         #  Java jobs need the same java executable but may be doing very different things.
-        self.addExecutableFromPath(path="/bin/sleep", name='siesta', clusterSizeMultiplier=1)
+        self.registerOneExecutable(path="/bin/sleep", name='siesta', clusterSizeMultiplier=1)
 
         # Add a 2nd pipe2File executable with a different name.
         #   This one will run "cat" to merge all output.
-        self.addExecutableFromPath(path=getAbsPathOutOfExecutable(self.pipe2File), \
+        self.registerOneExecutable(path=getAbsPathOutOfExecutable(self.pipe2File), \
                 name='mergeWC', clusterSizeMultiplier=1)
 
     def run(self):
@@ -55,8 +55,9 @@ class WordCountFiles(Workflow):
         
         # Register all .py files from the input folder
         #  self.registerOneInputFile('/tmp/abc.txt') can be used to register one input file.
-        inputData = self.registerFilesOfInputDir(inputDir=self.input_folder, \
-            input_site_handler=self.input_site_handler, inputSuffixSet=self.inputSuffixSet)
+        inputData = self.registerFilesOfInputDir(inputDir=self.input_folder, 
+            input_site_handler=self.input_site_handler, inputSuffixSet=self.inputSuffixSet, 
+            pegasusFolderName='input')
         
         # Pegasus jobs do NOT allow pipes. So use pipe2File (already registered in Workflow.py).
         # register wc and cat as they will be used by pipe2File.
@@ -72,15 +73,17 @@ class WordCountFiles(Workflow):
             commandFile=catCommand, outputFile=mergedOutputFile, \
             transferOutput=True, 
             job_max_memory=500, walltime=30)
-
+        
+        outputDir = 'output'
+        outputDirJob = self.addMkDirJob(outputDir=outputDir)
         for jobData in inputData.jobDataLs:
-            outputFile = File(f'{jobData.file.name}.wc.output.txt')
+            outputFile = File(os.path.join(outputDir, f'{jobData.file.name}.wc.output.txt'))
             ## wc each input file
             # Argument "executable" is not given, use self.pipe2File.
             wcJob = self.addPipe2FileJob(
                 commandFile=wcCommand,
                 outputFile=outputFile,
-                parentJob=None, parentJobLs=None, 
+                parentJob=None, parentJobLs=[outputDirJob], 
                 extraArgumentList=[jobData.file], \
                 extraDependentInputLs=[jobData.file], extraOutputLs=None, \
                 transferOutput=False)

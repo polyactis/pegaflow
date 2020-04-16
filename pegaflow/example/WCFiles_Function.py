@@ -33,23 +33,22 @@ if __name__ == '__main__':
             separator1=',', separator2='-')
     inputSuffixSet = set(inputSuffixList)
     wflow = ADAG("pegasus_test")
-    input_file_list = Workflow.registerFilesOfInputDir(workflow=wflow, \
-        inputDir=args.input_folder,
-        inputSuffixSet=inputSuffixSet, site_handler=args.site_handler, \
+    input_file_list = Workflow.registerFilesOfInputDir(wflow, \
+        args.input_folder, inputSuffixSet=inputSuffixSet, 
+        pegasusFolderName='input', site_handler=args.site_handler, \
         checkFileExistence=True)
-    # use this shell wrapper
+    # use this shell wrapper for shell commands that output to stdout
     pipe2File_path = os.path.join(src_dir, '../tools/pipe2File.sh')
     
-    pipe2File = Workflow.registerExecutable(wflow, pipe2File_path, \
-                cluster_size=args.cluster_size, site_handler=args.site_handler)
-    mergeWC = Workflow.registerExecutable(wflow, pipe2File_path, \
-                cluster_size=args.cluster_size, site_handler=args.site_handler,
-                executableName='mergeWC')
-    sleep = Workflow.registerExecutable(wflow, path="/bin/sleep", cluster_size=args.cluster_size,\
-        site_handler=args.site_handler)
+    pipe2File = Workflow.registerExecutable(wflow, pipe2File_path, 
+                args.site_handler, cluster_size=args.cluster_size)
+    mergeWC = Workflow.registerExecutable(wflow, pipe2File_path, args.site_handler, 
+                executableName='mergeWC', cluster_size=args.cluster_size)
+    sleep = Workflow.registerExecutable(wflow, "/bin/sleep", args.site_handler, 
+                cluster_size=args.cluster_size)
 
     mergedOutputFile = File("merged.txt")
-    mergeJob= Workflow.addJob2workflow(workflow=wflow, executable=mergeWC,
+    mergeJob= Workflow.addJob2workflow(wflow, mergeWC,
                     input_file_list=[],
                     output_file_transfer_list=[mergedOutputFile],
                     output_file_notransfer_list=[],
@@ -58,14 +57,19 @@ if __name__ == '__main__':
     # request 500MB memory, 30 minutes run time (walltime).
     Workflow.setJobResourceRequirement(job=mergeJob, job_max_memory=500, walltime=30)
 
+    mkdir = Workflow.registerExecutable(wflow, '/bin/mkdir', args.site_handler)
+    outputDir = 'output'
+    outputDirJob = Workflow.addMkDirJob(wflow, mkdir, outputDir)
+
     for input_file in input_file_list:
         ## wc each input file
-        output_file = File(f'{input_file.name}.wc.output.txt')
+        output_file = File(os.path.join(outputDir, f'{input_file.name}.wc.output.txt'))
         wcJob = Workflow.addJob2workflow(workflow=wflow, executable=pipe2File,
                     input_file_list=[input_file],
                     output_file_transfer_list=None,
                     output_file_notransfer_list=[output_file],
                     argv=[output_file, '/bin/cat', input_file])
+        wflow.addDependency(Dependency(parent=outputDirJob, child=wcJob))
         Workflow.setJobResourceRequirement(job=wcJob, job_max_memory=200)
         wflow.addJob(wcJob)
         #add wcJob's output as input to mergeJob
