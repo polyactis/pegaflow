@@ -18,7 +18,6 @@ if __name__ == '__main__':
     continue_to_monitor = True
     counter = 0
     while continue_to_monitor:
-        print(f'Round {counter}.', flush=True)
         time.sleep(args.interval)
         input_file = open(args.jobstate_path, 'r')
         for line in input_file:
