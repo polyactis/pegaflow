@@ -159,7 +159,7 @@ cat >sites.xml <<EOF
              xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
              xsi:schemaLocation="http://pegasus.isi.edu/schema/sitecatalog http://pegasus.isi.edu/schema/sc-4.0.xsd"
              version="4.0">
-	<site  handle="local" arch="x86_64" os="LINUX">
+	<site handle="local" arch="x86_64" os="LINUX">
 		<directory type="shared-scratch" path="$TOPDIR/scratch">
 			<file-server operation="all" url="file://$TOPDIR/scratch"/>
 		</directory>
@@ -170,7 +170,10 @@ cat >sites.xml <<EOF
 		<profile namespace="env" key="HOME">$HOME</profile>
 		<profile namespace="env" key="PATH" >$HOME_DIR/bin:$PATH</profile>
 	</site>
-	<site  handle="condor" arch="x86_64" os="LINUX">
+	<site handle="condor" arch="x86_64" os="LINUX">
+		<directory type="shared-scratch" path="$TOPDIR/scratch">
+			<file-server operation="all" url="file://$TOPDIR/scratch"/>
+		</directory>
 		<!-- Change the style to HTCondor for jobs to be executed in the HTCondor Pool.
 			By default, Pegasus creates jobs suitable for grid execution. -->
 		<profile namespace="pegasus" key="style" >condor</profile>
