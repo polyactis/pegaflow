@@ -4,8 +4,10 @@
 2. Functions that help to simplify coding:
 """
 import sys, os
-from . DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, Job, Dependency
-from . import PassingData, getListOutOfStr, getRealPrefixSuffixOfFilenameWithVariableSuffix, setJobResourceRequirement
+from . DAX3 import Executable, File, PFN, Profile, Namespace, 
+    Link, ADAG, Use, Job, Dependency
+from . import PassingData, getListOutOfStr, getRealPrefixSuffixOfFilenameWithVariableSuffix, 
+    setJobResourceRequirement, getExecutableClusterSize
 
 src_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -243,12 +245,6 @@ class Workflow(ADAG):
         executable = self.constructOneExecutableObject(path=path, name=name, noVersion=noVersion)
         self.setExecutableClusterSize(executable=executable, clusterSizeMultiplier=clusterSizeMultiplier)
         return executable
-
-    def getExecutableClusterSize(self, executable=None):
-        """
-        default is None
-        """
-        return getExecutableClusterSize(executable)
 
     def getFilesWithProperSuffixFromFolder(self, inputFolder=None, suffix='.h5'):
         """
