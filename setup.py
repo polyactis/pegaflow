@@ -51,7 +51,7 @@ def find_package_data(dirname):
 
 setup_args = dict(
     name="Pegaflow",
-    version="0.0.7",
+    version="0.0.8",
     author="Yu S. Huang",
     author_email="polyactis@gmail.com",
     description="Pegasus DAX Python API with a helper class",

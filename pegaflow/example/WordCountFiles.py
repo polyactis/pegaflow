@@ -4,7 +4,8 @@ An example workflow that word-counts files.
 """
 import sys, os
 from pegaflow.DAX3 import File
-from pegaflow.Workflow import Workflow, getAbsPathOutOfExecutable
+from pegaflow.Workflow import Workflow
+from pegaflow import getAbsPathOutOfExecutable
 
 # path to the source code's folder.
 # a convenient variable to add executables from the same folder.
