@@ -686,7 +686,7 @@ class Workflow(ADAG):
             job.addArguments(extraArguments)
 
         # scale walltime according to cluster_size
-        cluster_size = self.getExecutableClusterSize(executable)
+        cluster_size = getExecutableClusterSize(executable)
         if cluster_size is not None and cluster_size and walltime is not None:
             cluster_size = int(cluster_size)
             if cluster_size>1:
