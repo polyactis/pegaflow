@@ -38,7 +38,7 @@ test_OO:
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
     - ./submit.sh ./wc.python.code.xml condor
     - sleep 5 && pegasus-status work/wc.python.code.*
-    - ../test/run_til_workflow_end.sh work/wc.python.code.*/jobstate.log
+    - ../test/run_til_workflow_end.py -j work/wc.python.code.*/jobstate.log
     - pegasus-status work/wc.python.code.*
     - mv wc.python.code.*/merged.txt ./
   artifacts:
@@ -56,7 +56,7 @@ test_function:
     - ./WCFiles_Function.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
     - ./submit.sh ./wc.python.code.xml condor
     - sleep 5 && pegasus-status work/wc.python.code.*
-    - ../test/run_til_workflow_end.sh work/wc.python.code.*/jobstate.log
+    - ../test/run_til_workflow_end.py -j work/wc.python.code.*/jobstate.log
     - pegasus-status work/wc.python.code.*
     - mv wc.python.code.*/merged.txt ./
   artifacts:

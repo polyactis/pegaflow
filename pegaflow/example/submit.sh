@@ -30,9 +30,6 @@ HOME_DIR=$HOME
 ## unused.
 PEGASUS_PYTHON_LIB_DIR=`$PEGASUS_HOME/bin/pegasus-config --python`
 
-## a random large number to ensure Pegasus will not think it is running out of space.
-freeSpace="50000G"
-
 if test $# -lt 2 ; then
 	echo "Usage:"
 	echo "  $0 dagFile computingSiteName [keepIntermediateFiles] [cleanupClusterSize] "
@@ -105,7 +102,6 @@ fi
 
 echo cleanupClusterSize is $cleanupClusterSize.
 
-
 echo "Default submitOption is changed to $submitOptionDefault."
 
 if test -z "$submitOption"
@@ -113,11 +109,9 @@ then
 	submitOption=$submitOptionDefault
 fi
 
-
 if [ -z $storageSiteName ]; then
 	storageSiteName=$storageSiteNameDefault
 fi
-
 
 # The stageout folder that will contain all the final output.
 if [ -z $finalOutputDir ]; then
@@ -134,7 +128,6 @@ if test -z "$relativeWorkDir"
 then
 	relativeWorkDir=$finalOutputDir
 fi
-
 
 runningWorkflowLogFname=$runningWorkflowLogFnameDefault
 failedWorkflowLogFname=$failedWorkflowLogFnameDefault
@@ -190,7 +183,6 @@ EOF
 
 export CLASSPATH=.:$PEGASUS_HOME/lib/pegasus.jar:$CLASSPATH
 echo Java CLASSPATH is $CLASSPATH
-
 #2013.03.30 "--force " was once added due to a bug. it'll stop file reuse.
 commandLine="pegasus-plan -Dpegasus.file.cleanup.clusters.size=$cleanupClusterSize --conf pegasusrc \
 	--sites $computingSiteName --dax $dagFile --dir ${workDir} \
@@ -201,7 +193,6 @@ echo commandLine is $commandLine
 $commandLine
 
 exitCode=$?
-#2013.04.24
 if test $exitCode = "0"; then
 	echo ${workDir}/$relativeWorkDir >> $runningWorkflowLogFname
 else
