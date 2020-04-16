@@ -4,10 +4,10 @@
 2. Functions that help to simplify coding:
 """
 import sys, os
-from . DAX3 import Executable, File, PFN, Profile, Namespace, 
-    Link, ADAG, Use, Job, Dependency
-from . import PassingData, getListOutOfStr, getRealPrefixSuffixOfFilenameWithVariableSuffix, 
-    setJobResourceRequirement, getExecutableClusterSize
+from . DAX3 import Executable, File, PFN, Profile
+from . DAX3 import Namespace, Link, ADAG, Use, Job, Dependency
+from . import PassingData, getListOutOfStr, getRealPrefixSuffixOfFilenameWithVariableSuffix
+from . import setJobResourceRequirement, getExecutableClusterSize
 
 src_dir = os.path.dirname(os.path.abspath(__file__))
 
