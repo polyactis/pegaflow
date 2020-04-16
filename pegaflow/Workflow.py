@@ -1219,23 +1219,23 @@ class Workflow(ADAG):
                                     maxJobPropertyValue)	#in minutes
         return PassingData(value=int(walltime))
 
-    def addMkDirJob(self, executable=None, outputDir=None, namespace=None, version=None,\
+    def addMkDirJob(self, executable=None, outputDir=None, 
             parentJobLs=None, extraDependentInputLs=None):
         """
-        wrapper around addMkDirJob()
-            i.e.
+        add a job to make a directory.
+        i.e.
             simulateOutputDirJob = self.addMkDirJob(outputDir=simulateOutputDir)
         """
-        if namespace is None:
-            namespace = self.namespace
-        if version is None:
-            version = self.version
         if executable is None:
             executable = self.mkdirWrap
-
-        return addMkDirJob(workflow=self, executable=executable, outputDir=outputDir, \
-            namespace=namespace, version=version,\
-            parentJobLs=parentJobLs, extraDependentInputLs=extraDependentInputLs)
+        job = self.addGenericJob(executable=executable, \
+                    parentJobLs=parentJobLs, \
+                    extraDependentInputLs=extraDependentInputLs, \
+                    extraArgumentList=[outputDir], \
+                    job_max_memory=50, walltime=10)
+        job.folder = outputDir
+        job.output = outputDir
+        return job
 
     def setup_run(self):
         """
