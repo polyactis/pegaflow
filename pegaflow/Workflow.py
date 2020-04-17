@@ -323,15 +323,16 @@ class Workflow(ADAG):
             self.addFile(inputFile)
             jobData = PassingData(output=inputFile, job=None, jobLs=[], \
                                 file=inputFile, fileLs=[inputFile], indexFileLs=[])
-            #find all index files.
-            for indexFileSuffix in indexFileSuffixSet:
-                indexFilename = '%s%s'%(input_path, indexFileSuffix)
-                if os.path.isfile(indexFilename):
-                    indexFile = self.registerOneInputFile(input_path=indexFilename, \
-                                    input_site_handler=input_site_handler, folderName=pegasusFolderName, \
-                                    useAbsolutePathAsPegasusFileName=False, checkFileExistence=True)
-                    jobData.fileLs.append(indexFile)
-                    jobData.indexFileLs.append(indexFile)
+            # Find all index files if indexFileSuffixSet is given.
+            if indexFileSuffixSet:
+                for indexFileSuffix in indexFileSuffixSet:
+                    indexFilename = '%s%s'%(input_path, indexFileSuffix)
+                    if os.path.isfile(indexFilename):
+                        indexFile = self.registerOneInputFile(input_path=indexFilename, \
+                                        input_site_handler=input_site_handler, folderName=pegasusFolderName, \
+                                        useAbsolutePathAsPegasusFileName=False, checkFileExistence=True)
+                        jobData.fileLs.append(indexFile)
+                        jobData.indexFileLs.append(indexFile)
             returnData.jobDataLs.append(jobData)
         print(f"{len(returnData.jobDataLs)} out of {len(input_path_list)} possible files registered. Done.", flush=True)
         return returnData
@@ -730,7 +731,8 @@ class Workflow(ADAG):
             for key, objectForJob in key2ObjectForJob.items():
                 setattr(job, key, objectForJob)	#key should be a string.
 
-        #add all input files to the last (after db arguments,) otherwise, it'll mask others (cuz these don't have options).
+        #add all input files to the last (after db arguments,) otherwise,
+        #  it'll mask others (cuz these don't have options).
         if inputFileList:
             for inputFile in inputFileList:
                 if inputFile:
@@ -785,7 +787,8 @@ class Workflow(ADAG):
         job_max_memory = memRequirementObject.memRequirement
         javaMemRequirement = memRequirementObject.memRequirementInStr
 
-        frontArgumentList = [javaMemRequirement, '-jar', jarFile] + frontArgumentList	#put java stuff in front of other fron arguments
+        #put java stuff in front of other fron arguments
+        frontArgumentList = [javaMemRequirement, '-jar', jarFile] + frontArgumentList
         extraDependentInputLs.append(jarFile)
         job = self.addGenericJob(executable=executable, inputFile=inputFile, \
                     inputArgumentOption=inputArgumentOption,  inputFileList=inputFileList,\
@@ -882,7 +885,8 @@ class Workflow(ADAG):
         """
         Java 8 does not support PermSize anymore. set permSizeFraction to 0.
         handle when job_max_memory is None and minMemory is None.
-        if a job's virtual memory (1.2X=self.jvmVirtualByPhysicalMemoryRatio, of memory request) exceeds request, it'll abort.
+        if a job's virtual memory (1.2X=self.jvmVirtualByPhysicalMemoryRatio, 
+            of memory request) exceeds request, it'll abort.
             so set memRequirement accordingly.
         lower permSizeFraction from 0.4 to 0.2
             minimum for MaxPermSize is now minMemory/2
@@ -904,10 +908,12 @@ class Workflow(ADAG):
         mxMemory = max(minMemory, mxMemory_user)
         msMemory = mxMemory*3/4
         #-XX:+UseGCOverheadLimit
-            #Use a policy that limits the proportion of the VM's time that is spent in GC before an OutOfMemory error is thrown. (Introduced in 6.)
+        #Use a policy that limits the proportion of the VM's time that is spent in GC 
+        #  before an OutOfMemory error is thrown. (Introduced in 6.)
         #-XX:-UseGCOverheadLimit would disable the policy.
-        memRequirementInStr = "-Xms%sm -Xmx%sm"%(msMemory, mxMemory)	# -XX:PermSize=%sm -XX:MaxPermSize=%sm"%\
-                    #, PermSize, MaxPermSize)
+        #  -XX:PermSize=%sm -XX:MaxPermSize=%sm"%\
+        #  , PermSize, MaxPermSize)
+        memRequirementInStr = "-Xms%sm -Xmx%sm"%(msMemory, mxMemory)
         
         memRequirement = int(mxMemory*self.jvmVirtualByPhysicalMemoryRatio)
         #if a job's virtual memory (1.2X of memory request) exceeds request, it'll abort.
