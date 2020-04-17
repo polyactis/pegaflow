@@ -53,7 +53,6 @@ if __name__ == '__main__':
                     output_file_transfer_list=[mergedOutputFile],
                     output_file_notransfer_list=None,
                     argv=[mergedOutputFile, '/bin/cat'])
-    wflow.addJob(mergeJob)
     # request 500MB memory, 30 minutes run time (walltime).
     pegaflow.setJobResourceRequirement(job=mergeJob, job_max_memory=500, walltime=30)
 
@@ -71,7 +70,6 @@ if __name__ == '__main__':
                     output_file_notransfer_list=[output_file],
                     argv=[output_file, '/bin/cat', input_file])
         pegaflow.setJobResourceRequirement(job=wcJob, job_max_memory=200)
-        wflow.addJob(wcJob)
         wflow.addDependency(Dependency(parent=outputDirJob, child=wcJob))
         #add wcJob's output as input to mergeJob
         mergeJob.addArguments(output_file)
@@ -84,6 +82,5 @@ if __name__ == '__main__':
                     output_file_transfer_list=None,
                     output_file_notransfer_list=None,
                     argv=['30s'])
-    wflow.addJob(sleepJob)
     wflow.addDependency(Dependency(parent=sleepJob, child=mergeJob))
     wflow.writeXML(open(args.output_file, 'w'))

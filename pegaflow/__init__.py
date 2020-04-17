@@ -311,8 +311,8 @@ def addJob2workflow(workflow, executable, input_file_list, output_file_transfer_
     if output_file_notransfer_list:
         for output_file in output_file_notransfer_list:
             the_job.uses(output_file, link=Link.OUTPUT, transfer=False)
+    workflow.addJob(the_job)
     return the_job
-
 
 
 class Logger(logging.getLoggerClass()):
