@@ -37,9 +37,10 @@ test_OO:
     - cd pegaflow/example/
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
     - ./submit.sh ./wc.python.code.xml condor
-    - sleep 10 && pegasus-status work/wc.python.code.*
-    - ../test/run_til_workflow_end.py -j work/wc.python.code.*/jobstate.log
-    - pegasus-status work/wc.python.code.*
+    - sleep 10 && pegasus-status submit/wc.python.code.*
+    - ../test/pegaflow_monitor.py -j submit/wc.python.code.*/jobstate.log
+    - pegasus-statistics -s all submit/wc.python.code.*
+    - cat submit/wc.python.code.*/statistics/breakdown.txt
     - mv wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
@@ -55,9 +56,10 @@ test_function:
     - cd pegaflow/example/
     - ./WCFiles_Function.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
     - ./submit.sh ./wc.python.code.xml condor
-    - sleep 10 && pegasus-status work/wc.python.code.*
-    - ../test/run_til_workflow_end.py -j work/wc.python.code.*/jobstate.log
-    - pegasus-status work/wc.python.code.*
+    - sleep 10 && pegasus-status submit/wc.python.code.*
+    - ../test/pegaflow_monitor.py -j submit/wc.python.code.*/jobstate.log
+    - pegasus-statistics -s all submit/wc.python.code.*
+    - cat submit/wc.python.code.*/statistics/breakdown.txt
     - mv wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
@@ -74,7 +76,8 @@ test_local:
     - echo "pegasus.code.generator = Shell" >> pegasusrc
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l local -o wc.python.code.xml -C 1
     - ./submit.sh ./wc.python.code.xml local
-    - pegasus-status work/wc.python.code.*
+    - pegasus-statistics -s all submit/wc.python.code.*
+    - cat submit/wc.python.code.*/statistics/breakdown.txt
     - mv wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"

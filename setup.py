@@ -79,6 +79,7 @@ setup_args = dict(
     },
     include_package_data=True,
     zip_safe=False,
+    scripts=['pegaflow/test/pegaflow_monitor.py'],
 )
 
 

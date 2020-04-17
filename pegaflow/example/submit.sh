@@ -8,7 +8,7 @@ storageSiteNameDefault="local"
 submitOptionDefault="--submit"
 scratchTypeDefault="1"
 cleanupClusterSizeDefault=15
-workDir="work"
+submitDir="submit"
 
 ## two files to store the names of the successfully-submitted and submit-failed workflows respectively.
 runningWorkflowLogFnameDefault=runningWorkflows.txt
@@ -33,7 +33,7 @@ PEGASUS_PYTHON_LIB_DIR=`$PEGASUS_HOME/bin/pegasus-config --python`
 if test $# -lt 2 ; then
 	echo "Usage:"
 	echo "  $0 dagFile computingSiteName [keepIntermediateFiles] [cleanupClusterSize] "
-	echo "             [submitOption] [storageSiteName] [finalOutputDir] [relativeWorkDir]"
+	echo "      [submitOption] [storageSiteName] [finalOutputDir] [relativeSubmitDir]"
 	echo ""
 	echo "Note:"
 	echo "  - computingSiteName: the computing cluster on which the jobs will run. "
@@ -55,10 +55,10 @@ if test $# -lt 2 ; then
 	echo "     These files must be designated as transfer=True in the workflow."
 	echo "     If this folder doesn't exist, pegasus would create one. "
 	echo "     Default is dagFile name (without the first folder if there is one) + year+date+time."
-	echo "  - relativeWorkDir: the pegasus work folder relative to ${workDir}/."
+	echo "  - relativeSubmitDir: the pegasus submit folder relative to ${submitDir}/."
 	echo "     This folder will contain all job submission files, job stdout/stderr output, logs, etc."
 	echo "     Default is the same as finalOutputDir."
-	echo "  - finalOutputDir and relativeWorkDir can be the same. But they must be different from previous workflows."
+	echo "  - finalOutputDir and relativeSubmitDir can be the same. But they must be different from previous workflows."
 	echo ""
 	echo "Examples:"
 	echo "  #run on a condor computing cluster"
@@ -73,7 +73,7 @@ if test $# -lt 2 ; then
 	echo "  #only planning (no running) by setting submitOption to an empty string (options in the middle do not matter)"
 	echo "  $0 dags/TrioInconsistency15DistantVRC.xml condor 0 20 \"  \" "
 	echo
-	echo "  #run the workflow, keep intermediate files. Set the finalOutputDir and relativeWorkDir."
+	echo "  #run the workflow, keep intermediate files. Set the finalOutputDir and relativeSubmitDir."
 	echo "  $0 dags/TrioInconsistency15DistantVRC.xml condor 1 20 \"--submit\" local "
 	echo "     TrioInconsistency/TrioInconsistency15DistantVRC_20110929T1726 "
 	echo "     TrioInconsistency/TrioInconsistency15DistantVRC_20110929T1726 "
@@ -88,7 +88,7 @@ cleanupClusterSize=$4
 submitOption=$5
 storageSiteName=$6
 finalOutputDir=$7
-relativeWorkDir=$8
+relativeSubmitDir=$8
 
 #no cleanup when keepIntermediateFiles = 1
 if test "$keepIntermediateFiles" = "1"; then
@@ -124,19 +124,21 @@ if [ -z $finalOutputDir ]; then
 	echo Final output will be in $finalOutputDir
 fi
 
-if test -z "$relativeWorkDir"
+if test -z "$relativeSubmitDir"
 then
-	relativeWorkDir=$finalOutputDir
+	relativeSubmitDir=$finalOutputDir
 fi
 
 runningWorkflowLogFname=$runningWorkflowLogFnameDefault
 failedWorkflowLogFname=$failedWorkflowLogFnameDefault
 
 echo "Submitting to $computingSiteName for computing."
+echo "storageSiteName is $storageSiteName."
 echo "runningWorkflowLogFname is $runningWorkflowLogFname."
 echo "failedWorkflowLogFname is $failedWorkflowLogFname."
-echo "storageSiteName is $storageSiteName."
-echo "Final workflow submit option is $submitOption."
+echo "The workflow submit option is $submitOption."
+echo "relativeSubmitDir is $relativeSubmitDir."
+echo "PYTHONPATH is $PYTHONPATH."
 
 # The following two lines shall be added to any condor cluster that do not use shared file system or 
 # 	a filesystem that is not good at handling numerous small files in one folder.
@@ -162,6 +164,7 @@ cat >sites.xml <<EOF
 		<profile namespace="env" key="PEGASUS_HOME" >$PEGASUS_HOME</profile>
 		<profile namespace="env" key="HOME">$HOME</profile>
 		<profile namespace="env" key="PATH" >$HOME_DIR/bin:$PATH</profile>
+		<profile namespace="env" key="PYTHONPATH">$PYTHONPATH</profile>
 	</site>
 	<site handle="condor" arch="x86_64" os="LINUX">
 		<directory type="shared-scratch" path="$TOPDIR/scratch">
@@ -176,6 +179,7 @@ cat >sites.xml <<EOF
 		<profile namespace="env" key="PEGASUS_HOME" >$PEGASUS_HOME</profile>
 		<profile namespace="env" key="HOME" >$HOME_DIR</profile>
 		<profile namespace="env" key="PATH" >$HOME_DIR/bin:$PATH</profile>
+		<profile namespace="env" key="PYTHONPATH">$PYTHONPATH</profile>
 	</site>
 </sitecatalog>
 EOF
@@ -184,9 +188,10 @@ EOF
 export CLASSPATH=.:$PEGASUS_HOME/lib/pegasus.jar:$CLASSPATH
 echo Java CLASSPATH is $CLASSPATH
 #2013.03.30 "--force " was once added due to a bug. it'll stop file reuse.
-commandLine="pegasus-plan -Dpegasus.file.cleanup.clusters.size=$cleanupClusterSize --conf pegasusrc \
-	--sites $computingSiteName --dax $dagFile --dir ${workDir} \
-	--relative-dir $relativeWorkDir --output-site $storageSiteName --cluster horizontal $submitOption "
+commandLine="pegasus-plan -Dpegasus.file.cleanup.clusters.size=$cleanupClusterSize \
+	--conf pegasusrc --sites $computingSiteName --dax $dagFile \
+	--dir ${submitDir} --relative-dir $relativeSubmitDir \
+	--output-site $storageSiteName --cluster horizontal $submitOption "
 
 echo commandLine is $commandLine
 
@@ -194,9 +199,9 @@ $commandLine
 
 exitCode=$?
 if test $exitCode = "0"; then
-	echo ${workDir}/$relativeWorkDir >> $runningWorkflowLogFname
+	echo ${submitDir}/$relativeSubmitDir >> $runningWorkflowLogFname
 else
-	echo ${workDir}/$relativeWorkDir >> $failedWorkflowLogFname
+	echo ${submitDir}/$relativeSubmitDir >> $failedWorkflowLogFname
 fi
 
 # add the option below for debugging
