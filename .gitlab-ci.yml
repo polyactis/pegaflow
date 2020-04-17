@@ -76,8 +76,8 @@ test_local:
     - echo "pegasus.code.generator = Shell" >> pegasusrc
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l local -o wc.python.code.xml -C 1
     - ./submit.sh ./wc.python.code.xml local
-    - pegasus-statistics -s all submit/wc.python.code.*
-    - cat submit/wc.python.code.*/statistics/breakdown.txt
+    # pegasus-statistics can not work with locally run workflows.
+    - pegasus-status submit/wc.python.code.*
     - mv wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
