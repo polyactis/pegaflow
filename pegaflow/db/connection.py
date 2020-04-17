@@ -28,8 +28,8 @@ from pegaflow.tools import utils
 from sqlalchemy import create_engine, orm, event, exc
 from sqlalchemy.engine import Engine
 from sqlite3 import Connection as SQLite3Connection
-from stat import *
-from urlparse import urlparse
+from stat import ST_MODE
+from urllib.parse import urlparse
 
 __all__ = ['connect']
 
@@ -124,7 +124,7 @@ def connect(dburi, echo=False, schema_check=True, create=False, pegasus_version=
 
     except exc.OperationalError as e:
         if "mysql" in dburi and "unknown database" in str(e).lower():
-            raise ConnectionError("MySQL database should be previously created: %s (%s)" % (e.message, dburi),
+            raise ConnectionError(f"ERROR: MySQL database should be previously created. {e} ({dburi})",
                                   given_version=pegasus_version, db_type=db_type)
         raise ConnectionError("%s (%s)" % (e.message, dburi), given_version=pegasus_version, db_type=db_type)
     except Exception as e:
@@ -259,7 +259,7 @@ def get_wf_uuid(submit_dir):
 
     # Get wf_uuid for this workflow
     wf_uuid = None
-    if ('wf_uuid' in top_level_wf_params):
+    if 'wf_uuid' in top_level_wf_params:
         wf_uuid = top_level_wf_params['wf_uuid']
     else:
         log.error("workflow id cannot be found in the braindump.txt ")
@@ -449,7 +449,7 @@ def _validate(dburi):
                 imp.find_module('MySQLdb')
 
     except ImportError as e:
-        raise ConnectionError("Missing Python module: %s (%s)" % (e.message, dburi))
+        raise ConnectionError(f"Missing Python module: {e} ({dburi})")
 
 
 def _check_db_permissions(dburi, db_type, mask=None):

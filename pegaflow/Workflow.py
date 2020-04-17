@@ -17,12 +17,13 @@ class Workflow(ADAG):
     #  and will be expanded to be '/home/user/bin/myprogram'.
     # Child classes can add stuff into this list.
     pathToInsertHomePathList = []
+    home_path = ""
     def __init__(self, inputSuffixList=None, \
             pegasusFolderName='folder', output_path=None, \
             site_handler=None, input_site_handler=None, cluster_size=1, \
             tmpDir='/tmp/', max_walltime=4320, \
             javaPath=None, jvmVirtualByPhysicalMemoryRatio=1.2,\
-            debug=False, needSSHDBTunnel=False, report=False):
+            debug=False, needSSHDBTunnel=False, report=False, commit=False):
         """
         site_handler: The name of the computing site where the jobs run and executables are stored. Check your Pegasus configuration.
         input_site_handler: 'local or same as site_handler. It is the name of the site that has all the input files.'
@@ -44,6 +45,7 @@ class Workflow(ADAG):
         debug: 'toggle debug mode.'
         needSSHDBTunnel: 'If all DB-interacting jobs need a ssh tunnel to access a database that is inaccessible to computing nodes.'
         report: 'toggle verbose output.'
+        commit: an argument for database-related workflows.
         """
         self.inputSuffixList = getListOutOfStr(list_in_str=inputSuffixList, data_type=str, 
             separator1=',', separator2='-')
@@ -62,6 +64,7 @@ class Workflow(ADAG):
         self.debug = debug
         self.needSSHDBTunnel = needSSHDBTunnel
         self.report = report
+        self.commit = commit
         #change the workflow name to reflect the output filename
         workflowName = os.path.splitext(os.path.basename(self.output_path))[0]
         # call parent
@@ -141,9 +144,9 @@ class Workflow(ADAG):
                 fs_path = path
             
             if not (os.path.isfile(fs_path) and os.access(fs_path, os.X_OK)):
-                sys.stderr.write("Error from constructOneExecutableObject(): \
-        executable %s is not an executable.\n"%(path))
-                raise
+                sys.stderr.write(f"Error from constructOneExecutableObject(): "
+                    f"executable {path} is not an executable.\n")
+                sys.exit(3)
         executable.addPFN(PFN("file://" + os.path.expanduser(path), site_handler))
         return executable
 
@@ -204,7 +207,7 @@ class Workflow(ADAG):
         self.registerOneExecutable(path=os.path.join(src_dir, "tools/gzip.sh"), 
             name='gzip', clusterSizeMultiplier=1)
         
-    def setExecutablesClusterSize(self, executableClusterSizeMultiplierList=[], defaultClusterSize=None):
+    def setExecutablesClusterSize(self, executableClusterSizeMultiplierList, defaultClusterSize=None):
         """
         make sure the profile of clusters.size is not added already.
         """
@@ -260,12 +263,15 @@ class Workflow(ADAG):
         sys.stderr.write("%s files out of %s total.\n"%(len(input_path_list), counter))
         return input_path_list
 
-    def getFilesWithSuffixFromFolderRecursive(self, inputFolder=None, suffixSet=set(['.h5']), fakeSuffix='.gz', input_path_list=[]):
+    def getFilesWithSuffixFromFolderRecursive(self, inputFolder, 
+            suffixSet=None, fakeSuffix='.gz', return_path_list=None):
         """
-        similar to getFilesWithProperSuffixFromFolder() but recursively go through all sub-folders
-            and it uses utils.getRealPrefixSuffixOfFilenameWithVariableSuffix() to get the suffix.
+        This function recursively finds all files whose suffix is in suffixSet.
+        Return all files in return_path_list.
+        Similar to getFilesWithProperSuffixFromFolder(), but recursively go through all sub-folders.
+        It calls utils.getRealPrefixSuffixOfFilenameWithVariableSuffix() to get the suffix.
         """
-        sys.stderr.write("Getting files with %s as suffix (%s as fake suffix) from %s ...\n"%(repr(suffixSet), fakeSuffix, inputFolder))
+        sys.stderr.write(f"Getting files with suffix in {repr(suffixSet)}, fake suffix={fakeSuffix}, from {inputFolder} ...\n")
         counter = 0
         for filename in os.listdir(inputFolder):
             input_path = os.path.join(inputFolder, filename)
@@ -273,20 +279,20 @@ class Workflow(ADAG):
             if os.path.isfile(input_path):
                 prefix, file_suffix = getRealPrefixSuffixOfFilenameWithVariableSuffix(filename, fakeSuffix=fakeSuffix)
                 if file_suffix in suffixSet:
-                    input_path_list.append(input_path)
+                    return_path_list.append(input_path)
             elif os.path.isdir(input_path):
                 self.getFilesWithSuffixFromFolderRecursive(input_path, suffixSet=suffixSet, \
-                    fakeSuffix=fakeSuffix, input_path_list=input_path_list)
-        sys.stderr.write("%s files out of %s total.\n"%(len(input_path_list), counter))
-        #return input_path_list
+                    fakeSuffix=fakeSuffix, return_path_list=return_path_list)
+        sys.stderr.write(f"{len(return_path_list)} out of {counter} files.\n")
 
     def registerFilesOfInputDir(self, inputDir=None,  input_path_list=None, input_site_handler=None, \
-                pegasusFolderName='', inputSuffixSet=None, indexFileSuffixSet=set(['.tbi', '.fai']),\
+                pegasusFolderName='', inputSuffixSet=None, indexFileSuffixSet=None,\
                 **keywords):
         """
         This function registers all files in inputDir (if present) and input_path_list (if not None).
         indexFileSuffixSet is used to add additional index files related to an input file.
-            assuming index file name is original filename + indexFileSuffix.
+            Assume that index file name is original filename + indexFileSuffix.
+            indexFileSuffixSet=set(['.tbi', '.fai'])
         """
         if input_path_list is None:
             input_path_list = []
@@ -297,7 +303,7 @@ class Workflow(ADAG):
                 input_path_list.append(input_path)
 
         if inputSuffixSet is None:
-            inputSuffixSet = self.inputSuffixSet
+            inputSuffixSet = getattr(self, 'inputSuffixSet', None)
         print(f"Registering {len(input_path_list)} input files with suffix in {inputSuffixSet} ... ", \
             flush=True, end='')
         returnData = PassingData(jobDataLs = [])
@@ -365,8 +371,8 @@ class Workflow(ADAG):
                 pegasusFileName = os.path.join(folderName, os.path.basename(input_path))
         pegasusFile = File(pegasusFileName)
         if checkFileExistence and not os.path.isfile(input_path):
-            sys.stderr.write("Error from registerOneInputFile(): %s does not exist.\n"%(input_path))
-            raise
+            sys.stderr.write(f"Error from registerOneInputFile(): {input_path} does not exist.")
+            sys.exit(3)
         pegasusFile.abspath = os.path.abspath(input_path)
         pegasusFile.absPath = pegasusFile.abspath
         pegasusFile.addPFN(PFN("file://" + pegasusFile.abspath, input_site_handler))
@@ -948,10 +954,10 @@ class Workflow(ADAG):
             session = self.db_main.session
             session.begin(subtransactions=True)
 
-            if not self.data_dir:
+            if not getattr(self, 'data_dir', None):
                 self.data_dir = self.db_main.data_dir
 
-            if not self.local_data_dir:
+            if not getattr(self, 'local_data_dir', None):
                 self.local_data_dir = self.db_main.data_dir
 
         self.workflow = self
@@ -1031,7 +1037,7 @@ if __name__ == '__main__':
     ap.add_argument("--needSSHDBTunnel", action='store_true',
             help="If all DB-interacting jobs need a ssh tunnel to access a database that is inaccessible to computing nodes.")
     args = ap.parse_args()
-    instance = Workflow(inputSuffixList=args.inputSuffixList,  pegasusFolderName=args.pegasusFolderName, \
+    instance = Workflow(inputSuffixList=args.inputSuffixList, pegasusFolderName=args.pegasusFolderName, \
         output_path=args.output_path, \
         site_handler=args.site_handler, input_site_handler=args.input_site_handler, \
         cluster_size=args.cluster_size,\

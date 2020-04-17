@@ -2,7 +2,6 @@
 """
 A Pegasus example that does not use any class.
 """
-import copy
 import sys, os
 from argparse import ArgumentParser
 from pegaflow.DAX3 import File, Link, ADAG, Dependency

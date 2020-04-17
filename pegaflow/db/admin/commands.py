@@ -1,4 +1,3 @@
-from __future__ import print_function
 __author__ = "Rafael Ferreira da Silva"
 
 import logging

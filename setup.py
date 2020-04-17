@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import os
 import sys
-import subprocess
 from setuptools import setup, find_packages
 
 src_dir = os.path.dirname(__file__)
@@ -28,12 +27,6 @@ def create_manifest_file():
         if f:
             f.close()
 
-#
-# Install conditional dependencies
-#
-def setup_installer_dependencies():
-    global install_requires
-
 def find_package_data(dirname):
     def find_paths(dirname):
         items = []
@@ -51,7 +44,7 @@ def find_package_data(dirname):
 
 setup_args = dict(
     name="Pegaflow",
-    version="0.0.10",
+    version="0.0.11",
     author="Yu S. Huang",
     author_email="polyactis@gmail.com",
     description="Pegasus DAX Python API with a helper class",
@@ -79,11 +72,10 @@ setup_args = dict(
     },
     include_package_data=True,
     zip_safe=False,
-    scripts=['pegaflow/test/pegaflow_monitor.py'],
+    scripts=['pegaflow/test/pegaflow_monitor'],
 )
 
 
 if __name__ == '__main__':
     create_manifest_file()
-    setup_installer_dependencies()
     setup(**setup_args, install_requires=install_requires)

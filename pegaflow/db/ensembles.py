@@ -2,7 +2,6 @@ import os
 import re
 from datetime import datetime
 
-from flask import url_for, g
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy import sql
 
@@ -91,6 +90,7 @@ class Ensemble(EnsembleBase):
         return os.path.join(edir, self.name)
 
     def get_object(self):
+        from flask import url_for
         return {
             "id": self.id,
             "name": self.name,
@@ -185,6 +185,7 @@ class EnsembleWorkflow(EnsembleBase):
         return self.plan_command
 
     def get_object(self):
+        from flask import url_for
         return {
             "id": self.id,
             "name": self.name,

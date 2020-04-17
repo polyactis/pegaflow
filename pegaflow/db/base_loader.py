@@ -1,8 +1,8 @@
 import time
 import logging
 
-from pegaflow.db import connection
 from sqlalchemy import exc
+from pegaflow.db import connection
 
 class BaseLoader(object):
     "Base loader class. Has a database session and a log handle."
@@ -100,7 +100,7 @@ class BaseLoader(object):
             except exc.OperationalError as e:
                 self.check_connection(sub=True)
             if not sub:
-                self.log.warn('Connection re-established')
+                self.log.warning('Connection re-established')
 
     def individual_commit(self, event, merge=False):
         """
