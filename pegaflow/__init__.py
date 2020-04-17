@@ -9,14 +9,14 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-version='0.0.8'
+version='0.0.9'
 import logging
 import os
 import sys
 from . DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, Job, Dependency
 
 namespace = "pegasus"
-version = "1.0"
+pegasus_version = "1.0"
 architecture = "x86_64"
 operatingSystem = "linux"
 
@@ -41,7 +41,7 @@ def registerExecutable(workflow, path, site_handler,
         executableName = os.path.basename(path)
     executable = Executable(namespace=namespace, name=executableName,
                          os=operatingSystem, arch=architecture,
-                         installed=True, version=version)
+                         installed=True, version=pegasus_version)
     executable.addPFN(PFN("file://" + os.path.abspath(path), site_handler))
     workflow.addExecutable(executable)
     setExecutableClusterSize(workflow, executable, cluster_size=cluster_size)
@@ -140,7 +140,7 @@ def addMkDirJob(workflow, executable, outputDir, parentJobLs=None, extraDependen
     """
     """
     # Add a mkdir job for any directory.
-    job = Job(name=executable.name, namespace=namespace, version=version)
+    job = Job(name=executable.name, namespace=namespace, version=pegasus_version)
     job.addArguments(outputDir)
     #two attributes for child jobs to get the output directory.
     job.folder = outputDir
@@ -298,7 +298,7 @@ def registerFilesOfInputDir(workflow, inputDir, input_path_list=None, \
 
 def addJob2workflow(workflow, executable, input_file_list, output_file_transfer_list,
                 output_file_notransfer_list, argv):
-    the_job = Job(namespace=namespace, name=executable.name, version=version)
+    the_job = Job(namespace=namespace, name=executable.name, version=pegasus_version)
     if argv:
         the_job.addArguments(*argv)
     if input_file_list:
