@@ -37,7 +37,7 @@ test_OO:
     - cd pegaflow/example/
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
     - ./submit.sh ./wc.python.code.xml condor
-    - sleep 5 && pegasus-status work/wc.python.code.*
+    - sleep 10 && pegasus-status work/wc.python.code.*
     - ../test/run_til_workflow_end.py -j work/wc.python.code.*/jobstate.log
     - pegasus-status work/wc.python.code.*
     - mv wc.python.code.*/merged.txt ./
@@ -55,7 +55,7 @@ test_function:
     - cd pegaflow/example/
     - ./WCFiles_Function.py -i /y/home/huangyu/script/test/python/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
     - ./submit.sh ./wc.python.code.xml condor
-    - sleep 5 && pegasus-status work/wc.python.code.*
+    - sleep 10 && pegasus-status work/wc.python.code.*
     - ../test/run_til_workflow_end.py -j work/wc.python.code.*/jobstate.log
     - pegasus-status work/wc.python.code.*
     - mv wc.python.code.*/merged.txt ./
