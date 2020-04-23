@@ -30,8 +30,8 @@ $ ./WCFiles_Function.py -i /usr/lib/python3.6/ --inputSuffixList .py -l condor -
 
 
 # Plan and submit the workflow.
-# Try "./submit.sh condor ./wc.python.code.xml 1" if you want to keep intermediate files.
-$ ./submit.sh condor ./wc.python.code.xml
+# Try "./submit.sh ./wc.python.code.xml condor 1" if you want to keep intermediate files.
+$ ./submit.sh ./wc.python.code.xml condor
 
 # A work folder work/... is created to house job description/submit files, job status files, etc.
 
