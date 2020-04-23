@@ -4,7 +4,7 @@
 
 [WCFiles_Function.py](WCFiles_Function.py) provides the same function as [WordCountFiles.py](WordCountFiles.py), but is written in a procedural-programming way. No classes.
 
-[submit.sh](submit.sh) is a workflow submit script that invokes pegasus-plan. It also generates `sites.xml`, a configuration file specific to your workflow (where to store job files, where to run jobs, where to transfer final output). `sites.xml` will be copied into the workflow work folder (work/...), once a workflow is planned and submitted. Overwriting it is OK.
+[submit.sh](submit.sh) is a workflow submit script that invokes pegasus-plan. It also generates `sites.xml`, a configuration file specific to your workflow (where to store job files, where to run jobs, where to transfer final output). `sites.xml` will be copied into the workflow submit folder (submit/...), during the planning phase. Overwriting it is OK.
 
 [pegasusrc](pegasusrc) contains a few pre-set Pegasus settings that [submit.sh](submit.sh) will read from.
 
@@ -28,44 +28,35 @@ $ ./WordCountFiles.py -i /usr/lib/python3.6/ --inputSuffixList .py -l condor -o 
 # OR run this. WCFiles_Function.py has the same function as WordCountFiles.py but is written in a procedural-programming way.
 $ ./WCFiles_Function.py -i /usr/lib/python3.6/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
 
-
 # Plan and submit the workflow.
 # Try "./submit.sh ./wc.python.code.xml condor 1" if you want to keep intermediate files.
 $ ./submit.sh ./wc.python.code.xml condor
 
-# A work folder work/... is created to house job description/submit files, job status files, etc.
+# A submit folder submit/wc.python... is created to house job description/submit files, job status files, etc.
 
-# A running folder scratch/... is created.
-#  All input files will be symlinked or copied into this folder.
-#  All pegasus jobs will run inside that folder and also output in that folder.
+# A scratch folder scratch/wc.python... is created.
+#  All input files will be symlinked or copied into the scatch folder.
+#  All pegasus jobs will run inside that folder and also output in the scratch folder.
 
-# If the workflow succeeds in the end, final output will be copied into a new folder, ./..., in the current directory.
+# If the workflow succeeds in the end, final output will be copied into a new folder, wc.python..., in the current directory.
 
 # Check the status of the workflow:
-$ pegasus_status work/...
+$ pegasus_status submit/wc.python.*
 STAT  IN_STATE  JOB                                                                                                           
-Run      00:13  wc_python_condor_2-0 ( /home/user/src/pegaflow/pegaflow/example/work/wc.python.code.2020.Apr.1T113305 )       
-Idle     00:08   ┣━merge_pegasus-pipe2File-1_0_PID1_ID27                                                         
-Idle     00:08   ┣━merge_pegasus-pipe2File-1_0_PID1_ID26                                                     
-Idle     00:08   ┣━merge_pegasus-pipe2File-1_0_PID1_ID29                                    
-Idle     00:08   ┣━merge_pegasus-pipe2File-1_0_PID1_ID28                                  
-Idle     00:08   ┣━merge_pegasus-pipe2File-1_0_PID1_ID23                                                  
-Idle     00:03   ┣━merge_pegasus-pipe2File-1_0_PID1_ID22                         
-Idle     00:03   ┣━merge_pegasus-pipe2File-1_0_PID1_ID25                                                  
-Idle     00:03   ┣━merge_pegasus-pipe2File-1_0_PID1_ID24                                                         
-Idle     00:03   ┣━merge_pegasus-pipe2File-1_0_PID1_ID1                                                          
-Idle     00:03   ┗━merge_pegasus-pipe2File-1_0_PID1_ID2                                     
-Summary: 11 Condor jobs total (I:10 R:1)                                                               
-                                                                                                               
-UNREADY   READY     PRE  QUEUED    POST SUCCESS FAILURE %DONE                                            
-      2      26       0      10       0       6       0  13.6                                                          
+Run      00:13  wc_python_condor_2-0 ( /home/user/src/pegaflow/pegaflow/example/submit/wc.python.code.2020.Apr.1T113305 )
+...
+Idle     00:03   ┣━merge_pegasus-pipe2File-1_0_PID1_ID1
+Idle     00:03   ┗━merge_pegasus-pipe2File-1_0_PID1_ID2
+Summary: 11 Condor jobs total (I:10 R:1)
+
+UNREADY   READY     PRE  QUEUED    POST SUCCESS FAILURE %DONE
+      2      26       0      10       0       6       0  13.6
 Summary: 1 DAG total (Running:1)
 
-
 # If it failed, run this to check which jobs failed:
-$ pegasus-analyzer work/...
+$ pegasus-analyzer submit/wc.python...
 
 # Re-submit it after fixing program bugs. It will start only the failed jobs.
-$ pegasus-run work/...
+$ pegasus-run submit/...
 
 ```
