@@ -102,8 +102,8 @@ class Workflow(ADAG):
             if absPath:
                 setattr(self, pathName, absPath)
             else:
-                logging.warning("%s has an empty absolute path. Skip."%\
-                    (pathName))
+                logging.warning(f"{pathName} has an empty absolute path. "
+                    "Not insert home_path.")
         
         self.architecture = "x86_64"
         self.operatingSystem = "linux"
@@ -219,9 +219,11 @@ class Workflow(ADAG):
     def registerExecutables(self):
         """
         """
-        if hasattr(self, 'javaPath') and self.javaPath:
+        if hasattr(self, 'javaPath') and os.path.isfile(self.javaPath):
             self.registerOneExecutable(path=self.javaPath, name='java',
                 clusterSizeMultiplier=1)
+        else:
+            logging.warn(f"Java path: {self.javaPath}, does not exist.")
         self.registerOneExecutable(path="/bin/cp", name='cp',
             clusterSizeMultiplier=1)
         self.registerOneExecutable(path="/bin/mv", name='mv',
