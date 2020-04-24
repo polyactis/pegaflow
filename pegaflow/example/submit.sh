@@ -165,6 +165,7 @@ cat >sites.xml <<EOF
 		<profile namespace="env" key="HOME">$HOME</profile>
 		<profile namespace="env" key="PATH" >$HOME_DIR/bin:$PATH</profile>
 		<profile namespace="env" key="PYTHONPATH">$PYTHONPATH</profile>
+		<profile namespace="env" key="LC_ALL">$LC_ALL</profile>
 	</site>
 	<site handle="condor" arch="x86_64" os="LINUX">
 		<directory type="shared-scratch" path="$TOPDIR/scratch">
@@ -180,6 +181,7 @@ cat >sites.xml <<EOF
 		<profile namespace="env" key="HOME" >$HOME_DIR</profile>
 		<profile namespace="env" key="PATH" >$HOME_DIR/bin:$PATH</profile>
 		<profile namespace="env" key="PYTHONPATH">$PYTHONPATH</profile>
+		<profile namespace="env" key="LC_ALL">$LC_ALL</profile>
 	</site>
 </sitecatalog>
 EOF
