@@ -4,6 +4,7 @@
 2. Functions that help to simplify coding:
 """
 import sys, os
+import logging
 from . DAX3 import Executable, File, PFN, Profile
 from . DAX3 import Namespace, Link, ADAG, Use, Job, Dependency
 from . import PassingData, getListOutOfStr
@@ -21,12 +22,15 @@ class Workflow(ADAG):
     # Child classes can add stuff into this list.
     pathToInsertHomePathList = []
     home_path = ""
-    def __init__(self, inputSuffixList=None,
-        pegasusFolderName='folder', output_path=None,
-        site_handler=None, input_site_handler=None, cluster_size=1,
-        tmpDir='/tmp/', max_walltime=4320, 
-        javaPath=None, jvmVirtualByPhysicalMemoryRatio=1.2,
-        debug=False, needSSHDBTunnel=False, report=False, commit=False):
+    def __init__(self, inputSuffixList:list=None,
+        pegasusFolderName:str='folder', output_path:str=None,
+        site_handler:str=None, input_site_handler:str=None,
+        cluster_size:int=1,
+        tmpDir:str='/tmp/', max_walltime:int=4320,
+        javaPath:str=None,
+        jvmVirtualByPhysicalMemoryRatio:float=1.2,
+        home_path:str=None, needSSHDBTunnel:bool=False,
+        debug=False, report=False, commit:bool=False):
         """
         site_handler: The name of the computing site where the jobs run and
             executables are stored. Check your Pegasus configuration.
@@ -38,20 +42,32 @@ class Workflow(ADAG):
                 the computing cluster by pegasus-transfer.'
         cluster_size: 'The number of pegasus jobs that should be clustered
             into one job. '
-            'Good if your workflow contains many quick jobs. It will reduce Pegasus monitor I/O.'
-        pegasusFolderName: 'the path relative to the pegasus workflow root. This folder will contains pegasus input & output.'
-            'It will be created during the pegasus staging process. It is useful to separate multiple sub-workflows.'
+            'Good if your workflow contains many quick jobs.
+            It will reduce Pegasus monitor I/O.'
+        pegasusFolderName: 'the path relative to the pegasus workflow root.
+            This folder will contains pegasus input & output.'
+            'It will be created during the pegasus staging process.
+            It is useful to separate multiple sub-workflows.'
             'If empty or None, everything is in the pegasus root.'
-        inputSuffixList: 'coma-separated list of input file suffices. If None, any suffix.'
-            'Suffix include the dot, (i.e. .tsv). Typical zip suffices are excluded (.gz, .bz2, .zip, .bz).'
-        output_path: 'the path to the output file that will contain the Pegasus DAG.'
-        tmpDir: 'a local folder for some jobs (MarkDup) to store temp data. /tmp/ can be too small sometimes.'
-        max_walltime: 'maximum wall time any job could have, in minutes. 20160=2 weeks.'
+        inputSuffixList: 'coma-separated list of input file suffices.
+            If None, any suffix.'
+            'Suffix include the dot, (i.e. .tsv).
+            Typical zip suffices are excluded (.gz, .bz2, .zip, .bz).'
+        output_path: 'the path to the output file that will
+            contain the Pegasus DAG.'
+        tmpDir: 'a local folder for some jobs (MarkDup) to store temp data.
+            /tmp/ can be too small sometimes.'
+        max_walltime: 'maximum wall time any job could have, in minutes.
+            20160=2 weeks.'
             'used in addGenericJob().'
-        jvmVirtualByPhysicalMemoryRatio: "if a job's virtual memory (usually 1.2X of JVM resident memory) exceeds request, "
-            "it will be killed on some clusters, hoffman2. This will make sure your job requests enough memory from the job scheduler."
+        jvmVirtualByPhysicalMemoryRatio: "if a job's virtual memory
+            (usually 1.2X of JVM resident memory) exceeds request, "
+            "it will be killed on some clusters, hoffman2.
+            This will make sure your job requests enough memory
+             from the job scheduler."
         debug: 'toggle debug mode.'
-        needSSHDBTunnel: 'If all DB-interacting jobs need a ssh tunnel to access a database that is inaccessible to computing nodes.'
+        needSSHDBTunnel: 'If all DB-interacting jobs need a ssh tunnel to
+             access a database that is inaccessible to computing nodes.'
         report: 'toggle verbose output.'
         commit: an argument for database-related workflows.
         """
@@ -69,8 +85,9 @@ class Workflow(ADAG):
         self.max_walltime = max_walltime
         self.javaPath = javaPath
         self.jvmVirtualByPhysicalMemoryRatio = jvmVirtualByPhysicalMemoryRatio
-        self.debug = debug
+        self.home_path = home_path
         self.needSSHDBTunnel = needSSHDBTunnel
+        self.debug = debug
         self.report = report
         self.commit = commit
         #change the workflow name to reflect the output filename
@@ -80,11 +97,13 @@ class Workflow(ADAG):
         ADAG.__init__(self, self.name)
 
         for pathName in self.pathToInsertHomePathList:
-            absPath = self.insertHomePath(getattr(self, pathName, None), self.home_path)
+            absPath = self.insertHomePath(getattr(self, pathName, None),
+                self.home_path)
             if absPath:
                 setattr(self, pathName, absPath)
             else:
-                sys.stderr.write("Warning: %s has an empty absolute path. Skip.\n"%(pathName))
+                logging.warning("%s has an empty absolute path. Skip."%\
+                    (pathName))
         
         self.architecture = "x86_64"
         self.operatingSystem = "linux"
@@ -154,7 +173,7 @@ class Workflow(ADAG):
                 fs_path = path
             
             if not (os.path.isfile(fs_path) and os.access(fs_path, os.X_OK)):
-                sys.stderr.write(f"Error from constructOneExecutableObject(): "
+                logging.error(f"From constructOneExecutableObject(): "
                     f"executable {path} is not an executable.\n")
                 sys.exit(3)
         executable.addPFN(PFN("file://" + os.path.expanduser(path),
@@ -205,39 +224,50 @@ class Workflow(ADAG):
                 clusterSizeMultiplier=1)
         self.registerOneExecutable(path="/bin/cp", name='cp',
             clusterSizeMultiplier=1)
-        self.registerOneExecutable(path="/bin/mv", name='mv', clusterSizeMultiplier=1)
-        self.registerOneExecutable(path=os.path.join(src_dir, "tools/runShellCommand.sh"), \
-                name='runShellCommand', clusterSizeMultiplier=1)
-        self.registerOneExecutable(path=os.path.join(src_dir, 'tools/pipe2File.sh'), \
-                name='pipe2File', clusterSizeMultiplier=1)
-        self.registerOneExecutable(path=os.path.join(src_dir, 'tools/sortHeaderAware.sh'), \
-                name='sortHeaderAware', clusterSizeMultiplier=1)
+        self.registerOneExecutable(path="/bin/mv", name='mv',
+            clusterSizeMultiplier=1)
+        self.registerOneExecutable(
+            path=os.path.join(src_dir, "tools/runShellCommand.sh"),
+            name='runShellCommand', clusterSizeMultiplier=1)
+        self.registerOneExecutable(
+            path=os.path.join(src_dir, 'tools/pipe2File.sh'),
+            name='pipe2File', clusterSizeMultiplier=1)
+        self.registerOneExecutable(
+            path=os.path.join(src_dir, 'tools/sortHeaderAware.sh'),
+            name='sortHeaderAware', clusterSizeMultiplier=1)
         #to be used on pipe2File.sh
-        self.sortExecutableFile = self.registerOneExecutableAsFile(path="/usr/bin/sort")
-        #mkdirWrap is different from mkdir that it doesn't report error when the directory is already there.
-        self.registerOneExecutable(path=os.path.join(src_dir, 'tools/mkdirWrap.sh'), \
+        self.sortExecutableFile = self.registerOneExecutableAsFile(
+            path="/usr/bin/sort")
+        #mkdirWrap is different from mkdir that it doesn't report error
+        #  when the directory is already there.
+        self.registerOneExecutable(
+            path=os.path.join(src_dir, 'tools/mkdirWrap.sh'),
             name='mkdirWrap', clusterSizeMultiplier=1)
-        self.registerOneExecutable(path=os.path.join(src_dir, "tools/gzip.sh"), 
+        self.registerOneExecutable(
+            path=os.path.join(src_dir, "tools/gzip.sh"),
             name='gzip', clusterSizeMultiplier=1)
         
     def setExecutablesClusterSize(self, executableClusterSizeMultiplierList,
-        defaultClusterSize=None):
+        defaultClusterSize:int=None):
         """
         make sure the profile of clusters.size is not added already.
         """
         if defaultClusterSize is None:
             defaultClusterSize = self.cluster_size
-        for executableClusterSizeMultiplierTuple in executableClusterSizeMultiplierList:
+        for executableClusterSizeMultiplierTuple in \
+            executableClusterSizeMultiplierList:
             executable = executableClusterSizeMultiplierTuple[0]
-            if len(executableClusterSizeMultiplierTuple)==1:
+            if len(executableClusterSizeMultiplierTuple) == 1:
                 clusterSizeMultiplier = 1
             else:
                 clusterSizeMultiplier = executableClusterSizeMultiplierTuple[1]
-            self.setExecutableClusterSize(executable=executable,
+            self.setExecutableClusterSize(
+                executable=executable,
                 clusterSizeMultiplier=clusterSizeMultiplier,
                 defaultClusterSize=defaultClusterSize)
     
-    def setExecutableClusterSize(self, executable=None,
+    def setExecutableClusterSize(
+        self, executable=None,
         clusterSizeMultiplier=1, defaultClusterSize=None):
         """
         it will remove the clustering profile if the new clusterSize is <1
@@ -245,10 +275,11 @@ class Workflow(ADAG):
         if defaultClusterSize is None:
             defaultClusterSize = self.cluster_size
         clusterSize = int(defaultClusterSize*clusterSizeMultiplier)
-        clusteringProf = Profile(Namespace.PEGASUS, key="clusters.size", value="%s"%clusterSize)
+        clusteringProf = Profile(Namespace.PEGASUS, key="clusters.size",
+            value="%s"%clusterSize)
         if executable.hasProfile(clusteringProf):
             executable.removeProfile(clusteringProf)
-        if clusterSize>1:
+        if clusterSize > 1:
             executable.addProfile(clusteringProf)
         if not self.hasExecutable(executable):
             self.addExecutable(executable)
@@ -263,7 +294,8 @@ class Workflow(ADAG):
         """
         if clusterSizeMultiplier is None:
             clusterSizeMultiplier = 1
-        executable = self.constructOneExecutableObject(path=path, name=name, noVersion=noVersion)
+        executable = self.constructOneExecutableObject(path=path, name=name, 
+            noVersion=noVersion)
         self.setExecutableClusterSize(executable=executable,
             clusterSizeMultiplier=clusterSizeMultiplier)
         return executable
@@ -271,7 +303,7 @@ class Workflow(ADAG):
     def getFilesWithProperSuffixFromFolder(self, inputFolder=None, suffix='.h5'):
         """
         """
-        sys.stderr.write("Getting files with %s as suffix from %s ..."%(suffix, inputFolder))
+        logging.info("Getting files with %s as suffix from %s ..."%(suffix, inputFolder))
         input_path_list = []
         counter = 0
         for filename in os.listdir(inputFolder):
@@ -279,7 +311,7 @@ class Workflow(ADAG):
             counter += 1
             if file_suffix==suffix:
                 input_path_list.append(os.path.join(inputFolder, filename))
-        sys.stderr.write("%s files out of %s total.\n"%(len(input_path_list), counter))
+        logging.info("%s files out of %s total.\n"%(len(input_path_list), counter))
         return input_path_list
 
     def getFilesWithSuffixFromFolderRecursive(self, inputFolder, 
@@ -290,7 +322,8 @@ class Workflow(ADAG):
         Similar to getFilesWithProperSuffixFromFolder(), but recursively go through all sub-folders.
         It calls utils.getRealPrefixSuffixOfFilenameWithVariableSuffix() to get the suffix.
         """
-        sys.stderr.write(f"Getting files with suffix in {repr(suffixSet)}, fake suffix={fakeSuffix}, from {inputFolder} ...\n")
+        logging.info(f"Getting files with suffix in {repr(suffixSet)}, "
+            f"fake suffix={fakeSuffix}, from {inputFolder} ...")
         counter = 0
         for filename in os.listdir(inputFolder):
             input_path = os.path.join(inputFolder, filename)
@@ -302,7 +335,7 @@ class Workflow(ADAG):
             elif os.path.isdir(input_path):
                 self.getFilesWithSuffixFromFolderRecursive(input_path, suffixSet=suffixSet, \
                     fakeSuffix=fakeSuffix, return_path_list=return_path_list)
-        sys.stderr.write(f"{len(return_path_list)} out of {counter} files.\n")
+        logging.info(f"{len(return_path_list)} out of {counter} files.")
 
     def registerFilesOfInputDir(self, inputDir=None,  input_path_list=None,
         input_site_handler=None, \
@@ -395,7 +428,7 @@ class Workflow(ADAG):
                 pegasusFileName = os.path.join(folderName, os.path.basename(input_path))
         pegasusFile = File(pegasusFileName)
         if checkFileExistence and not os.path.isfile(input_path):
-            sys.stderr.write(f"Error from registerOneInputFile(): {input_path} does not exist.")
+            logging.error(f"From registerOneInputFile(): {input_path} does not exist.")
             sys.exit(3)
         pegasusFile.abspath = os.path.abspath(input_path)
         pegasusFile.absPath = pegasusFile.abspath
@@ -1071,8 +1104,8 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava, \
         """
         # Write the DAX to stdout
         if self.isDAGWrittenToDisk:
-            sys.stderr.write("Warning: the dag has been written to a file "
-                "already (writeXML() has been called). No more calling.\n")
+            logging.warn("The dag has been written to a file "
+                "already (writeXML() has been called). No more writing.")
         else:
             outf = open(self.output_path, 'w')
             self.writeXML(outf)
