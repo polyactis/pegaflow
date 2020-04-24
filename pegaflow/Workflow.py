@@ -219,7 +219,7 @@ class Workflow(ADAG):
     def registerExecutables(self):
         """
         """
-        if hasattr(self, 'javaPath') and os.path.isfile(self.javaPath):
+        if hasattr(self, 'javaPath') and self.javaPath and os.path.isfile(self.javaPath):
             self.registerOneExecutable(path=self.javaPath, name='java',
                 clusterSizeMultiplier=1)
         else:
