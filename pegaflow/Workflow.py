@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-1. Class Workflow is a class for other programs to inherit and helps to simplify pegasus workflow dax writing.
+1. Class Workflow is a class for other programs to inherit and simplify pegasus
+    workflow dax generation.
 2. Functions that help to simplify coding:
 """
 import sys, os
@@ -1139,8 +1140,8 @@ if __name__ == '__main__':
         " pegasus-transfer (need setup).")
     ap.add_argument("-C", "--cluster_size", type=int, default=1,
             help="Default: %(default)s. "
-            "This number decides how many of pegasus jobs should be clustered into one job. "
-            "Good if your workflow contains many quick jobs. "
+            "This number decides how many of pegasus jobs should be clustered "
+            "into one job. Good if your workflow contains many quick jobs. "
             "It will reduce Pegasus monitor I/O.")
     ap.add_argument("-o", "--output_path", type=str, required=True,
             help="The path to the output file that will contain the Pegasus DAG.")
@@ -1151,7 +1152,8 @@ if __name__ == '__main__':
             'It is useful to separate multiple sub-workflows. '
             'If empty or None, everything is in the pegasus root.')
     ap.add_argument("--inputSuffixList", type=str,
-            help='Coma-separated list of input file suffices. Used to exclude input files.'
+            help='Coma-separated list of input file suffices. '
+            'Used to exclude input files.'
             'If None, no exclusion. Please include the dot to the suffix, .tsv, not tsv.'
             'Common zip suffices (.gz, .bz2, .zip, .bz) will be ignored in obtaining the suffix.')
     ap.add_argument("--tmpDir", type=str, default='/tmp/',
@@ -1159,15 +1161,16 @@ if __name__ == '__main__':
                 'A local folder for some jobs (MarkDup) to store temp data.'
                 '/tmp/ can be too small sometimes.')
     ap.add_argument("--max_walltime", type=int, default=4320,
-            help='Default: %(default)s. Maximum wall time for any job, in minutes. 4320=3 days.'
+            help='Default: %(default)s. '
+            'Maximum wall time for any job, in minutes. 4320=3 days.'
             'Used in addGenericJob(). Most clusters have upper limit for runtime.')
     ap.add_argument("--javaPath", type=str,
             help='The path to java binary. Must be provided if you have Java jobs.')
     ap.add_argument("--jvmVirtualByPhysicalMemoryRatio", type=float, default=1.2,
             help='Default: %(default)s. '
-            'If a job virtual memory (usually 1.2X of JVM resident memory) exceeds request, '
-            "it will be killed on some clusters. "
-            "This will make sure your job requests enough memory.")
+            'If a job virtual memory (~1.2X of JVM resident memory) exceeds request, '
+            "it may be killed. "
+            "This will make sure your java jobs request enough memory.")
     ap.add_argument("--debug", action='store_true',
             help='Toggle debug mode.')
     ap.add_argument("--report", action='store_true',
@@ -1184,7 +1187,8 @@ if __name__ == '__main__':
         cluster_size=args.cluster_size,\
         tmpDir=args.tmpDir, max_walltime=args.max_walltime, \
         javaPath=args.javaPath,
-        jvmVirtualByPhysicalMemoryRatio=args.jvmVirtualByPhysicalMemoryRatio,\
-        debug=args.debug, needSSHDBTunnel=args.needSSHDBTunnel, report=args.report)
+        jvmVirtualByPhysicalMemoryRatio=args.jvmVirtualByPhysicalMemoryRatio,
+        needSSHDBTunnel=args.needSSHDBTunnel,
+        debug=args.debug, report=args.report)
     instance.setup_run()
     instance.end_run()
