@@ -147,8 +147,8 @@ class Workflow(ADAG):
             print("Done", flush=True)
             self.isDAGWrittenToDisk = True
     
-    def constructOneExecutableObject(self, path=None, name=None, 
-        checkPathExecutable=True, version=None, namespace=None,\
+    def constructOneExecutableObject(self, path=None, name=None,
+        checkExecutable=True, version=None, namespace=None,
         noVersion=False):
         """
         check if path is an executable file.
@@ -157,19 +157,17 @@ class Workflow(ADAG):
             namespace = self.namespace
         if not version:
             version = self.version
-        operatingSystem = self.operatingSystem
-        architecture = self.architecture
-        site_handler = self.site_handler
-
+        
         if noVersion:
             #removed argument version from Executable()
             executable = Executable(namespace=namespace, name=name,
-                os=operatingSystem, arch=architecture, installed=True)
+                os=self.operatingSystem, arch=self.architecture,
+                installed=True)
         else:
             executable = Executable(namespace=namespace, name=name,
-                version=version, os=operatingSystem,
-                arch=architecture, installed=True)
-        if checkPathExecutable:
+                version=version, os=self.operatingSystem,
+                arch=self.architecture, installed=True)
+        if checkExecutable:
             if path.find('file://') == 0:
                 fs_path = path[6:]
             else:
@@ -177,10 +175,10 @@ class Workflow(ADAG):
             
             if not (os.path.isfile(fs_path) and os.access(fs_path, os.X_OK)):
                 logging.error(f"From constructOneExecutableObject(): "
-                    f"executable {path} is not an executable.\n")
+                    f"Exec {path} does not exist or is not an executable.")
                 sys.exit(3)
         executable.addPFN(PFN("file://" + os.path.expanduser(path),
-            site_handler))
+            self.site_handler))
         return executable
 
     def connectDB(self):
@@ -302,13 +300,13 @@ class Workflow(ADAG):
         """
         if clusterSizeMultiplier is None:
             clusterSizeMultiplier = 1
-        executable = self.constructOneExecutableObject(path=path, \
+        executable = self.constructOneExecutableObject(path=path,
             name=name, noVersion=noVersion)
         self.setExecutableClusterSize(executable=executable,
             clusterSizeMultiplier=clusterSizeMultiplier)
         return executable
 
-    def getFilesWithProperSuffixFromFolder(self, inputFolder=None, \
+    def getFilesWithProperSuffixFromFolder(self, inputFolder=None,
         suffix='.h5'):
         """
         """
@@ -477,7 +475,6 @@ class Workflow(ADAG):
         """
         if site_handler is None:
             site_handler = self.site_handler
-            #usually they are same
         if not folderName:
             folderName = "jar"
         pegasusFile = self.registerOneInputFile(input_path=path, 

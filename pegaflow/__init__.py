@@ -14,7 +14,7 @@ import os
 from . DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG
 from .DAX3 import Use, Job, Dependency
 
-version='0.0.15'
+version='0.0.16'
 namespace = "pegasus"
 pegasus_version = "1.0"
 architecture = "x86_64"
@@ -38,7 +38,16 @@ def setExecutableClusterSize(workflow, executable, cluster_size=1):
 
 
 def registerExecutable(workflow, path, site_handler,
-    executableName=None, cluster_size=1):
+    executableName=None, cluster_size=1, checkExecutable=True):
+    if checkExecutable:
+        if path.find('file://') == 0:
+            fs_path = path[6:]
+        else:
+            fs_path = path
+        if not (os.path.isfile(fs_path) and os.access(fs_path, os.X_OK)):
+            logging.error(f"From registerExecutable(): "
+                f"executable {path} does not exist or is not an executable.")
+            sys.exit(3)
     if executableName is None:
         executableName = os.path.basename(path)
     executable = Executable(namespace=namespace, name=executableName,
@@ -195,7 +204,6 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
         condorJobRequirementLs.append(f"(sshDBTunnel=={sshDBTunnel})")
     
     if no_of_cpus is not None:
-       	#for dynamic slots
         job.addProfile(Profile(Namespace.CONDOR, key="request_cpus",
             value=f"{no_of_cpus}"))
     
@@ -322,8 +330,7 @@ def registerFilesOfInputDir(workflow, inputDir, input_path_list=None,
 
 
 def addJob2workflow(workflow, executable, input_file_list,
-    output_file_transfer_list,
-    output_file_notransfer_list, argv):
+    output_file_transfer_list, output_file_notransfer_list, argv):
     the_job = Job(namespace=namespace, name=executable.name,
         version=pegasus_version)
     if argv:
