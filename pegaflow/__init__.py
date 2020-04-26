@@ -9,12 +9,12 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
-version='0.0.14'
 import logging
 import os
-import sys
-from . DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG, Use, Job, Dependency
+from . DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG
+from .DAX3 import Use, Job, Dependency
 
+version='0.0.15'
 namespace = "pegasus"
 pegasus_version = "1.0"
 architecture = "x86_64"
@@ -24,24 +24,26 @@ def setExecutableClusterSize(workflow, executable, cluster_size=1):
     """
     it will remove the clustering profile if the new cluster_size is <1.
     """
-    if cluster_size is not None and cluster_size>1:
-        clusteringProf = Profile(Namespace.PEGASUS, key="clusters.size", value="%s"%cluster_size)
+    if cluster_size is not None and cluster_size > 1:
+        clusteringProf = Profile(Namespace.PEGASUS, key="clusters.size",
+            value=f"{cluster_size}")
         if executable.hasProfile(clusteringProf):
             executable.removeProfile(clusteringProf)
         executable.addProfile(clusteringProf)
     if not workflow.hasExecutable(executable):
-        workflow.addExecutable(executable)	#removeExecutable() is its counterpart
+        workflow.addExecutable(executable)
+        #removeExecutable() is its counterpart
         setattr(workflow, executable.name, executable)
     return executable
 
 
-def registerExecutable(workflow, path, site_handler, 
-        executableName=None, cluster_size=1):
+def registerExecutable(workflow, path, site_handler,
+    executableName=None, cluster_size=1):
     if executableName is None:
         executableName = os.path.basename(path)
     executable = Executable(namespace=namespace, name=executableName,
-                         os=operatingSystem, arch=architecture,
-                         installed=True, version=pegasus_version)
+        os=operatingSystem, arch=architecture,
+        installed=True, version=pegasus_version)
     executable.addPFN(PFN("file://" + os.path.abspath(path), site_handler))
     workflow.addExecutable(executable)
     setExecutableClusterSize(workflow, executable, cluster_size=cluster_size)
@@ -75,72 +77,80 @@ class PassingData(object):
     def __getitem__(self, key):
         """
         enable it to work like a dictionary
-            i.e. pdata.chromosome or pdata['chromosome'] is equivalent if attribute 0 is chromosome.
+        i.e. pdata.chromosome or pdata['chromosome'] is equivalent if
+         attribute 0 is chromosome.
         """
         return self.__getattribute__(key)
 
 
-def getListOutOfStr(list_in_str=None, data_type=int, separator1=',', separator2='-'):
+def getListOutOfStr(list_in_str=None, data_type=int, separator1=',',
+    separator2='-'):
     """
-    This function parses a list from a string representation of a list, such as '1,3-7,11'=[1,3,4,5,6,7,11].
+    This function parses a list from a string representation of a list,
+        such as '1,3-7,11'=[1,3,4,5,6,7,11].
     If only separator2, '-', is used ,all numbers have to be integers.
     If all are separated by separator1, it could be in non-int data_type.
     strip the strings as much as u can.
     if separator2 is None or nothing or 0, it wont' be used.
 
     Examples:
-        self.chromosomeList = utils.getListOutOfStr('1-5,7,9', data_type=str, separator2=None)
+        self.chromosomeList = utils.getListOutOfStr('1-5,7,9', data_type=str,
+            separator2=None)
     """
     list_to_return = []
-    if list_in_str=='' or list_in_str is None:
+    if list_in_str == '' or list_in_str is None:
         return list_to_return
     list_in_str = list_in_str.strip()
-    if list_in_str=='' or list_in_str is None:
+    if list_in_str == '' or list_in_str is None:
         return list_to_return
-    if type(list_in_str)==int:	#just one integer, put it in and return immediately
+    if type(list_in_str) == int:
+        #just one integer, put it in and return immediately
         return [list_in_str]
     index_anchor_ls = list_in_str.split(separator1)
     for index_anchor in index_anchor_ls:
         index_anchor = index_anchor.strip()
-        if len(index_anchor)==0:	#nothing there, skip
+        if len(index_anchor) == 0:
             continue
         if separator2:
             start_stop_tup = index_anchor.split(separator2)
         else:
             start_stop_tup = [index_anchor]
-        if len(start_stop_tup)==1:
+        if len(start_stop_tup) == 1:
             list_to_return.append(data_type(start_stop_tup[0]))
-        elif len(start_stop_tup)>1:
+        elif len(start_stop_tup) > 1:
             start_stop_tup = map(int, start_stop_tup)
             list_to_return += range(start_stop_tup[0], start_stop_tup[1]+1)
     list_to_return = map(data_type, list_to_return)
     return list_to_return
 
 
-def getRealPrefixSuffixOfFilenameWithVariableSuffix(path, fakeSuffix='.gz', 
-    fakeSuffixSet = set(['.gz', '.zip', '.bz2', '.bz'])):
+def getRealPrefixSuffixOfFilenameWithVariableSuffix(path, fakeSuffix='.gz',
+    fakeSuffixSet =set(['.gz', '.zip', '.bz2', '.bz'])):
     """
-    The purpose of this function is to get the prefix, suffix of a filename regardless of whether it
-        has two suffices (gzipped) or one. 
+    The purpose of this function is to get the prefix, suffix of a filename
+         regardless of whether it has two suffices (gzipped) or one.
     i.e.
-        A file name is either sequence_628BWAAXX_4_1.fastq.gz or sequence_628BWAAXX_4_1.fastq (without gz).
+        A file name is either sequence_628BWAAXX_4_1.fastq.gz or
+            sequence_628BWAAXX_4_1.fastq (without gz).
         This function returns ('sequence_628BWAAXX_4_1', '.fastq')
 
     "." is considered part of the filename suffix.
     """
-    fname_prefix, fname_suffix =  os.path.splitext(path)
+    fname_prefix, fname_suffix = os.path.splitext(path)
     if fakeSuffix and fakeSuffix not in fakeSuffixSet:
         fakeSuffixSet.add(fakeSuffix)
     while fname_suffix in fakeSuffixSet:
-        fname_prefix, fname_suffix =  os.path.splitext(fname_prefix)
+        fname_prefix, fname_suffix = os.path.splitext(fname_prefix)
     return fname_prefix, fname_suffix
 
 
-def addMkDirJob(workflow, executable, outputDir, parentJobLs=None, extraDependentInputLs=None):
+def addMkDirJob(workflow, executable, outputDir, parentJobLs=None,
+    extraDependentInputLs=None):
     """
     """
     # Add a mkdir job for any directory.
-    job = Job(name=executable.name, namespace=namespace, version=pegasus_version)
+    job = Job(name=executable.name, namespace=namespace,
+        version=pegasus_version)
     job.addArguments(outputDir)
     #two attributes for child jobs to get the output directory.
     job.folder = outputDir
@@ -158,7 +168,8 @@ def addMkDirJob(workflow, executable, outputDir, parentJobLs=None, extraDependen
         workflow.no_of_jobs += 1
     return job
 
-def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1, walltime=180, sshDBTunnel=0):
+def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
+    walltime=180, sshDBTunnel=0):
     """
     job_max_memory: integer, unit in MB.
         if job_max_memory is None, then skip setting memory requirement.
@@ -170,29 +181,34 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1, wallti
         set walltime default to 180 minutes (3 hours).
     """
     condorJobRequirementLs = []
-    if job_max_memory == "" or job_max_memory == 0 or job_max_memory =="0":
+    if job_max_memory == "" or job_max_memory == 0 or job_max_memory == "0":
         job_max_memory = 500
     if job_max_memory is not None: 
-        job.addProfile(Profile(Namespace.GLOBUS, key="maxmemory", value="%s"%(job_max_memory)))
+        job.addProfile(Profile(Namespace.GLOBUS, key="maxmemory",
+            value=f"{job_max_memory}"))
        	#for dynamic slots
-        job.addProfile(Profile(Namespace.CONDOR, key="request_memory", value="%s"%(job_max_memory)))
-        condorJobRequirementLs.append("(memory>=%s)"%(job_max_memory))
+        job.addProfile(Profile(Namespace.CONDOR, key="request_memory",
+            value=f"{job_max_memory}"))
+        condorJobRequirementLs.append(f"(memory>={job_max_memory})")
     if sshDBTunnel==1:
        	#use ==, not =.
-        condorJobRequirementLs.append("(sshDBTunnel==%s)"%(sshDBTunnel))
+        condorJobRequirementLs.append(f"(sshDBTunnel=={sshDBTunnel})")
     
     if no_of_cpus is not None:
        	#for dynamic slots
-        job.addProfile(Profile(Namespace.CONDOR, key="request_cpus", value="%s"%(no_of_cpus)) )
+        job.addProfile(Profile(Namespace.CONDOR, key="request_cpus",
+            value=f"{no_of_cpus}"))
     
     if walltime is not None:
         #scale walltime according to cluster_size
-        job.addProfile(Profile(Namespace.GLOBUS, key="maxwalltime", value="%s"%(walltime)) )
+        job.addProfile(Profile(Namespace.GLOBUS, key="maxwalltime",
+            value=f"{walltime}"))
         #TimeToLive is in seconds
-        condorJobRequirementLs.append("(Target.TimeToLive>=%s)"%(int(walltime)*60) )
+        condorJobRequirementLs.append(
+            f"(Target.TimeToLive>={int(walltime)*60})")
     #key='requirements' could only be added once for the condor profile
-    job.addProfile(Profile(Namespace.CONDOR, key="requirements", 
-        value=" && ".join(condorJobRequirementLs) ))
+    job.addProfile(Profile(Namespace.CONDOR, key="requirements",
+        value=" && ".join(condorJobRequirementLs)))
 
 
 def getAbsPathOutOfExecutable(executable):
@@ -224,9 +240,9 @@ def getExecutableClusterSize(executable=None):
     return cluster_size
 
 
-def registerOneInputFile(workflow, input_path, site_handler, folderName="", \
-                    useAbsolutePathAsPegasusFileName=False,\
-                    pegasusFileName=None, checkFileExistence=True):
+def registerOneInputFile(workflow, input_path, site_handler, folderName="",
+    useAbsolutePathAsPegasusFileName=False,
+    pegasusFileName=None, checkFileExistence=True):
     """
     Register a single input file to pegasus.
 
@@ -234,14 +250,16 @@ def registerOneInputFile(workflow, input_path, site_handler, folderName="", \
         pegasusFile = registerOneInputFile(input_path='/tmp/abc.txt')
         
     useAbsolutePathAsPegasusFileName:
-        This would render the file to be referred as the absolute path on the running nodes.
+        This would render the file to be referred as the absolute path on
+         the running nodes.
         And pegasus will not symlink or copy/transfer the file.
-        Set it to True only if you don't want to add the file to the job 
+        Set it to True only if you don't want to add the file to the job
             as an INPUT dependency (as it's accessed through abs path).
     folderName: if given, it will cause the file to be put into that folder
          (relative path) within the pegasus workflow running folder.
         This folder needs to be created by a mkdir job.
-    Return: pegasusFile.abspath or pegasusFile.absPath is the absolute path of the file.
+    Return: pegasusFile.abspath or pegasusFile.absPath is the absolute
+        path of the file.
     """
     if not pegasusFileName:
         if useAbsolutePathAsPegasusFileName:
@@ -249,10 +267,12 @@ def registerOneInputFile(workflow, input_path, site_handler, folderName="", \
             # and also no need to indicate them as file dependency for jobs.
             pegasusFileName = os.path.abspath(input_path)
         else:
-            pegasusFileName = os.path.join(folderName, os.path.basename(input_path))
+            pegasusFileName = os.path.join(folderName, os.path.basename(
+                input_path))
     pegasusFile = File(pegasusFileName)
     if checkFileExistence and not os.path.isfile(input_path):
-        sys.stderr.write("Error from registerOneInputFile(): %s does not exist.\n"%(input_path))
+        logging.error(f"From registerOneInputFile(): {input_path}"
+            f" does not exist.")
         raise
     pegasusFile.abspath = os.path.abspath(input_path)
     pegasusFile.absPath = pegasusFile.abspath
@@ -262,11 +282,12 @@ def registerOneInputFile(workflow, input_path, site_handler, folderName="", \
     return pegasusFile
 
 
-def registerFilesOfInputDir(workflow, inputDir, input_path_list=None, \
-            inputSuffixSet=None, site_handler=None, pegasusFolderName='', \
-            **keywords):
+def registerFilesOfInputDir(workflow, inputDir, input_path_list=None,
+    inputSuffixSet=None, site_handler=None, pegasusFolderName='',
+    **keywords):
     """
-    This function registers all files in inputDir (if present) and input_path_list (if not None).
+    This function registers all files in inputDir (if present) and
+         input_path_list (if not None).
     """
     if input_path_list is None:
         input_path_list = []
@@ -276,34 +297,41 @@ def registerFilesOfInputDir(workflow, inputDir, input_path_list=None, \
             input_path = os.path.realpath(os.path.join(inputDir, fname))
             input_path_list.append(input_path)
 
-    print(f"Registering {len(input_path_list)} input files with suffix in {inputSuffixSet} ... ", \
-        flush=True, end='')
+    print(f"Registering {len(input_path_list)} input files with suffix in"
+        f" {inputSuffixSet} ... ", flush=True, end='')
     inputFileList = []
     counter = 0
     for input_path in input_path_list:
         counter += 1
         # file.fastq.gz's suffix is .fastq, not .gz.
         suffix = getRealPrefixSuffixOfFilenameWithVariableSuffix(input_path)[1]
-        if inputSuffixSet is not None and len(inputSuffixSet)>0 and suffix not in inputSuffixSet:
-            #skip input whose suffix is not in inputSuffixSet if inputSuffixSet is a non-empty set.
+        if inputSuffixSet is not None and len(inputSuffixSet)>0 and \
+            suffix not in inputSuffixSet:
+            #skip input whose suffix is not in inputSuffixSet if inputSuffixSet
+            #  is a non-empty set.
             continue
-        inputFile = File(os.path.join(pegasusFolderName, os.path.basename(input_path)))
+        inputFile = File(os.path.join(pegasusFolderName,
+            os.path.basename(input_path)))
         inputFile.addPFN(PFN("file://" + input_path, site_handler))
         inputFile.abspath = input_path
         workflow.addFile(inputFile)
         inputFileList.append(inputFile)
-    print(f"{len(inputFileList)} out of {len(input_path_list)} files registered. Done.", flush=True)
+    print(f"{len(inputFileList)} out of {len(input_path_list)} files"
+        f" registered. Done.", flush=True)
     return inputFileList
 
 
-def addJob2workflow(workflow, executable, input_file_list, output_file_transfer_list,
-                output_file_notransfer_list, argv):
-    the_job = Job(namespace=namespace, name=executable.name, version=pegasus_version)
+def addJob2workflow(workflow, executable, input_file_list,
+    output_file_transfer_list,
+    output_file_notransfer_list, argv):
+    the_job = Job(namespace=namespace, name=executable.name,
+        version=pegasus_version)
     if argv:
         the_job.addArguments(*argv)
     if input_file_list:
         for input_file in input_file_list:
-            the_job.uses(input_file, link=Link.INPUT, transfer=True, register=True)
+            the_job.uses(input_file, link=Link.INPUT, transfer=True,
+                register=True)
     
     if output_file_transfer_list:
         for output_file in output_file_transfer_list:

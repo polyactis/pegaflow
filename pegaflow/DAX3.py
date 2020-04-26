@@ -1200,17 +1200,21 @@ class AbstractJob(ProfileMixin, UseMixin, InvokeMixin, MetadataMixin):
     def addArguments(self, *arguments):
         """Add one or more arguments to the job (this will add whitespace)"""
         for arg in arguments:
-            if not isinstance(arg, (File, str)):
+            if not isinstance(arg, (File, str, int, float)):
                 raise FormatError("Invalid argument", arg)
-        for arg in arguments:
+            
             if len(self.arguments) > 0:
                 self.arguments.append(' ')
-            self.arguments.append(arg)
+            
+            if isinstance(arg, (int, float)):
+                self.arguments.append(f"{arg}")
+            else:
+                self.arguments.append(arg)
 
     def addRawArguments(self, *arguments):
         """Add one or more arguments to the job (whitespace will NOT be added)"""
         for arg in arguments:
-            if not isinstance(arg, (File, str)):
+            if not isinstance(arg, (File, str, int, float)):
                 raise FormatError("Invalid argument", arg)
         self.arguments.extend(arguments)
 
@@ -1225,7 +1229,7 @@ class AbstractJob(ProfileMixin, UseMixin, InvokeMixin, MetadataMixin):
             if isinstance(a, File):
                 args.append(a.toArgumentXML())
             else:
-                args.append(a)
+                args.append(f'{a}')
         return ''.join(args)
 
     def setStdout(self, filename):
