@@ -11,14 +11,16 @@
 #  limitations under the License.
 import logging
 import os
-from . DAX3 import Executable, File, PFN, Profile, Namespace, Link, ADAG
-from .DAX3 import Use, Job, Dependency
+import sys
+from . DAX3 import Executable, File, PFN, Profile, Namespace, Link
+from .DAX3 import Job
 
-version='0.0.16'
+version = '0.0.17'
 namespace = "pegasus"
 pegasus_version = "1.0"
 architecture = "x86_64"
 operatingSystem = "linux"
+
 
 def setExecutableClusterSize(workflow, executable, cluster_size=1):
     """
@@ -45,9 +47,9 @@ def registerExecutable(workflow, path, site_handler,
         else:
             fs_path = path
         if not (os.path.isfile(fs_path) and os.access(fs_path, os.X_OK)):
-            logging.error(f"From registerExecutable(): "
+            logging.error(f"registerExecutable(): "
                 f"executable {path} does not exist or is not an executable.")
-            sys.exit(3)
+            raise
     if executableName is None:
         executableName = os.path.basename(path)
     executable = Executable(namespace=namespace, name=executableName,
@@ -76,7 +78,7 @@ class PassingData(object):
         """
         return_ls = []
         for attributeName in dir(self):
-            if attributeName.find('__')==0:	#ignore the 
+            if attributeName.find('__')==0:
                 continue
             value = getattr(self, attributeName, None)
             return_ls.append("%s = %s"%(attributeName, value))
@@ -338,7 +340,7 @@ def addJob2workflow(workflow, executable, input_file_list,
     if input_file_list:
         for input_file in input_file_list:
             the_job.uses(input_file, link=Link.INPUT, transfer=True,
-                register=True)
+                         register=True)
     
     if output_file_transfer_list:
         for output_file in output_file_transfer_list:

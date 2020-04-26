@@ -17,21 +17,21 @@ src_dir = os.path.dirname(os.path.abspath(__file__))
 
 class Workflow(ADAG):
     __doc__ = __doc__
-    # Each entry of pathToInsertHomePathList should contain %s, i.e. 
+    # Each entry of pathToInsertHomePathList should contain %s, i.e.
     #  '%s/bin/myprogram',
     #  and will be expanded to be '/home/user/bin/myprogram'.
     # Child classes can add stuff into this list.
     pathToInsertHomePathList = []
     home_path = ""
-    def __init__(self, inputSuffixList:list=None,
-        pegasusFolderName:str='folder', output_path:str=None,
-        site_handler:str=None, input_site_handler:str=None,
-        cluster_size:int=1,
-        tmpDir:str='/tmp/', max_walltime:int=4320,
-        javaPath:str=None,
-        jvmVirtualByPhysicalMemoryRatio:float=1.2,
-        home_path:str=None, needSSHDBTunnel:bool=False,
-        debug=False, report=False, commit:bool=False):
+    def __init__(self, inputSuffixList: list = None,
+        pegasusFolderName: str = 'folder', output_path: str = None,
+        site_handler: str = None, input_site_handler: str = None,
+        cluster_size: int = 1,
+        tmpDir: str = '/tmp/', max_walltime: int = 4320,
+        javaPath: str = None,
+        jvmVirtualByPhysicalMemoryRatio: float = 1.2,
+        home_path: str = None, needSSHDBTunnel: bool = False,
+        debug=False, report=False, commit: bool = False):
         """
         site_handler: The name of the computing site where the jobs run and
             executables are stored. Check your Pegasus configuration.
@@ -457,7 +457,7 @@ class Workflow(ADAG):
         pegasusFile = File(pegasusFileName)
         if checkFileExistence and not os.path.isfile(input_path):
             logging.error(f"From registerOneInputFile(): {input_path} does not exist.")
-            sys.exit(3)
+            raise
         pegasusFile.abspath = os.path.abspath(input_path)
         pegasusFile.absPath = pegasusFile.abspath
         pegasusFile.addPFN(PFN("file://" + pegasusFile.abspath, \
