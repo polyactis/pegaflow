@@ -17,8 +17,8 @@ src_dir = os.path.dirname(os.path.abspath(__file__))
 
 class Workflow(ADAG):
     __doc__ = __doc__
-    # Each entry of pathToInsertHomePathList should contain %s, i.e.
-    #  '%s/bin/myprogram',
+    # Each entry of pathToInsertHomePathList should be a relative path.
+    #  'bin/myprogram',
     #  and will be expanded to be '/home/user/bin/myprogram'.
     # Child classes can add stuff into this list.
     pathToInsertHomePathList = []
