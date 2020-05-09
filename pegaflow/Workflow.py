@@ -104,7 +104,7 @@ class Workflow(ADAG):
                 setattr(self, pathName, absPath)
             else:
                 logging.warning(f"{pathName} has an empty absolute path. "
-                    "Not insert home_path.")
+                    "Ignored in prepending home_path.")
         
         self.architecture = "x86_64"
         self.operatingSystem = "linux"
@@ -189,11 +189,12 @@ class Workflow(ADAG):
 
     def insertHomePath(self, inputPath, home_path):
         """
-        inputPath could be None
+        inputPath could be None/empty
         """
         if inputPath:
-            if inputPath.find('%s')!=-1:
-                inputPath = inputPath % home_path
+            if inputPath[0]!='/':
+                #prepend home to a relative path only
+                inputPath = os.path.join(home_path, inputPath)
         else:
             inputPath = None
         return inputPath
