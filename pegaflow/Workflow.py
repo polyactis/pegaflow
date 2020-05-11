@@ -662,18 +662,19 @@ class Workflow(ADAG):
         """
         a generic wrapper for jobs that "inserts" data (from file) into database
         Example:
-            job = self.addData2DBJob(executable=executable, inputFile=None,
-                inputArgumentOption="-i", \
-                outputFile=None, outputArgumentOption="-o", inputFileList=None, \
-                data_dir=None, logFile=logFile, commit=commit,\
-                parentJobLs=parentJobLs,
-                extraDependentInputLs=extraDependentInputLs,
-                extraOutputLs=None, transferOutput=transferOutput, \
-                extraArguments=extraArguments,
-                extraArgumentList=extraArgumentList,
-                job_max_memory=job_max_memory,  sshDBTunnel=sshDBTunnel,
-                walltime=walltime,\
-                key2ObjectForJob=None, objectWithDBArguments=self, **keywords)
+        
+        job = self.addData2DBJob(executable=executable, inputFile=None,
+            inputArgumentOption="-i", \
+            outputFile=None, outputArgumentOption="-o", inputFileList=None, \
+            data_dir=None, logFile=logFile, commit=commit,\
+            parentJobLs=parentJobLs,
+            extraDependentInputLs=extraDependentInputLs,
+            extraOutputLs=None, transferOutput=transferOutput, \
+            extraArguments=extraArguments,
+            extraArgumentList=extraArgumentList,
+            job_max_memory=job_max_memory,  sshDBTunnel=sshDBTunnel,
+            walltime=walltime,\
+            key2ObjectForJob=None, objectWithDBArguments=self, **keywords)
 
         """
         if extraArgumentList is None:
