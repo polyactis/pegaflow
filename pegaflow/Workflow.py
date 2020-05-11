@@ -272,8 +272,7 @@ class Workflow(ADAG):
                 clusterSizeMultiplier=clusterSizeMultiplier,
                 defaultClusterSize=defaultClusterSize)
     
-    def setExecutableClusterSize(
-        self, executable=None,
+    def setExecutableClusterSize(self, executable=None,
         clusterSizeMultiplier=1, defaultClusterSize=None):
         """
         it will remove the clustering profile if the new clusterSize is <1
@@ -469,7 +468,7 @@ class Workflow(ADAG):
         return pegasusFile
 
     def registerOneJar(self, name=None, path=None, site_handler=None, \
-        workflow=None, folderName="", useAbsolutePathAsPegasusFileName=False):
+        folderName="", useAbsolutePathAsPegasusFileName=False):
         """
         useAbsolutePathAsPegasusFileName=True if you do not plan
          to add a jar file as INPUT dependency for jobs
@@ -517,9 +516,9 @@ class Workflow(ADAG):
         setattr(self, pythonVariableName, pegasusFile)
         return pegasusFile
 
-    def addInputToMergeJob(self, mergeJob=None, inputF=None,
-        inputArgumentOption="",
-        parentJobLs=None, \
+    def addInputToMergeJob(self, mergeJob=None,
+        inputF=None, inputArgumentOption="",
+        parentJobLs=None,
         extraDependentInputLs=None, **keywords):
         """
         This function adds inputF or parentJobLs[i].output
