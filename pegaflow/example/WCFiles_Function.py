@@ -75,7 +75,7 @@ if __name__ == '__main__':
             input_file_list=[input_file],
             output_file_transfer_list=None,
             output_file_notransfer_list=[output_file],
-            argv=[output_file, '/bin/cat', input_file])
+            argv=[output_file, '/usr/bin/wc', input_file])
         pegaflow.setJobResourceRequirement(job=wcJob, job_max_memory=200)
         wflow.addDependency(Dependency(parent=outputDirJob, child=wcJob))
         #add wcJob's output as input to mergeJob
