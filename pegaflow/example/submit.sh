@@ -192,7 +192,7 @@ echo Java CLASSPATH is $CLASSPATH
 #2013.03.30 "--force " was once added due to a bug. it'll stop file reuse.
 commandLine="pegasus-plan -Dpegasus.file.cleanup.clusters.size=$cleanupClusterSize \
 	--conf pegasusrc --sites $computingSiteName --dax $dagFile \
-	--dir ${submitDir} --relative-dir $relativeSubmitDir \
+	--dir ${submitDir} --relative-dir $relativeSubmitDir --verbose \
 	--output-site $storageSiteName --cluster horizontal $submitOption "
 
 echo commandLine is $commandLine
