@@ -560,9 +560,9 @@ class Workflow(ADAG):
 
     def addSortJob(self, executable=None, commandFile=None, \
         inputFile=None, outputFile=None, noOfHeaderLines=0, \
+        extraArgumentList=None, extraArguments=None, 
         parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None,
-        transferOutput=False, \
-        extraArgumentList=None, extraArguments=None, sshDBTunnel=None,\
+        transferOutput=False, sshDBTunnel=None,
         job_max_memory=200, walltime=120, **keywords):
         """
         use sortHeaderAware executable (from pymodule/shell).
@@ -573,9 +573,9 @@ class Workflow(ADAG):
             sortSNPID2NewCoordinatesJob = self.addSortJob(
                 inputFile=reduceJob.output, \
                 outputFile=sortedSNPID2NewCoordinateFile, noOfHeaderLines=1,
+                extraArgumentList=["-k3,3 -k4,4n"], \
                 parentJobLs=[reduceJob], \
                 extraOutputLs=None, transferOutput=False, \
-                extraArgumentList=["-k3,3 -k4,4n"], \
                 sshDBTunnel=None,\
                 job_max_memory=4000, walltime=120)
             # -t$'\t' for sort has to be removed as it won't be passed correctly.
@@ -595,25 +595,25 @@ class Workflow(ADAG):
         job = self.addGenericJob(executable=executable,
             inputFile=inputFile, inputArgumentOption="",
             outputFile=outputFile, outputArgumentOption="",
+            extraArgumentList=extraArgumentList,
+            extraArguments=extraArguments,
             extraOutputLs=extraOutputLs,
             transferOutput=transferOutput,
             parentJobLs=parentJobLs,
             extraDependentInputLs=extraDependentInputLs,
-            extraArgumentList=extraArgumentList, \
-            extraArguments=extraArguments, \
             sshDBTunnel=sshDBTunnel,\
             job_max_memory=job_max_memory, walltime=walltime)
         return job
     
-    def addDBJob(self, executable=None, inputFile=None,
-        inputArgumentOption="-i",
+    def addDBJob(self, executable=None, 
+        inputFile=None, inputArgumentOption="-i",
         inputFileList=None, argumentForEachFileInInputFileList=None,
         outputFile=None, outputArgumentOption="-o",
+        extraArguments=None, extraArgumentList=None,
         parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None,
         transferOutput=False,
-        extraArguments=None, extraArgumentList=None,
-        job_max_memory=200, sshDBTunnel=None,
-        key2ObjectForJob=None, objectWithDBArguments=None, walltime=None,
+        job_max_memory=200, walltime=None, sshDBTunnel=None,
+        key2ObjectForJob=None, objectWithDBArguments=None,
         **keywords):
         """
         similar to addGenericJob but these are jobs that need
@@ -633,12 +633,12 @@ class Workflow(ADAG):
             outputFile=outputFile, outputArgumentOption=outputArgumentOption,
             inputFileList=inputFileList,
             argumentForEachFileInInputFileList=argumentForEachFileInInputFileList,
-            parentJobLs=parentJobLs, \
-            extraDependentInputLs=extraDependentInputLs,
-            extraOutputLs=extraOutputLs, \
-            transferOutput=transferOutput,
             extraArguments=extraArguments,
             extraArgumentList=extraArgumentList,\
+            parentJobLs=parentJobLs,
+            extraDependentInputLs=extraDependentInputLs,
+            extraOutputLs=extraOutputLs,
+            transferOutput=transferOutput,
             job_max_memory=job_max_memory, sshDBTunnel=sshDBTunnel,
             key2ObjectForJob=key2ObjectForJob,\
             objectWithDBArguments=objectWithDBArguments, walltime=walltime,
@@ -649,29 +649,29 @@ class Workflow(ADAG):
             job.input = job.inputLs[0]
         return job
     
-    def addData2DBJob(self, executable=None, inputFile=None,
-        inputArgumentOption="-i", \
+    def addData2DBJob(self, executable=None, 
+        inputFile=None, inputArgumentOption="-i",
         inputFileList=None, argumentForEachFileInInputFileList=None,\
-        outputFile=None, outputArgumentOption="-o", \
-        data_dir=None, logFile=None, commit=False,\
+        outputFile=None, outputArgumentOption="-o",
+        data_dir=None, logFile=None, commit=False,
+        extraArguments=None, extraArgumentList=None,
         parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None,
         transferOutput=False, \
-        extraArguments=None, extraArgumentList=None, job_max_memory=200,
-        sshDBTunnel=None, \
+        job_max_memory=200, sshDBTunnel=None,
         key2ObjectForJob=None, objectWithDBArguments=None, **keywords):
         """
         a generic wrapper for jobs that "inserts" data (from file) into database
         Example:
         
-        job = self.addData2DBJob(executable=executable, inputFile=None,
-            inputArgumentOption="-i", \
-            outputFile=None, outputArgumentOption="-o", inputFileList=None, \
-            data_dir=None, logFile=logFile, commit=commit,\
+        job = self.addData2DBJob(executable=executable,
+            inputArgumentOption="-i", inputFile=None,
+            outputFile=None, outputArgumentOption="-o",
+            data_dir=None, logFile=logFile, commit=commit,
+            extraArguments=extraArguments,
+            extraArgumentList=extraArgumentList,
             parentJobLs=parentJobLs,
             extraDependentInputLs=extraDependentInputLs,
             extraOutputLs=None, transferOutput=transferOutput, \
-            extraArguments=extraArguments,
-            extraArgumentList=extraArgumentList,
             job_max_memory=job_max_memory,  sshDBTunnel=sshDBTunnel,
             walltime=walltime,\
             key2ObjectForJob=None, objectWithDBArguments=self, **keywords)
@@ -691,17 +691,17 @@ class Workflow(ADAG):
             extraOutputLs.append(logFile)
         #do not pass the inputFileList to addGenericJob()
         #  because db arguments need to be added before them.
-        job = self.addDBJob(executable=executable, inputFile=inputFile, \
-            inputArgumentOption=inputArgumentOption, \
+        job = self.addDBJob(executable=executable,
+            inputArgumentOption=inputArgumentOption, inputFile=inputFile,
             inputFileList=inputFileList,
             argumentForEachFileInInputFileList=argumentForEachFileInInputFileList,
-            outputFile=outputFile, \
             outputArgumentOption=outputArgumentOption, \
+            outputFile=outputFile, \
+            extraArguments=extraArguments, extraArgumentList=extraArgumentList,
             parentJobLs=parentJobLs, \
             extraDependentInputLs=extraDependentInputLs,
             extraOutputLs=extraOutputLs,
             transferOutput=transferOutput,
-            extraArguments=extraArguments, extraArgumentList=extraArgumentList,
             job_max_memory=job_max_memory, sshDBTunnel=sshDBTunnel,
             key2ObjectForJob=key2ObjectForJob,\
             objectWithDBArguments=objectWithDBArguments, **keywords)
@@ -764,11 +764,12 @@ class Workflow(ADAG):
             job.addArguments("--port=%s"%(objectWithDBArguments.port))
         return job
     
-    def addGenericJob(self, executable=None, inputArgumentOption="",
-        inputFile=None,
-        outputArgumentOption="", outputFile=None, \
+    def addGenericJob(self, executable=None,
+        frontArgumentList=None,
+        inputArgumentOption="", inputFile=None,
         inputFileList=None, argumentForEachFileInInputFileList=None, \
-        frontArgumentList=None, extraArgumentList=None, extraArguments=None, \
+        outputArgumentOption="", outputFile=None, \
+        extraArgumentList=None, extraArguments=None, \
         parentJob=None, parentJobLs=None, extraDependentInputLs=None,
         extraOutputLs=None, \
         transferOutput=False, sshDBTunnel=None, \
@@ -910,28 +911,27 @@ class Workflow(ADAG):
         self.no_of_jobs += 1
         return job
 
-    def addJavaJob(self, executable=None, jarFile=None, \
-        inputFile=None, inputArgumentOption=None, \
-        inputFileList=None,argumentForEachFileInInputFileList=None,\
+    def addJavaJob(self, executable=None, jarFile=None,
+        frontArgumentList=None,
+        inputFile=None, inputArgumentOption=None,
+        inputFileList=None,argumentForEachFileInInputFileList=None,
         outputFile=None, outputArgumentOption=None,\
-        frontArgumentList=None, extraArguments=None,
-        extraArgumentList=None, extraOutputLs=None, \
-        extraDependentInputLs=None, \
-        parentJobLs=None, transferOutput=True, job_max_memory=1000,
-        key2ObjectForJob=None, no_of_cpus=None, walltime=120, 
-        sshDBTunnel=None, **keywords):
+        extraArguments=None, extraArgumentList=None,
+        extraDependentInputLs=None,
+        extraOutputLs=None,
+        parentJobLs=None, transferOutput=True,
+        job_max_memory=1000, no_of_cpus=None, walltime=120, 
+        key2ObjectForJob=None, sshDBTunnel=None, **keywords):
         """
         a generic function to add Java jobs:
 
 fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
     jarFile=CreateSequenceDictionaryJar, \
-    inputFile=refFastaF, inputArgumentOption="REFERENCE=", \
-    inputFileList=None, argumentForEachFileInInputFileList=None,\
-    outputFile=refFastaDictF, outputArgumentOption="OUTPUT=",\
+    frontArgumentList=None,
+    inputArgumentOption="REFERENCE=", inputFile=refFastaF,
+    outputArgumentOption="OUTPUT=", outputFile=refFastaDictF,
     parentJobLs=parentJobLs, transferOutput=transferOutput,
     job_max_memory=job_max_memory,
-    frontArgumentList=None, extraArguments=None, extraArgumentList=None,
-    extraOutputLs=None,
     extraDependentInputLs=None, no_of_cpus=None, walltime=walltime,
     sshDBTunnel=None, **keywords)
         """
@@ -951,30 +951,33 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
         job_max_memory = memRequirementObject.memRequirement
         javaMemRequirement = memRequirementObject.memRequirementInStr
 
-        #put java stuff in front of other fron arguments
+        #put java stuff in front of other front arguments
         frontArgumentList = [javaMemRequirement, '-jar', jarFile] + \
             frontArgumentList
         extraDependentInputLs.append(jarFile)
-        job = self.addGenericJob(executable=executable, inputFile=inputFile,
-            inputArgumentOption=inputArgumentOption,
-            inputFileList=inputFileList,
+        job = self.addGenericJob(executable=executable,
+            frontArgumentList=frontArgumentList, 
+            inputArgumentOption=inputArgumentOption, inputFile=inputFile,
             argumentForEachFileInInputFileList=argumentForEachFileInInputFileList,
-            outputFile=outputFile, outputArgumentOption=outputArgumentOption,
-            parentJob=None, parentJobLs=parentJobLs, 
-            extraDependentInputLs=extraDependentInputLs, \
-            extraOutputLs=extraOutputLs, \
-            transferOutput=transferOutput, \
-            frontArgumentList=frontArgumentList, extraArguments=extraArguments,
-            extraArgumentList=extraArgumentList, job_max_memory=job_max_memory,
-            sshDBTunnel=sshDBTunnel, \
-            key2ObjectForJob=key2ObjectForJob,
+            inputFileList=inputFileList,
+            outputArgumentOption=outputArgumentOption,
+            outputFile=outputFile,
+            extraArguments=extraArguments,
+            extraArgumentList=extraArgumentList,
+            parentJobLs=parentJobLs, 
+            extraDependentInputLs=extraDependentInputLs,
+            extraOutputLs=extraOutputLs,
+            transferOutput=transferOutput,
+            sshDBTunnel=sshDBTunnel, key2ObjectForJob=key2ObjectForJob,
+            job_max_memory=job_max_memory,
             no_of_cpus=no_of_cpus, walltime=walltime, **keywords)
         return job
 
-    def addPipe2FileJob(self, executable=None, commandFile=None, \
-        outputFile=None, extraOutputLs=None, transferOutput=False, \
+    def addPipe2FileJob(self, executable=None, commandFile=None,
+        outputFile=None, extraArgumentList=None, 
+        extraOutputLs=None, transferOutput=False, \
         parentJobLs=None, extraDependentInputLs=None, \
-        extraArgumentList=None, sshDBTunnel=None,\
+        sshDBTunnel=None,\
         job_max_memory=200, walltime=120, **keywords):
         """
         Call shell/pipe2File to redirect stdout output to outputFile.
@@ -989,11 +992,10 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
             alignmentJob = self.addPipe2FileJob(executable=self.BWA_Mem,
                 commandFile=bwaCommand,
                 outputFile=alignmentSamF, \
+                extraArgumentList=extraArgumentList, \
                 extraOutputLs=None, transferOutput=transferOutput, \
                 parentJobLs=parentJobLs,
                 extraDependentInputLs=[refFastaFile] + fastqFileList,
-                extraArgumentList=extraArgumentList, \
-                sshDBTunnel=None,\
                 job_max_memory=aln_job_max_memory, 
                 walltime=aln_job_walltime, no_of_cpus=no_of_aln_threads,
                 **keywords)
@@ -1004,11 +1006,10 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
                 executable=self.pipe2File,
                 commandFile=self.sortExecutableFile, \
                 outputFile=sortedSNPID2NewCoordinateFile, \
-                extraOutputLs=None, transferOutput=False, \
+                extraArgumentList=["-k 3,3 -k4,4n -t$'\t'", reduceJob.output],
+                transferOutput=False, \
                 parentJobLs=[reduceJob], \
                 extraDependentInputLs=[reduceJob.output], \
-                extraArgumentList=["-k 3,3 -k4,4n -t$'\t'", reduceJob.output],
-                sshDBTunnel=None,\
                 job_max_memory=4000, walltime=120)
             
             #skip executable
@@ -1017,14 +1018,14 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
             vcfSorterJob = self.addPipe2FileJob(
                 commandFile=self.vcfsorterExecutableFile,
                 outputFile=sortedVCFFile, \
-                extraOutputLs=None, transferOutput=False, \
+                extraArgumentList=[
+                    self.newRegisterReferenceData.refPicardFastaDictF,
+                    selectOneChromosomeVCFJob.output],
                 parentJobLs=[selectOneChromosomeVCFJob, self.liftOverReduceDirJob], \
                 extraDependentInputLs=[
                     self.newRegisterReferenceData.refPicardFastaDictF, 
                     selectOneChromosomeVCFJob.output], \
-                extraArgumentList=[
-                    self.newRegisterReferenceData.refPicardFastaDictF,
-                    selectOneChromosomeVCFJob.output], \
+                transferOutput=False, \
                 job_max_memory=job_max_memory, walltime=walltime)
 
         """
@@ -1041,13 +1042,13 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
         
         job= self.addGenericJob(executable=executable, \
             frontArgumentList=None,\
-            inputFile=None, inputArgumentOption=None,\
-            outputFile=outputFile, outputArgumentOption=None,\
+            inputArgumentOption=None, inputFile=None,
+            outputArgumentOption=None, outputFile=outputFile,
+            extraArgumentList=extraArgumentList,
             parentJobLs=parentJobLs,
             extraDependentInputLs=extraDependentInputLs,
-            extraOutputLs=extraOutputLs, transferOutput=transferOutput, \
-            extraArgumentList=extraArgumentList, extraArguments=None, \
-            key2ObjectForJob=None, job_max_memory=job_max_memory, \
+            extraOutputLs=extraOutputLs, transferOutput=transferOutput,
+            job_max_memory=job_max_memory,
             sshDBTunnel=sshDBTunnel, walltime=walltime, **keywords)
         return job
     
@@ -1126,10 +1127,10 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
         """
         if executable is None:
             executable = self.mkdirWrap
-        job = self.addGenericJob(executable=executable, \
-            parentJobLs=parentJobLs, \
-            extraDependentInputLs=extraDependentInputLs, \
-            extraArgumentList=[outputDir], \
+        job = self.addGenericJob(executable=executable,
+            extraArgumentList=[outputDir],
+            parentJobLs=parentJobLs,
+            extraDependentInputLs=extraDependentInputLs,
             job_max_memory=50, walltime=10)
         job.folder = outputDir
         job.output = outputDir
