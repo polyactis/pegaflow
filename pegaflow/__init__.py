@@ -15,7 +15,7 @@ import sys
 from . DAX3 import Executable, File, PFN, Profile, Namespace, Link
 from .DAX3 import Job
 
-version = '0.1.0'
+version = '0.1.1'
 namespace = "pegasus"
 pegasus_version = "1.0"
 architecture = "x86_64"
