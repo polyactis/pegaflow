@@ -1090,7 +1090,7 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
         #MaxPermSize= min(MaxPermSizeUpperBound, max(minMemory/2, MaxPermSize_user))
         #PermSize=MaxPermSize*3/4
         mxMemory = max(minMemory, mxMemory_user)
-        msMemory = mxMemory*3/4
+        msMemory = int(mxMemory*3/4)
         #-XX:+UseGCOverheadLimit
         #Use a policy that limits the proportion of the VM's time
         #  that is spent in GC 
@@ -1098,7 +1098,7 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
         #-XX:-UseGCOverheadLimit would disable the policy.
         #  -XX:PermSize=%sm -XX:MaxPermSize=%sm"%\
         #  , PermSize, MaxPermSize)
-        memRequirementInStr = "-Xms%sm -Xmx%sm"%(msMemory, mxMemory)
+        memRequirementInStr = f"-Xms{msMemory}m -Xmx{mxMemory}m"
         
         memRequirement = int(mxMemory*self.jvmVirtualByPhysicalMemoryRatio)
         #if a job's virtual memory (1.2X of memory request) exceeds request,
