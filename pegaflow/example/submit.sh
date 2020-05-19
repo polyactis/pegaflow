@@ -158,8 +158,8 @@ cat >sites.xml <<EOF
 		<directory type="shared-scratch" path="$TOPDIR/scratch">
 			<file-server operation="all" url="file://$TOPDIR/scratch"/>
 		</directory>
-		<directory type="local-storage" path="$TOPDIR/$finalOutputDir">
-			<file-server operation="all" url="file://$TOPDIR/$finalOutputDir"/>
+		<directory type="local-storage" path="$TOPDIR/output/$finalOutputDir">
+			<file-server operation="all" url="file://$TOPDIR/output/$finalOutputDir"/>
 		</directory>
 		<profile namespace="env" key="PEGASUS_HOME" >$PEGASUS_HOME</profile>
 		<profile namespace="env" key="HOME">$HOME</profile>

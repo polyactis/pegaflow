@@ -41,7 +41,7 @@ test_OO:
     - ../test/pegaflow_monitor -j submit/wc.python.code.*/jobstate.log
     - pegasus-statistics -s all submit/wc.python.code.*
     - cat submit/wc.python.code.*/statistics/breakdown.txt
-    - mv wc.python.code.*/merged.txt ./
+    - mv output/wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos
@@ -60,7 +60,7 @@ test_function:
     - ../test/pegaflow_monitor -j submit/wc.python.code.*/jobstate.log
     - pegasus-statistics -s all submit/wc.python.code.*
     - cat submit/wc.python.code.*/statistics/breakdown.txt
-    - mv wc.python.code.*/merged.txt ./
+    - mv output/wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos
@@ -78,7 +78,7 @@ test_local:
     - ./submit.sh ./wc.python.code.xml local
     # pegasus-statistics can not work with locally run workflows.
     - pegasus-status submit/wc.python.code.*
-    - mv wc.python.code.*/merged.txt ./
+    - mv output/wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos

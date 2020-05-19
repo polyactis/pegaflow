@@ -38,7 +38,7 @@ $ ./submit.sh ./wc.python.code.xml condor
 #  All input files will be symlinked or copied into the scatch folder.
 #  All pegasus jobs will run inside that folder and also output in the scratch folder.
 
-# If the workflow succeeds in the end, final output will be copied into a new folder, wc.python..., in the current directory.
+# If the workflow succeeds in the end, final output will be copied into a new folder, output/wc.python...
 
 # Check the status of the workflow:
 $ pegasus_status submit/wc.python.*
