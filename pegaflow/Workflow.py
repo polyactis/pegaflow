@@ -796,23 +796,27 @@ class Workflow(ADAG):
          in inputFileList.
         frontArgumentList: a list of arguments to be put in front of anything else.
         parentJob: similar to parentJobLs, but only one job.
-        inputFileList: a list of input files to be added to commandline as the
-         last arguments. They would also be added as the job's dependent input.
+        inputFileList: a list of input files to be appended to the commandline.
+            They would also be added as the job's dependent input.
             Difference from extraDependentInputLs:
                 the latter is purely for dependency purpose,
-                    not added as input arguments.
+                    not added as commandline arguments.
                 So if a file has been put in inputFileList,
                 then it shouldn't be in extraDependentInputLs.
         If transferOutput is None, do not register output files as OUTPUT with
             transfer flag.
         key2ObjectForJob: which is a dictionary with strings as key,
             to set key:object for each job.
-        job.outputLs: to hold more output files.
-            If job.output is not set, set it to the 1st entry of job.outputLs
+        job.inputLs:
+            Hold all input files, including inputFile.
+        job.outputLs or job.outputList:
+            Hold all output files, including outputFile.
+        job.output: =outputFile.
+            If it is not set, set it to the 1st entry of job.outputLs.
         """
         job = Job(namespace=self.namespace, name=executable.name,
             version=self.version)
-        job.outputLs = []	# to hold more output files
+        job.outputLs = []	# to hold all output files
         job.inputLs = []
         if frontArgumentList:
             job.addArguments(*frontArgumentList)
@@ -830,7 +834,7 @@ class Workflow(ADAG):
             isAdded = self.addJobUse(job, file=inputFile, transfer=True,
                 register=True, link=Link.INPUT)
             job.input = inputFile
-            #job.inputLs.append(inputFile)
+            job.inputLs.append(inputFile)
         if outputFile:
             if outputArgumentOption:
                 job.addArguments(outputArgumentOption)
@@ -839,7 +843,7 @@ class Workflow(ADAG):
                 self.addJobUse(job, file=outputFile, transfer=transferOutput,
                     register=True, link=Link.OUTPUT)
             job.output = outputFile
-            #job.outputLs.append(outputFile)
+            job.outputLs.append(outputFile)
         if extraArgumentList:
             job.addArguments(*extraArgumentList)
 
@@ -876,8 +880,8 @@ class Workflow(ADAG):
                 if inputFile:
                     isAdded = self.addJobUse(job, file=inputFile,
                         transfer=True, register=True, link=Link.INPUT)
-                    #if isAdded:
-                    #	job.inputLs.append(inputFile)
+                    if isAdded:
+                        job.inputLs.append(inputFile)
         if extraOutputLs:
             for output in extraOutputLs:
                 if output:
@@ -900,8 +904,8 @@ class Workflow(ADAG):
                     job.addArguments(inputFile)
                     isAdded = self.addJobUse(job, file=inputFile, transfer=True,
                         register=True, link=Link.INPUT)
-                    #if isAdded:
-                    #	job.inputLs.append(inputFile)
+                    if isAdded:
+                        job.inputLs.append(inputFile)
         job.outputList = job.outputLs
         #if job.output is not set, set it to the 1st entry of job.outputLs
         if getattr(job, 'output', None) is None and job.outputLs:
