@@ -771,16 +771,20 @@ class Workflow(ADAG):
     
     def addGenericJob(self, executable=None,
         frontArgumentList=None,
-        inputArgumentOption="", inputFile=None,
-        inputFileList=None, argumentForEachFileInInputFileList=None, \
-        outputArgumentOption="", outputFile=None, \
-        extraArgumentList=None, extraArguments=None, \
-        parentJob=None, parentJobLs=None, extraDependentInputLs=None,
+        inputArgumentOption="",
+        inputFile=None,
+        inputFileList=None,
+        argumentForEachFileInInputFileList=None,
+        outputArgumentOption="",
+        outputFile=None,
+        extraArgumentList=None, extraArguments=None,
+        parentJob=None, parentJobLs=None,
+        extraDependentInputLs=None,
         extraOutputLs=None, \
         transferOutput=False, sshDBTunnel=None, \
         key2ObjectForJob=None, objectWithDBArguments=None,
         objectWithDBGenomeArguments=None,\
-        no_of_cpus=None, job_max_memory=200, walltime=180, \
+        no_of_cpus=None, job_max_memory=200, walltime=180,
         max_walltime=None, **keywords):
         """
         A generic job adding function for other functions to use.
@@ -821,7 +825,8 @@ class Workflow(ADAG):
         """
         job = Job(namespace=self.namespace, name=executable.name,
             version=self.version)
-        job.outputLs = []	# to hold all output files
+        #self.addJobUse() will fill job.outputLs and job.inputLs
+        job.outputLs = []
         job.inputLs = []
         if frontArgumentList:
             job.addArguments(*frontArgumentList)
@@ -836,19 +841,18 @@ class Workflow(ADAG):
             if inputArgumentOption:
                 job.addArguments(inputArgumentOption)
             job.addArguments(inputFile)
+            # addJobUse will append the file to job.inputLs
             isAdded = self.addJobUse(job, file=inputFile, transfer=True,
                 register=True, link=Link.INPUT)
             job.input = inputFile
-            job.inputLs.append(inputFile)
         if outputFile:
             if outputArgumentOption:
                 job.addArguments(outputArgumentOption)
             job.addArguments(outputFile)
-            if transferOutput is not None:
-                self.addJobUse(job, file=outputFile, transfer=transferOutput,
-                    register=True, link=Link.OUTPUT)
+            # addJobUse will append the file to job.outputLs
+            self.addJobUse(job, file=outputFile, transfer=transferOutput,
+                register=True, link=Link.OUTPUT)
             job.output = outputFile
-            job.outputLs.append(outputFile)
         if extraArgumentList:
             job.addArguments(*extraArgumentList)
 
@@ -883,18 +887,16 @@ class Workflow(ADAG):
         if extraDependentInputLs:
             for inputFile in extraDependentInputLs:
                 if inputFile:
+                    # addJobUse will append the file to job.inputLs
                     isAdded = self.addJobUse(job, file=inputFile,
                         transfer=True, register=True, link=Link.INPUT)
-                    if isAdded:
-                        job.inputLs.append(inputFile)
         if extraOutputLs:
             for output in extraOutputLs:
                 if output:
-                    job.outputLs.append(output)
-                    if transferOutput is not None:
-                        self.addJobUse(job, file=output,
-                            transfer=transferOutput, register=True,
-                            link=Link.OUTPUT)
+                    # addJobUse will append the file to job.outputLs
+                    self.addJobUse(job, file=output,
+                        transfer=transferOutput, register=True,
+                        link=Link.OUTPUT)
         if key2ObjectForJob:
             for key, objectForJob in key2ObjectForJob.items():
                 setattr(job, key, objectForJob)
@@ -907,10 +909,9 @@ class Workflow(ADAG):
                     if argumentForEachFileInInputFileList:
                         job.addArguments(argumentForEachFileInInputFileList)
                     job.addArguments(inputFile)
-                    isAdded = self.addJobUse(job, file=inputFile, transfer=True,
+                    # addJobUse will append the file to job.inputLs
+                    self.addJobUse(job, file=inputFile, transfer=True,
                         register=True, link=Link.INPUT)
-                    if isAdded:
-                        job.inputLs.append(inputFile)
         job.outputList = job.outputLs
         #if job.output is not set, set it to the 1st entry of job.outputLs
         if getattr(job, 'output', None) is None and job.outputLs:
