@@ -651,12 +651,14 @@ class Workflow(ADAG):
     
     def addData2DBJob(self, executable=None, 
         inputFile=None, inputArgumentOption="-i",
-        inputFileList=None, argumentForEachFileInInputFileList=None,\
+        inputFileList=None,
+        argumentForEachFileInInputFileList=None,
         outputFile=None, outputArgumentOption="-o",
         data_dir=None, logFile=None, commit=False,
         extraArguments=None, extraArgumentList=None,
-        parentJobLs=None, extraDependentInputLs=None, extraOutputLs=None,
-        transferOutput=False, \
+        parentJobLs=None, extraDependentInputLs=None,
+        extraOutputLs=None,
+        transferOutput=False,
         job_max_memory=200, sshDBTunnel=None,
         key2ObjectForJob=None, objectWithDBArguments=None, **keywords):
         """
@@ -671,7 +673,8 @@ class Workflow(ADAG):
             extraArgumentList=extraArgumentList,
             parentJobLs=parentJobLs,
             extraDependentInputLs=extraDependentInputLs,
-            extraOutputLs=None, transferOutput=transferOutput, \
+            extraOutputLs=None,
+            transferOutput=transferOutput,
             job_max_memory=job_max_memory,  sshDBTunnel=sshDBTunnel,
             walltime=walltime,\
             key2ObjectForJob=None, objectWithDBArguments=self, **keywords)
@@ -692,18 +695,20 @@ class Workflow(ADAG):
         #do not pass the inputFileList to addGenericJob()
         #  because db arguments need to be added before them.
         job = self.addDBJob(executable=executable,
-            inputArgumentOption=inputArgumentOption, inputFile=inputFile,
+            inputArgumentOption=inputArgumentOption,
+            inputFile=inputFile,
             inputFileList=inputFileList,
             argumentForEachFileInInputFileList=argumentForEachFileInInputFileList,
-            outputArgumentOption=outputArgumentOption, \
-            outputFile=outputFile, \
-            extraArguments=extraArguments, extraArgumentList=extraArgumentList,
-            parentJobLs=parentJobLs, \
+            outputArgumentOption=outputArgumentOption,
+            outputFile=outputFile,
+            extraArguments=extraArguments,
+            extraArgumentList=extraArgumentList,
+            parentJobLs=parentJobLs,
             extraDependentInputLs=extraDependentInputLs,
             extraOutputLs=extraOutputLs,
             transferOutput=transferOutput,
             job_max_memory=job_max_memory, sshDBTunnel=sshDBTunnel,
-            key2ObjectForJob=key2ObjectForJob,\
+            key2ObjectForJob=key2ObjectForJob,
             objectWithDBArguments=objectWithDBArguments, **keywords)
         return job
 
