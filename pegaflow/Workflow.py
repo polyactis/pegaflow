@@ -136,10 +136,11 @@ class Workflow(ADAG):
         call ADAG.writeXML() and then add my commandline comment.
         """
         if self.isDAGWrittenToDisk:
-            print("Warning: the dag has been written to a file already "
+            print("Warning: the DAG has been written to a file already "
                 "(writeXML() has been called). No more calling.", flush=True)
         else:
-            print(f"Writing XML job to {out} ... ", flush=True, end='')
+            print(f'{self.no_of_jobs} jobs in the DAG.', flush=True)
+            print(f"Writing the DAG to {out} ... ", flush=True, end='')
             ADAG.writeXML(self, out)
             # -- is not allowed in xml.
             out.write('<!-- commandline: %s -->\n'%(
