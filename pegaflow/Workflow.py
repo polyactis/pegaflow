@@ -423,14 +423,22 @@ class Workflow(ADAG):
             self.addJobUse(job=job, file=inputFile, transfer=True,
                 register=True, link=Link.INPUT)
 
-    def registerOneInputFile(self, input_path=None, input_site_handler=None,
-        folderName="", \
-        useAbsolutePathAsPegasusFileName=False,\
-        pegasusFileName=None, checkFileExistence=True):
+    def registerOneInputFile(self,
+        input_path=None,
+        pegasusFileName=None,
+        input_site_handler=None,
+        folderName="",
+        useAbsolutePathAsPegasusFileName=False,
+        checkFileExistence=True):
         """
         Examples:
-            pegasusFile = self.registerOneInputFile(input_path='/tmp/abc.txt')
+            pegasusFile = self.registerOneInputFile(input_path='/tmp/abc.txt',
+                pegasusFileName='input/abc.txt')
         
+        pegasusFileName:
+            Can be a relative path, like 'input/input.txt'.
+            No need to create folder "input".
+            pegasus will create all preceding folders during stage-in.
         useAbsolutePathAsPegasusFileName:
             This would render the file to be referred as the absolute path on
              the running nodes.
@@ -448,7 +456,7 @@ class Workflow(ADAG):
         if not pegasusFileName:
             if useAbsolutePathAsPegasusFileName:
                 #this will stop symlinking/transferring ,
-                #  and also no need to indicate them as file dependency for jobs.
+                #  and no need to add them as dependency for jobs.
                 pegasusFileName = os.path.abspath(input_path)
             else:
                 pegasusFileName = os.path.join(folderName,
