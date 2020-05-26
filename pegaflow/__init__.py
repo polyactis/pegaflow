@@ -135,7 +135,7 @@ def getListOutOfStr(list_in_str=None, data_type=int, separator1=',',
     return list_to_return
 
 
-def getRealPrefixSuffixOfFilenameWithVariableSuffix(path, fakeSuffix='.gz',
+def getRealPrefixSuffix(path, fakeSuffix='.gz',
     fakeSuffixSet =set(['.gz', '.zip', '.bz2', '.bz'])):
     """
     The purpose of this function is to get the prefix, suffix of a filename
@@ -314,7 +314,7 @@ def registerFilesOfInputDir(workflow, inputDir, input_path_list=None,
     for input_path in input_path_list:
         counter += 1
         # file.fastq.gz's suffix is .fastq, not .gz.
-        suffix = getRealPrefixSuffixOfFilenameWithVariableSuffix(input_path)[1]
+        suffix = getRealPrefixSuffix(input_path)[1]
         if inputSuffixSet is not None and len(inputSuffixSet)>0 and \
             suffix not in inputSuffixSet:
             #skip input whose suffix is not in inputSuffixSet if inputSuffixSet

@@ -9,7 +9,7 @@ import logging
 from . DAX3 import Executable, File, PFN, Profile
 from . DAX3 import Namespace, Link, ADAG, Use, Job, Dependency
 from . import PassingData, getListOutOfStr
-from . import getRealPrefixSuffixOfFilenameWithVariableSuffix
+from . import getRealPrefixSuffix
 from . import setJobResourceRequirement, getExecutableClusterSize
 
 src_dir = os.path.dirname(os.path.abspath(__file__))
@@ -330,7 +330,7 @@ class Workflow(ADAG):
         Return all files in return_path_list.
         Similar to getFilesWithProperSuffixFromFolder(),
             but recursively go through all sub-folders.
-        It calls utils.getRealPrefixSuffixOfFilenameWithVariableSuffix()
+        It calls utils.getRealPrefixSuffix()
             to get the suffix.
         """
         logging.info(f"Getting files with suffix in {repr(suffixSet)}, "
@@ -341,7 +341,7 @@ class Workflow(ADAG):
             counter += 1
             if os.path.isfile(input_path):
                 prefix, file_suffix = \
-                    getRealPrefixSuffixOfFilenameWithVariableSuffix(
+                    getRealPrefixSuffix(
                         filename, fakeSuffix=fakeSuffix)
                 if file_suffix in suffixSet:
                     return_path_list.append(input_path)
@@ -379,8 +379,7 @@ class Workflow(ADAG):
         counter = 0
         for input_path in input_path_list:
             counter += 1
-            suffix = getRealPrefixSuffixOfFilenameWithVariableSuffix(
-                input_path)[1]
+            suffix = getRealPrefixSuffix(input_path)[1]
             #default fakeSuffixSet includes .gz
             if inputSuffixSet is not None and len(inputSuffixSet)>0 and suffix \
                 not in inputSuffixSet:
