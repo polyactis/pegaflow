@@ -179,8 +179,9 @@ def addMkDirJob(workflow, executable, outputDir, parentJobLs=None,
         workflow.no_of_jobs += 1
     return job
 
+
 def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
-    walltime=180, sshDBTunnel=0, db=None, io=None):
+    walltime=180, sshDBTunnel=0, db=None, io=None, gpu=None):
     """
     db: integer.
         A custom resource of condor to avoid too many programs
@@ -198,6 +199,7 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
         Condor needs a custom resource setup, i.e.
             MACHINE_RESOURCE_IO=100
             JOB_DEFAULT_REQUESTIO=0
+    gpu: integer, the number of GPUs a job requests.
     job_max_memory: integer, unit in MB.
         if job_max_memory is None, then skip setting memory requirement.
         if job_max_memory is "" or 0 or "0", then assign 500 (MB) to it.
@@ -221,12 +223,15 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
     if no_of_cpus is not None:
         job.addProfile(Profile(Namespace.CONDOR, key="request_cpus",
             value=f"{no_of_cpus}"))
-    if db is not None and db>0:
+    if db is not None and db > 0:
         job.addProfile(Profile(Namespace.CONDOR, key="request_db",
             value=f"{db}"))
-    if io is not None and io>0:
+    if io is not None and io > 0:
         job.addProfile(Profile(Namespace.CONDOR, key="request_io",
             value=f"{io}"))
+    if gpu is not None and gpu > 0:
+        job.addProfile(Profile(Namespace.CONDOR, key="request_gpu",
+            value=f"{gpu}"))
     if walltime is not None:
         #scale walltime according to cluster_size
         job.addProfile(Profile(Namespace.GLOBUS, key="maxwalltime",
@@ -234,8 +239,7 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
         #TimeToLive is in seconds
         condorJobRequirementLs.append(
             f"(Target.TimeToLive>={int(walltime)*60})")
-    if sshDBTunnel==1:
-       	#use ==, not =.
+    if sshDBTunnel == 1:
         condorJobRequirementLs.append(f"(sshDBTunnel=={sshDBTunnel})")
     #key='requirements' could only be added once for the condor profile
     job.addProfile(Profile(Namespace.CONDOR, key="requirements",
