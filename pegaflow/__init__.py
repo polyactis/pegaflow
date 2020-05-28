@@ -356,8 +356,9 @@ def registerFilesOfInputDir(workflow, inputDir, input_path_list=None,
     return inputFileList
 
 
-def addJob2workflow(workflow, executable, input_file_list,
-    output_file_transfer_list, output_file_notransfer_list, argv):
+def addJob2workflow(workflow, executable, input_file_list=None,
+    output_file_transfer_list=None, output_file_notransfer_list=None,
+    argv=None):
     the_job = Job(namespace=namespace, name=executable.name,
         version=pegasus_version)
     if argv:
@@ -365,7 +366,7 @@ def addJob2workflow(workflow, executable, input_file_list,
     if input_file_list:
         for input_file in input_file_list:
             the_job.uses(input_file, link=Link.INPUT, transfer=True,
-                         register=True)
+                register=True)
     
     if output_file_transfer_list:
         for output_file in output_file_transfer_list:
