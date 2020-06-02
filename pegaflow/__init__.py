@@ -13,7 +13,7 @@ import logging
 import os
 import sys
 from . DAX3 import Executable, File, PFN, Profile, Namespace, Link
-from . DAX3 import Job
+from . DAX3 import Job, Dependency
 
 version = '0.2.0'
 namespace = "pegasus"
@@ -155,13 +155,16 @@ def getRealPrefixSuffix(path, fakeSuffix='.gz',
     return fname_prefix, fname_suffix
 
 
-def addMkDirJob(workflow, executable, outputDir, parentJobLs=None,
+def addMkDirJob(workflow, executable, outputDir, frontArgumentList=None,
+    parentJobLs=None,
     extraDependentInputLs=None):
     """
     """
     # Add a mkdir job for any directory.
     job = Job(name=executable.name, namespace=namespace,
         version=pegasus_version)
+    if frontArgumentList:
+        job.addArguments(*frontArgumentList)
     job.addArguments(outputDir)
     #two attributes for child jobs to get the output directory.
     job.folder = outputDir
@@ -356,9 +359,13 @@ def registerFilesOfInputDir(workflow, inputDir, input_path_list=None,
     return inputFileList
 
 
-def addJob2workflow(workflow, executable, input_file_list=None,
+def addJob2workflow(workflow=None, executable=None, argv=None,
+    input_file_list=None,
     output_file_transfer_list=None, output_file_notransfer_list=None,
-    argv=None):
+    parent_job_ls=None,
+    job_max_memory=None, no_of_cpus=1,
+    walltime=180, sshDBTunnel=0, db=None, io=None, gpu=None
+    ):
     the_job = Job(namespace=namespace, name=executable.name,
         version=pegasus_version)
     if argv:
@@ -375,6 +382,14 @@ def addJob2workflow(workflow, executable, input_file_list=None,
         for output_file in output_file_notransfer_list:
             the_job.uses(output_file, link=Link.OUTPUT, transfer=False)
     workflow.addJob(the_job)
+    if parent_job_ls:
+        for parent_job in parent_job_ls:
+            if parent_job:
+                workflow.addDependency(
+                    Dependency(parent=parent_job, child=the_job))
+    setJobResourceRequirement(job=the_job, job_max_memory=job_max_memory,
+        no_of_cpus=no_of_cpus, walltime=walltime, sshDBTunnel=sshDBTunnel,
+        db=db, io=io, gpu=gpu)
     return the_job
 
 

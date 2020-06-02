@@ -54,13 +54,13 @@ if __name__ == '__main__':
         cluster_size=args.cluster_size)
 
     mergedOutputFile = File("merged.txt")
+    # request 500MB memory, 30 minutes run time (walltime).
     mergeJob= pegaflow.addJob2workflow(wflow, mergeWC,
+        argv=[mergedOutputFile, '/bin/cat'],
         input_file_list=None,
         output_file_transfer_list=[mergedOutputFile],
         output_file_notransfer_list=None,
-        argv=[mergedOutputFile, '/bin/cat'])
-    # request 500MB memory, 30 minutes run time (walltime).
-    pegaflow.setJobResourceRequirement(job=mergeJob, job_max_memory=500,
+        job_max_memory=500,
         walltime=30)
 
     mkdir = pegaflow.registerExecutable(wflow, '/bin/mkdir', args.site_handler)
@@ -72,12 +72,13 @@ if __name__ == '__main__':
         output_file = File(os.path.join(outputDir,
             f'{os.path.basename(input_file.name)}.wc.output.txt'))
         wcJob = pegaflow.addJob2workflow(workflow=wflow, executable=pipe2File,
+            argv=[output_file, '/usr/bin/wc', input_file],
             input_file_list=[input_file],
             output_file_transfer_list=None,
             output_file_notransfer_list=[output_file],
-            argv=[output_file, '/usr/bin/wc', input_file])
-        pegaflow.setJobResourceRequirement(job=wcJob, job_max_memory=200)
-        wflow.addDependency(Dependency(parent=outputDirJob, child=wcJob))
+            parent_job_ls=[outputDirJob],
+            job_max_memory=200,
+            )
         #add wcJob's output as input to mergeJob
         mergeJob.addArguments(output_file)
         mergeJob.uses(output_file, link=Link.INPUT)
@@ -85,9 +86,6 @@ if __name__ == '__main__':
     # a sleep job to slow down the workflow for 30 seconds
     # sleepJob has no output.
     sleepJob = pegaflow.addJob2workflow(workflow=wflow, executable=sleep,
-        input_file_list=[],
-        output_file_transfer_list=None,
-        output_file_notransfer_list=None,
-        argv=[30])
-    wflow.addDependency(Dependency(parent=sleepJob, child=mergeJob))
+        argv=[30],
+        parent_job_ls=[mergeJob])
     wflow.writeXML(open(args.output_file, 'w'))
