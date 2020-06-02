@@ -215,7 +215,7 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
     condorJobRequirementLs = []
     if job_max_memory == "" or job_max_memory == 0 or job_max_memory == "0":
         job_max_memory = 500
-    if job_max_memory is not None: 
+    if job_max_memory:
         job.addProfile(Profile(Namespace.GLOBUS, key="maxmemory",
             value=f"{job_max_memory}"))
        	#for dynamic slots
@@ -223,19 +223,19 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
             value=f"{job_max_memory}"))
         condorJobRequirementLs.append(f"(memory>={job_max_memory})")
     
-    if no_of_cpus is not None:
+    if no_of_cpus:
         job.addProfile(Profile(Namespace.CONDOR, key="request_cpus",
             value=f"{no_of_cpus}"))
-    if db is not None and db > 0:
+    if db:
         job.addProfile(Profile(Namespace.CONDOR, key="request_db",
             value=f"{db}"))
-    if io is not None and io > 0:
+    if io:
         job.addProfile(Profile(Namespace.CONDOR, key="request_io",
             value=f"{io}"))
-    if gpu is not None and gpu > 0:
+    if gpu:
         job.addProfile(Profile(Namespace.CONDOR, key="request_gpu",
             value=f"{gpu}"))
-    if walltime is not None:
+    if walltime:
         #scale walltime according to cluster_size
         job.addProfile(Profile(Namespace.GLOBUS, key="maxwalltime",
             value=f"{walltime}"))
@@ -244,6 +244,7 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
             f"(Target.TimeToLive>={int(walltime)*60})")
     if sshDBTunnel == 1:
         condorJobRequirementLs.append(f"(sshDBTunnel=={sshDBTunnel})")
+    
     #key='requirements' could only be added once for the condor profile
     job.addProfile(Profile(Namespace.CONDOR, key="requirements",
         value=" && ".join(condorJobRequirementLs)))
@@ -363,8 +364,8 @@ def addJob2workflow(workflow=None, executable=None, argv=None,
     input_file_list=None,
     output_file_transfer_list=None, output_file_notransfer_list=None,
     parent_job_ls=None,
-    job_max_memory=None, no_of_cpus=1,
-    walltime=180, sshDBTunnel=0, db=None, io=None, gpu=None
+    job_max_memory=None, no_of_cpus=None,
+    walltime=None, sshDBTunnel=None, db=None, io=None, gpu=None
     ):
     the_job = Job(namespace=namespace, name=executable.name,
         version=pegasus_version)
