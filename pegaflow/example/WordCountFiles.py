@@ -40,7 +40,7 @@ class WordCountFiles(Workflow):
         """
         Workflow.registerExecutables(self)
         # accessed as self.sleep.
-        self.registerOneExecutable(path="/bin/sleep", name='sleep',
+        self.registerOneExecutable(path="/bin/sleep",
             clusterSizeMultiplier=1)
         # You can also give a different name to the same executable.
         # The Pegasus jobs are named after the executables.
