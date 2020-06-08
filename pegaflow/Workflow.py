@@ -301,6 +301,8 @@ class Workflow(ADAG):
         """
         if clusterSizeMultiplier is None:
             clusterSizeMultiplier = 1
+        if name is None:
+            name = os.path.basename(os.path.splitext(path)[0])
         executable = self.constructOneExecutableObject(path=path,
             name=name, noVersion=noVersion)
         self.setExecutableClusterSize(executable=executable,
