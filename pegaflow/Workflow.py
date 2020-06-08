@@ -178,8 +178,10 @@ class Workflow(ADAG):
                 logging.error(f"From constructOneExecutableObject(): "
                     f"Exec {path} does not exist or is not an executable.")
                 sys.exit(3)
-        executable.addPFN(PFN("file://" + os.path.expanduser(path),
-            self.site_handler))
+        executable.addPFN(
+            PFN("file://" + os.path.abspath(os.path.expanduser(path)),
+                self.site_handler)
+            )
         return executable
 
     def connectDB(self):
