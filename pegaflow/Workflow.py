@@ -301,7 +301,7 @@ class Workflow(ADAG):
         """
         if clusterSizeMultiplier is None:
             clusterSizeMultiplier = 1
-        if name is None:
+        if not name:
             name = os.path.basename(os.path.splitext(path)[0])
         executable = self.constructOneExecutableObject(path=path,
             name=name, noVersion=noVersion)
@@ -1138,8 +1138,8 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
             maxJobPropertyValue)	#in minutes
         return PassingData(value=int(walltime))
 
-    def addMkDirJob(self, executable=None, outputDir=None, 
-            parentJobLs=None, extraDependentInputLs=None):
+    def addMkDirJob(self, outputDir=None, executable=None, 
+        parentJobLs=None, extraDependentInputLs=None):
         """
         add a job to make a directory.
         i.e.

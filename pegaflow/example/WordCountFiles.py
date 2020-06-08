@@ -87,7 +87,7 @@ class WordCountFiles(Workflow):
             job_max_memory=500, walltime=30)
         
         outputDir = 'output'
-        outputDirJob = self.addMkDirJob(outputDir=outputDir)
+        outputDirJob = self.addMkDirJob(outputDir)
         for jobData in inputData.jobDataLs:
             outputFile = File(os.path.join(outputDir, 
                 f'{os.path.basename(jobData.file.name)}.wc.output.txt'))
