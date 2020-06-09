@@ -18,22 +18,28 @@ class WordCountFiles(Workflow):
     #  and will be expanded to be '/home/user/bin/myprogram'.
     # Child classes can add stuff into this list.
     pathToInsertHomePathList = []
-    def __init__(self, input_folder=None, inputSuffixList=None,
-        output_path=None,
+    def __init__(self,
+        input_path=None, inputSuffixList=None,
         pegasusFolderName=None,
+        output_path=None,
         site_handler=None, input_site_handler=None,
         max_walltime=4320, cluster_size=1
         ):
         #call the parent class first
-        Workflow.__init__(self, inputSuffixList=inputSuffixList,
-            output_path=output_path,
+        Workflow.__init__(self,
+            input_path = input_path,
+            inputSuffixList=inputSuffixList,
             pegasusFolderName=pegasusFolderName,
-            site_handler=site_handler, input_site_handler=input_site_handler,
+            output_path=output_path,
+            
+            tmpDir='/tmp/', max_walltime=max_walltime,
+            javaPath=None, jvmVirtualByPhysicalMemoryRatio=1.2,
+
+            site_handler=site_handler,
+            input_site_handler=input_site_handler,
             cluster_size=cluster_size,
-            tmpDir='/tmp/', max_walltime=max_walltime, \
-            javaPath=None, jvmVirtualByPhysicalMemoryRatio=1.2,\
+            
             debug=False, needSSHDBTunnel=False, report=False)
-        self.input_folder = input_folder
     
     def registerExecutables(self):
         """
@@ -53,8 +59,8 @@ class WordCountFiles(Workflow):
 
         # Add a 2nd pipe2File executable with a different name.
         #   This one will run "cat" to merge all output.
-        self.registerOneExecutable(path=
-            getAbsPathOutOfExecutable(self.pipe2File),
+        self.registerOneExecutable(
+            path=getAbsPathOutOfExecutable(self.pipe2File),
             name='mergeWC', clusterSizeMultiplier=1)
 
     def run(self):
@@ -64,7 +70,7 @@ class WordCountFiles(Workflow):
         # Register all .py files from the input folder
         #  self.registerOneInputFile('/tmp/abc.txt') can be used to register
         #  one input file.
-        inputData = self.registerFilesOfInputDir(inputDir=self.input_folder,
+        inputData = self.registerFilesOfInputDir(inputDir=self.input_path,
             input_site_handler=self.input_site_handler,
             inputSuffixSet=self.inputSuffixSet, 
             pegasusFolderName='input')
@@ -121,7 +127,7 @@ class WordCountFiles(Workflow):
 if __name__ == '__main__':
     from argparse import ArgumentParser
     ap = ArgumentParser()
-    ap.add_argument("-i", "--input_folder", type=str, required=True,
+    ap.add_argument("-i", "--input_path", type=str, required=True,
         help="The folder that contains input files.")
     ap.add_argument("-l", "--site_handler", type=str, required=True,
         help="The name of the computing site where the jobs run and"
@@ -162,7 +168,8 @@ if __name__ == '__main__':
         help='Default: %(default)s. Maximum run time (minutes) for any job. '
         '4320=3 days. Used in addGenericJob().')
     args = ap.parse_args()
-    instance = WordCountFiles(input_folder=args.input_folder,
+    instance = WordCountFiles(
+        input_path=args.input_path,
         inputSuffixList=args.inputSuffixList,
         output_path=args.output_path,
         pegasusFolderName=args.pegasusFolderName,
