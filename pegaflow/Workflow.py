@@ -23,14 +23,23 @@ class Workflow(ADAG):
     # Child classes can add stuff into this list.
     pathToInsertHomePathList = []
     home_path = ""
-    def __init__(self, inputSuffixList: list = None,
-        pegasusFolderName: str = 'folder', output_path: str = None,
-        site_handler: str = None, input_site_handler: str = None,
-        cluster_size: int = 1,
-        tmpDir: str = '/tmp/', max_walltime: int = 4320,
+    def __init__(self,
+        input_path: str = None,
+        inputSuffixList: list = None,
+        pegasusFolderName: str = 'folder',
+        output_path: str = None,
+        
+        tmpDir: str = '/tmp/',
+        max_walltime: int = 4320,
+        home_path: str = None,
         javaPath: str = None,
         jvmVirtualByPhysicalMemoryRatio: float = 1.2,
-        home_path: str = None, needSSHDBTunnel: bool = False,
+
+        site_handler: str = None,
+        input_site_handler: str = None,
+        cluster_size: int = 1,
+        
+        needSSHDBTunnel: bool = False,
         debug=False, report=False, commit: bool = False):
         """
         site_handler: The name of the computing site where the jobs run and
@@ -72,21 +81,25 @@ class Workflow(ADAG):
         report: 'toggle verbose output.'
         commit: an argument for database-related workflows.
         """
+        self.input_path = input_path   #folder or file
         self.inputSuffixList = getListOutOfStr(list_in_str=inputSuffixList,
             data_type=str, separator1=',', separator2='-')
         self.inputSuffixSet = set(self.inputSuffixList)
         self.pegasusFolderName = pegasusFolderName
         self.output_path = output_path
+
+        self.tmpDir = tmpDir
+        self.max_walltime = max_walltime
+        self.home_path = home_path
+        self.javaPath = javaPath
+        self.jvmVirtualByPhysicalMemoryRatio = jvmVirtualByPhysicalMemoryRatio
+        
         self.site_handler = site_handler
         self.input_site_handler = input_site_handler
         if not self.input_site_handler:
             self.input_site_handler = self.site_handler
         self.cluster_size = cluster_size
-        self.tmpDir = tmpDir
-        self.max_walltime = max_walltime
-        self.javaPath = javaPath
-        self.jvmVirtualByPhysicalMemoryRatio = jvmVirtualByPhysicalMemoryRatio
-        self.home_path = home_path
+
         self.needSSHDBTunnel = needSSHDBTunnel
         self.debug = debug
         self.report = report
@@ -1208,10 +1221,45 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
 if __name__ == '__main__':
     from argparse import ArgumentParser
     ap = ArgumentParser()
+    ap.add_argument("-i", "--input_path", type=str, required=True,
+        help="the path to the input folder or file.")
+    ap.add_argument("--inputSuffixList", type=str,
+        help='Coma-separated list of input file suffices. '
+        'Used to exclude input files.'
+        'If None, no exclusion.'
+        'Please include the dot to the suffix, .tsv, not tsv.'
+        'Common zip suffices (.gz, .bz2, .zip, .bz) will be ignored in '
+        'obtaining the suffix.')
+    ap.add_argument("-F", "--pegasusFolderName", type=str,
+        help='The path relative to the workflow running root. '
+        'This folder will contain pegasus input & output. '
+        'It will be created during the pegasus staging process. '
+        'It is useful to separate multiple sub-workflows. '
+        'If empty or None, everything is in the pegasus root.')
+    ap.add_argument("-o", "--output_path", type=str, required=True,
+        help="The path to the output file that will contain the Pegasus DAG.")
+
+    ap.add_argument("--tmpDir", type=str, default='/tmp/',
+        help='Default: %(default)s. '
+            'A local folder for some jobs (MarkDup) to store temp data.'
+            '/tmp/ can be too small sometimes.')
+    ap.add_argument("--max_walltime", type=int, default=4320,
+        help='Default: %(default)s. '
+        'Maximum wall time for any job, in minutes. 4320=3 days.'
+        'Used in addGenericJob(). Most clusters have upper limit for runtime.')
+    
+    ap.add_argument("--javaPath", type=str,
+        help='The path to java binary. Must be provided if you have Java jobs.')
+    ap.add_argument("--jvmVirtualByPhysicalMemoryRatio", type=float, default=1.2,
+        help='Default: %(default)s. '
+        'If a job virtual memory (~1.2X of JVM resident memory) exceeds request, '
+        "it may be killed. "
+        "This will make sure your java jobs request enough memory.")
+    
     ap.add_argument("-l", "--site_handler", type=str, required=True,
-            help="The name of the computing site where the jobs run "
-            "and executables are stored. "
-            "Check your Pegasus configuration in submit.sh.")
+        help="The name of the computing site where the jobs run "
+        "and executables are stored. "
+        "Check your Pegasus configuration in submit.sh.")
     ap.add_argument("-j", "--input_site_handler", type=str,
         help="It is the name of the site that has all the input files."
         "Possible values can be 'local' or the same as site_handler. "
@@ -1223,56 +1271,33 @@ if __name__ == '__main__':
         " and the input files will be transferred to the computing site by"
         " pegasus-transfer (need setup).")
     ap.add_argument("-C", "--cluster_size", type=int, default=1,
-            help="Default: %(default)s. "
-            "This number decides how many of pegasus jobs should be clustered "
-            "into one job. Good if your workflow contains many quick jobs. "
-            "It will reduce Pegasus monitor I/O.")
-    ap.add_argument("-o", "--output_path", type=str, required=True,
-            help="The path to the output file that will contain the Pegasus DAG.")
-    ap.add_argument("-F", "--pegasusFolderName", type=str,
-            help='The path relative to the workflow running root. '
-            'This folder will contain pegasus input & output. '
-            'It will be created during the pegasus staging process. '
-            'It is useful to separate multiple sub-workflows. '
-            'If empty or None, everything is in the pegasus root.')
-    ap.add_argument("--inputSuffixList", type=str,
-            help='Coma-separated list of input file suffices. '
-            'Used to exclude input files.'
-            'If None, no exclusion. Please include the dot to the suffix, .tsv, not tsv.'
-            'Common zip suffices (.gz, .bz2, .zip, .bz) will be ignored in '
-            'obtaining the suffix.')
-    ap.add_argument("--tmpDir", type=str, default='/tmp/',
-            help='Default: %(default)s. '
-                'A local folder for some jobs (MarkDup) to store temp data.'
-                '/tmp/ can be too small sometimes.')
-    ap.add_argument("--max_walltime", type=int, default=4320,
-            help='Default: %(default)s. '
-            'Maximum wall time for any job, in minutes. 4320=3 days.'
-            'Used in addGenericJob(). Most clusters have upper limit for runtime.')
-    ap.add_argument("--javaPath", type=str,
-            help='The path to java binary. Must be provided if you have Java jobs.')
-    ap.add_argument("--jvmVirtualByPhysicalMemoryRatio", type=float, default=1.2,
-            help='Default: %(default)s. '
-            'If a job virtual memory (~1.2X of JVM resident memory) exceeds request, '
-            "it may be killed. "
-            "This will make sure your java jobs request enough memory.")
+        help="Default: %(default)s. "
+        "This number decides how many of pegasus jobs should be clustered "
+        "into one job. Good if your workflow contains many quick jobs. "
+        "It will reduce Pegasus monitor I/O.")
+    
     ap.add_argument("--debug", action='store_true',
-            help='Toggle debug mode.')
+        help='Toggle debug mode.')
     ap.add_argument("--report", action='store_true',
-            help="Toggle verbose mode. Default: %(default)s.")
+        help="Toggle verbose mode. Default: %(default)s.")
     ap.add_argument("--needSSHDBTunnel", action='store_true',
-            help="If all DB-interacting jobs need a ssh tunnel to "
-            "access a database that is inaccessible to computing nodes.")
+        help="If all DB-interacting jobs need a ssh tunnel to "
+        "access a database that is inaccessible to computing nodes.")
     args = ap.parse_args()
-    instance = Workflow(inputSuffixList=args.inputSuffixList,
-        pegasusFolderName=args.pegasusFolderName, \
-        output_path=args.output_path, \
-        site_handler=args.site_handler,
-        input_site_handler=args.input_site_handler, \
-        cluster_size=args.cluster_size,\
-        tmpDir=args.tmpDir, max_walltime=args.max_walltime, \
+    instance = Workflow(
+        input_path=args.input_path,
+        inputSuffixList=args.inputSuffixList,
+        pegasusFolderName=args.pegasusFolderName,
+        output_path=args.output_path,
+        
+        tmpDir=args.tmpDir, max_walltime=args.max_walltime,
         javaPath=args.javaPath,
         jvmVirtualByPhysicalMemoryRatio=args.jvmVirtualByPhysicalMemoryRatio,
+        
+        site_handler=args.site_handler,
+        input_site_handler=args.input_site_handler,
+        cluster_size=args.cluster_size,
+
         needSSHDBTunnel=args.needSSHDBTunnel,
         debug=args.debug, report=args.report)
     instance.setup_run()
