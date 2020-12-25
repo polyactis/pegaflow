@@ -311,9 +311,12 @@ class Workflow(ADAG):
     def registerOneExecutable(self, path=None, name=None,
         clusterSizeMultiplier=1, noVersion=False):
         """
-        clusterSizeMultiplier: fine-tuning the cluster size for this particular executable.
-            cluster-size of the executable = default-cluster-size * clusterSizeMultiplier.
-        combination of constructOneExecutableObject() & 
+        clusterSizeMultiplier: fine-tune the cluster size for one executable.
+            cluster-size of an executable = default-cluster-size * clusterSizeMultiplier.
+            Set clusterSizeMultiplier to 0 if your job has a very long list of arguments.
+                Otherwise, pegasus will fail your job due to too many arguments.
+        
+        Call constructOneExecutableObject() & 
             setExecutableClusterSize()
         """
         if clusterSizeMultiplier is None:
