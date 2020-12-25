@@ -59,9 +59,14 @@ class WordCountFiles(Workflow):
 
         # Add a 2nd pipe2File executable with a different name.
         #   This one will run "cat" to merge all output.
+        # Set clusterSizeMultiplier=0 to disable clustering for mergeWC.
+        #   or any kind of merging/reducing jobs like mergeWC.
+        #   This kind of jobs may have a very long list of arguments.
+        #   Clustering will disable break-up (by Pegasus) of long arguments
+        #     during job planning.
         self.registerOneExecutable(
             path=getAbsPathOutOfExecutable(self.pipe2File),
-            name='mergeWC', clusterSizeMultiplier=1)
+            name='mergeWC', clusterSizeMultiplier=0)
 
     def run(self):
         ## setup_run() will call registerExecutables()
