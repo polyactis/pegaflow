@@ -311,6 +311,8 @@ class Workflow(ADAG):
     def registerOneExecutable(self, path=None, name=None,
         clusterSizeMultiplier=1, noVersion=False):
         """
+        clusterSizeMultiplier: fine-tuning the cluster size for this particular executable.
+            cluster-size of the executable = default-cluster-size * clusterSizeMultiplier.
         combination of constructOneExecutableObject() & 
             setExecutableClusterSize()
         """
