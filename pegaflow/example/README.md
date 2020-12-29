@@ -1,4 +1,7 @@
-# This folder contains an example to inherit Workflow.py.
+# 1. An example to inherit Workflow.py
+
+- [1. An example to inherit Workflow.py](#1-an-example-to-inherit-workflowpy)
+  - [1.1. Test on a Condor cluster](#11-test-on-a-condor-cluster)
 
 [WordCountFiles.py](WordCountFiles.py) is an Object-Oriented example that runs `wc` (word-count) on all files with a given suffix in an input folder.
 
@@ -10,15 +13,17 @@
 
 A user should copy both [submit.sh](submit.sh) and [pegasusrc](pegasusrc) to his/her running environment.
 
-
 To get help on the arguments of [WordCountFiles.py](WordCountFiles.py) or [WCFiles_Function.py](WCFiles_Function.py):
+
 ```bash
 ./WordCountFiles.py -h
 
 ./WCFiles_Function.py -h
 ```
 
-To run on a condor cluster (https://research.cs.wisc.edu/htcondor/ must be setup beforehand):
+## 1.1. Test on a Condor cluster
+
+[Condor](https://research.cs.wisc.edu/htcondor/) and [Pegasus](http://pegasus.isi.edu/) (version <5.0) must be installed and properly setup beforehand:
 
 ```bash
 # Count all .py files in /usr/lib/python3.6
