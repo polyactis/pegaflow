@@ -135,6 +135,7 @@ if __name__ == '__main__':
     ap.add_argument("-i", "--input_path", type=str, required=True,
         help="The folder that contains input files.")
     ap.add_argument("-l", "--site_handler", type=str, required=True,
+        default="condor",
         help="The name of the computing site where the jobs run and"
         " executables are stored. "
         "Check your Pegasus configuration in submit.sh.")
