@@ -23,6 +23,7 @@ if __name__ == '__main__':
     ap.add_argument("-o", "--output_file", type=str, required=True,
             help="the path to the output xml file to contain the dag.")
     ap.add_argument("-l", "--site_handler", type=str, required=True,
+        default="condor",
         help="The name of the computing site where the jobs run and"
         " executables are stored. "
         "Check your Pegasus configuration in submit.sh.")
