@@ -6,8 +6,10 @@
 """
 import sys, os
 import logging
-from . DAX3 import Executable, File, PFN, Profile
-from . DAX3 import Namespace, Link, ADAG, Use, Job, Dependency
+from . DAX3 import Executable, PFN, Profile, 
+from . DAX3 import Namespace, Link, ADAG, Use, Dependency
+from Pegasus.api import Workflow, Transformation, ReplicaCatalog, File, \
+    TransformationCatalog, Job, PegasusClientError
 from . import PassingData, getListOutOfStr
 from . import getRealPrefixSuffix
 from . import setJobResourceRequirement, getExecutableClusterSize
@@ -15,7 +17,7 @@ from . import setJobResourceRequirement, getExecutableClusterSize
 src_dir = os.path.dirname(os.path.abspath(__file__))
 
 
-class Workflow(ADAG):
+class MyWorkflow(Workflow):
     __doc__ = __doc__
     # Each entry of pathToInsertHomePathList should be a relative path.
     #  'bin/myprogram',
@@ -108,7 +110,7 @@ class Workflow(ADAG):
         workflowName = os.path.splitext(os.path.basename(self.output_path))[0]
         # call parent
         self.name = workflowName
-        ADAG.__init__(self, self.name)
+        Workflow.__init__(self, self.name)
 
         for pathName in self.pathToInsertHomePathList:
             absPath = self.insertHomePath(getattr(self, pathName, None),

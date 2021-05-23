@@ -40,6 +40,9 @@ def create_site_catalog(top_dir: str, dag_file_path: str, add_staging_site=False
     condor.add_pegasus_profile(style="condor")\
         .add_pegasus_profile(auxillary_local="true")\
         .add_condor_profile(universe="vanilla")
+    
+    condor.add_env(HOME=os.path.expanduser('~'))
+    
     # create and add job managers to the site "condor"
     """    
     condor.add_grids(

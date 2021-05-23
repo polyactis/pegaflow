@@ -4,14 +4,14 @@ An example workflow that word-counts files.
 """
 import sys, os
 from pegaflow.DAX3 import File
-from pegaflow.Workflow import Workflow
+from pegaflow.Workflow import MyWorkflow
 from pegaflow import getAbsPathOutOfExecutable
 
 # path to the source code's folder.
 # a convenient variable to add executables from the same folder.
 src_dir = os.path.dirname(os.path.abspath(__file__))
 
-class WordCountFiles(Workflow):
+class WordCountFiles(MyWorkflow):
     __doc__ = __doc__
     # Each entry of pathToInsertHomePathList should be a relative path,
     #  i.e. 'bin/myprogram'
@@ -26,7 +26,7 @@ class WordCountFiles(Workflow):
         max_walltime=4320, cluster_size=1
         ):
         #call the parent class first
-        Workflow.__init__(self,
+        MyWorkflow.__init__(self,
             input_path = input_path,
             inputSuffixList=inputSuffixList,
             pegasusFolderName=pegasusFolderName,
@@ -44,7 +44,7 @@ class WordCountFiles(Workflow):
     def registerExecutables(self):
         """
         """
-        Workflow.registerExecutables(self)
+        MyWorkflow.registerExecutables(self)
         # accessed as self.sleep.
         self.registerOneExecutable(path="/bin/sleep",
             clusterSizeMultiplier=1)
@@ -126,7 +126,20 @@ class WordCountFiles(Workflow):
         self.addInputToMergeJob(mergeJob=mergeJob, parentJobLs=[sleepJob])
 
         # end_run() will output the DAG to output_path
-        self.end_run()
+        #self.end_run()
+        
+        # plan and submit the workflow for execution
+        self.plan(submit=True)
+
+        # braindump becomes accessible following a call to wf.plan()
+        print(self.braindump.submit_dir)
+
+        # wait for workflow execution to complete
+        self.wait()
+
+        # workflow debugging and statistics
+        self.analyze()
+        self.statistics()
 
 
 if __name__ == '__main__':
