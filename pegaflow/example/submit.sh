@@ -120,6 +120,7 @@ if [ -z $finalOutputDir ]; then
 	month=`python3 -c "import time; print(time.asctime().split()[1])"`
 	day=`python3 -c "import time; print(time.asctime().split()[2])"`
 	year=`python3 -c "import time; print(time.asctime().split()[-1])"`
+    #remove the first folder (usually "dags/") in the dag file path
 	finalOutputDir=`python3 -c "import sys, os; pathLs=os.path.splitext(sys.argv[1])[0].split('/'); n=len(pathLs); print('/'.join(pathLs[-(n-1):]))" $dagFile`.$year.$month.$day\T$t;
 	echo Final output will be in $finalOutputDir
 fi
