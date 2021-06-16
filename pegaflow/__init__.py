@@ -12,34 +12,27 @@
 import logging
 import os
 import sys
-from . DAX3 import Executable, File, PFN, Profile, Namespace, Link
-from . DAX3 import Job, Dependency
+from .api import File, Job, Transformation
+from .api import Arch, OS
+from .api import Workflow as PegaWorkflow
 
 version = '1.0.0'
 namespace = "pegasus"
 pegasus_version = "1.0"
-architecture = "x86_64"
-operatingSystem = "linux"
 
-
-def setExecutableClusterSize(workflow, executable, cluster_size=1):
+def setExecutableClusterSize(workflow:PegaWorkflow, executable:Transformation,
+    cluster_size=1):
     """
-    it will remove the clustering profile if the new cluster_size is <1.
     """
     if cluster_size is not None and cluster_size > 1:
-        clusteringProf = Profile(Namespace.PEGASUS, key="clusters.size",
-            value=f"{cluster_size}")
-        if executable.hasProfile(clusteringProf):
-            executable.removeProfile(clusteringProf)
-        executable.addProfile(clusteringProf)
-    if not workflow.hasExecutable(executable):
-        workflow.addExecutable(executable)
-        #removeExecutable() is its counterpart
-        setattr(workflow, executable.name, executable)
+        if cluster_size > 1:
+            executable.add_pegasus_profile(clusters_size=cluster_size)
+        #workflow.transformation_catalog.add_transformations(executable)
+        #setattr(workflow, executable.name, executable)
     return executable
 
 
-def registerExecutable(workflow, path, site_handler,
+def registerExecutable(workflow:PegaWorkflow, path:str, site_handler:str,
     executableName=None, cluster_size=1, checkExecutable=True):
     if checkExecutable:
         if path.find('file://') == 0:
@@ -52,11 +45,12 @@ def registerExecutable(workflow, path, site_handler,
             raise
     if executableName is None:
         executableName = os.path.basename(path)
-    executable = Executable(namespace=namespace, name=executableName,
-        os=operatingSystem, arch=architecture,
-        installed=True, version=pegasus_version)
-    executable.addPFN(PFN("file://" + os.path.abspath(path), site_handler))
-    workflow.addExecutable(executable)
+    executable = Transformation(name=executableName, site=site_handler, \
+            pfn=os.path.abspath(os.path.expanduser(path)), 
+            is_stageable=True, arch=Arch.X86_64,
+            os_type=OS.LINUX, version=pegasus_version)
+    workflow.transformation_catalog.add_transformations(executable)
+    setattr(workflow, executable.name, executable)
     setExecutableClusterSize(workflow, executable, cluster_size=cluster_size)
     return executable
 
@@ -155,35 +149,37 @@ def getRealPrefixSuffix(path, fakeSuffix='.gz',
     return fname_prefix, fname_suffix
 
 
-def addMkDirJob(workflow, executable, outputDir, frontArgumentList=None,
+def addMkDirJob(workflow:PegaWorkflow, executable:Transformation, outputDir:str,
+    frontArgumentList=None,
     parentJobLs=None,
     extraDependentInputLs=None):
     """
     """
     # Add a mkdir job for any directory.
-    job = Job(name=executable.name, namespace=namespace,
-        version=pegasus_version)
+    job = Job(executable)
+    #.add_inputs(fa).add_outputs(fb1, fb2)
     if frontArgumentList:
-        job.addArguments(*frontArgumentList)
-    job.addArguments(outputDir)
+        job.add_args(*frontArgumentList)
+        #.add_args("-a", "preprocess", "-T", "3", "-i", fa, "-o", fb1, fb2)\
+    job.add_args(outputDir)
     #two attributes for child jobs to get the output directory.
     job.folder = outputDir
     job.output = outputDir
-    workflow.addJob(job)
+    workflow.add_jobs(job)
     if parentJobLs:
         for parentJob in parentJobLs:
             if parentJob:
-                workflow.depends(parent=parentJob, child=job)
+                workflow.add_dependency(job, parents=[parentJob])
     if extraDependentInputLs:
         for input in extraDependentInputLs:
             if input is not None:
-                job.uses(input, transfer=True, register=True, link=Link.INPUT)
+                job.add_inputs(input)
     if hasattr(workflow, 'no_of_jobs'):
         workflow.no_of_jobs += 1
     return job
 
 
-def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
+def setJobResourceRequirement(job:Job=None, job_max_memory=500, no_of_cpus=1,
     walltime=180, sshDBTunnel=0, db=None, io=None, gpu=None):
     """
     db: integer.
@@ -216,29 +212,23 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
     if job_max_memory == "" or job_max_memory == 0 or job_max_memory == "0":
         job_max_memory = 500
     if job_max_memory:
-        job.addProfile(Profile(Namespace.GLOBUS, key="maxmemory",
-            value=f"{job_max_memory}"))
-       	#for dynamic slots
-        job.addProfile(Profile(Namespace.CONDOR, key="request_memory",
-            value=f"{job_max_memory}"))
-        condorJobRequirementLs.append(f"(memory>={job_max_memory})")
+        job.add_globus_profile(max_memory=f"{job_max_memory}MB")
+        job.add_pegasus_profile(memory=f"{job_max_memory}MB")
+        job.add_condor_profile(request_memory=f"{job_max_memory}MB")
+        condorJobRequirementLs.append(f"(memory>={job_max_memory}MB)")
     
     if no_of_cpus:
-        job.addProfile(Profile(Namespace.CONDOR, key="request_cpus",
-            value=f"{no_of_cpus}"))
+        job.add_pegasus_profile(cores=no_of_cpus)
+        job.add_condor_profile(request_cpus=f"{no_of_cpus}")
     if db:
-        job.addProfile(Profile(Namespace.CONDOR, key="request_db",
-            value=f"{db}"))
+        job.add_condor_profile(key="request_db", value=f"{db}")
     if io:
-        job.addProfile(Profile(Namespace.CONDOR, key="request_io",
-            value=f"{io}"))
+        job.add_condor_profile(key="request_io", value=f"{io}")
     if gpu:
-        job.addProfile(Profile(Namespace.CONDOR, key="request_gpu",
-            value=f"{gpu}"))
+        job.add_pegasus_profile(gpus=gpu)
+        job.add_condor_profile(request_gpus=f"{gpu}")
     if walltime:
-        #scale walltime according to cluster_size
-        job.addProfile(Profile(Namespace.GLOBUS, key="maxwalltime",
-            value=f"{walltime}"))
+        job.add_globus_profile(max_wall_time=f"{walltime}")
         #TimeToLive is in seconds
         condorJobRequirementLs.append(
             f"(Target.TimeToLive>={int(walltime)*60})")
@@ -246,14 +236,13 @@ def setJobResourceRequirement(job=None, job_max_memory=500, no_of_cpus=1,
         condorJobRequirementLs.append(f"(sshDBTunnel=={sshDBTunnel})")
     
     #key='requirements' could only be added once for the condor profile
-    job.addProfile(Profile(Namespace.CONDOR, key="requirements",
-        value=" && ".join(condorJobRequirementLs)))
+    job.add_condor_profile(requirements=" && ".join(condorJobRequirementLs))
 
 
-def getAbsPathOutOfExecutable(executable):
+def getAbsPathOutOfExecutable(executable:Transformation):
     """
-        This function extracts path out of a registered executable.
-            executable is a registered pegasus executable with PFNs.
+    This function extracts path out of a registered executable.
+        The executable is a registered pegasus executable with PFNs.
     """
     pfn = (list(executable.pfns)[0])
     #the url looks like "file:///home/crocea/bin/bwa"
@@ -266,20 +255,19 @@ def getAbsPathOutOfFile(file):
     """
     return getAbsPathOutOfExecutable(file)
 
-def getExecutableClusterSize(executable=None):
+def getExecutableClusterSize(executable:Transformation=None):
     """
     default is None
     """
     cluster_size = None
-    clusteringProf = Profile(Namespace.PEGASUS, key="clusters.size", value="1")
-    for profile in executable.profiles:
-        #__hash__ only involves namespace + key 
-        if clusteringProf.__hash__() == profile.__hash__():
-            cluster_size = profile.value
+    pegasus_prof_dict = executable.profiles.get("pegasus", None)
+    if pegasus_prof_dict and "clusters.size" in pegasus_prof_dict:
+        cluster_size = pegasus_prof_dict["clusters.size"]
     return cluster_size
 
 
-def registerOneInputFile(workflow, input_path, site_handler, folderName="",
+def registerOneInputFile(workflow:PegaWorkflow, input_path:str, site_handler:str,
+    folderName="",
     useAbsolutePathAsPegasusFileName=False,
     pegasusFileName=None, checkFileExistence=True):
     """
@@ -310,18 +298,15 @@ def registerOneInputFile(workflow, input_path, site_handler, folderName="",
                 input_path))
     pegasusFile = File(pegasusFileName)
     if checkFileExistence and not os.path.isfile(input_path):
-        logging.error(f"From registerOneInputFile(): {input_path}"
-            f" does not exist.")
+        logging.error(f"From registerOneInputFile(): {input_path} does not exist.")
         raise
     pegasusFile.abspath = os.path.abspath(input_path)
     pegasusFile.absPath = pegasusFile.abspath
-    pegasusFile.addPFN(PFN("file://" + pegasusFile.abspath, site_handler))
-    if not workflow.hasFile(pegasusFile):
-        workflow.addFile(pegasusFile)
+    workflow.replica_catalog.add_replica(site_handler, lfn=pegasusFile, pfn=pegasusFile.abspath)
     return pegasusFile
 
 
-def registerFilesOfInputDir(workflow, inputDir, input_path_list=None,
+def registerFilesOfInputDir(workflow:PegaWorkflow, inputDir:str, input_path_list=None,
     inputSuffixSet=None, site_handler=None, pegasusFolderName='',
     **keywords):
     """
@@ -338,7 +323,7 @@ def registerFilesOfInputDir(workflow, inputDir, input_path_list=None,
 
     print(f"Registering {len(input_path_list)} input files with suffix in"
         f" {inputSuffixSet} ... ", flush=True, end='')
-    inputFileList = []
+    input_file_list = []
     counter = 0
     for input_path in input_path_list:
         counter += 1
@@ -349,45 +334,43 @@ def registerFilesOfInputDir(workflow, inputDir, input_path_list=None,
             #skip input whose suffix is not in inputSuffixSet if inputSuffixSet
             #  is a non-empty set.
             continue
-        inputFile = File(os.path.join(pegasusFolderName,
+        input_file = File(os.path.join(pegasusFolderName,
             os.path.basename(input_path)))
-        inputFile.addPFN(PFN("file://" + input_path, site_handler))
-        inputFile.abspath = input_path
-        workflow.addFile(inputFile)
-        inputFileList.append(inputFile)
-    print(f"{len(inputFileList)} out of {len(input_path_list)} files"
+        input_file.abspath = os.path.abspath(input_path)
+        input_file.absPath = input_file.abspath
+        workflow.replica_catalog.add_replica(site_handler, lfn=input_file,
+            pfn=input_file.abspath)
+        input_file_list.append(input_file)
+    print(f"{len(input_file_list)} out of {len(input_path_list)} files"
         f" registered. Done.", flush=True)
-    return inputFileList
+    return input_file_list
 
 
-def addJob2workflow(workflow=None, executable=None, argv=None,
-    input_file_list=None,
+def addJob2workflow(workflow:PegaWorkflow=None, executable:Transformation=None,
+    argv=None, input_file_list=None,
     output_file_transfer_list=None, output_file_notransfer_list=None,
     parent_job_ls=None,
     job_max_memory=None, no_of_cpus=None,
     walltime=None, sshDBTunnel=None, db=None, io=None, gpu=None
     ):
-    the_job = Job(namespace=namespace, name=executable.name,
-        version=pegasus_version)
+    the_job = Job(executable)
     if argv:
-        the_job.addArguments(*argv)
+        the_job.add_args(*argv)
     if input_file_list:
         for input_file in input_file_list:
-            the_job.uses(input_file, link=Link.INPUT, transfer=True,
-                register=True)
+            the_job.add_inputs(input_file)
     
     if output_file_transfer_list:
         for output_file in output_file_transfer_list:
-            the_job.uses(output_file, link=Link.OUTPUT, transfer=True)
+            the_job.add_outputs(output_file, stage_out=True, register_replica=False)
     if output_file_notransfer_list:
         for output_file in output_file_notransfer_list:
-            the_job.uses(output_file, link=Link.OUTPUT, transfer=False)
-    workflow.addJob(the_job)
+            the_job.add_outputs(output_file, stage_out=False, register_replica=False)
+    workflow.add_jobs(the_job)
     if parent_job_ls:
         for parent_job in parent_job_ls:
             if parent_job:
-                workflow.addDependency(
-                    Dependency(parent=parent_job, child=the_job))
+                workflow.add_dependency(the_job, parents=[parent_job])
     setJobResourceRequirement(job=the_job, job_max_memory=job_max_memory,
         no_of_cpus=no_of_cpus, walltime=walltime, sshDBTunnel=sshDBTunnel,
         db=db, io=io, gpu=gpu)

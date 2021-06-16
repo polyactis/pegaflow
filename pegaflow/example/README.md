@@ -23,7 +23,7 @@ To get help on the arguments of [WordCountFiles.py](WordCountFiles.py) or [WCFil
 
 ## 1.1. Test on a Condor cluster
 
-[Condor](https://research.cs.wisc.edu/htcondor/) and [Pegasus](http://pegasus.isi.edu/) (version <5.0) must be installed and properly setup beforehand:
+[Condor](https://research.cs.wisc.edu/htcondor/) and [Pegasus](http://pegasus.isi.edu/) must be installed and properly setup beforehand:
 
 ```bash
 # Count all .py files in /usr/lib/python3.6

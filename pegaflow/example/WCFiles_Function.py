@@ -4,7 +4,7 @@ A Pegasus example that does not use any class.
 """
 import sys, os
 from argparse import ArgumentParser
-from pegaflow.DAX3 import File, Link, ADAG, Dependency
+from pegaflow.api import File, Workflow
 import pegaflow
 
 src_dir = os.path.dirname(os.path.abspath(__file__))
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         list_in_str=args.inputSuffixList, data_type=str,
         separator1=',', separator2='-')
     inputSuffixSet = set(inputSuffixList)
-    wflow = ADAG("pegasus_test")
+    wflow = Workflow("pegasus_test")
     input_file_list = pegaflow.registerFilesOfInputDir(wflow,
         args.input_folder, inputSuffixSet=inputSuffixSet,
         pegasusFolderName='input', site_handler=args.site_handler,
@@ -81,12 +81,12 @@ if __name__ == '__main__':
             job_max_memory=200,
             )
         #add wcJob's output as input to mergeJob
-        mergeJob.addArguments(output_file)
-        mergeJob.uses(output_file, link=Link.INPUT)
-        wflow.addDependency(Dependency(parent=wcJob, child=mergeJob))
+        mergeJob.add_args(output_file)
+        mergeJob.add_inputs(output_file)
+        wflow.add_dependency(mergeJob, parents=[wcJob])
     # a sleep job to slow down the workflow for 30 seconds
     # sleepJob has no output.
     sleepJob = pegaflow.addJob2workflow(workflow=wflow, executable=sleep,
         argv=[30],
         parent_job_ls=[mergeJob])
-    wflow.writeXML(open(args.output_file, 'w'))
+    wflow.write(args.output_file)

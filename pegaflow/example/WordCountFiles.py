@@ -3,15 +3,15 @@
 An example workflow that word-counts files.
 """
 import sys, os
-from pegaflow.DAX3 import File
-from pegaflow.Workflow import MyWorkflow
+from pegaflow.api import File
+from pegaflow.Workflow import Workflow
 from pegaflow import getAbsPathOutOfExecutable
 
 # path to the source code's folder.
 # a convenient variable to add executables from the same folder.
 src_dir = os.path.dirname(os.path.abspath(__file__))
 
-class WordCountFiles(MyWorkflow):
+class WordCountFiles(Workflow):
     __doc__ = __doc__
     # Each entry of pathToInsertHomePathList should be a relative path,
     #  i.e. 'bin/myprogram'
@@ -23,10 +23,11 @@ class WordCountFiles(MyWorkflow):
         pegasusFolderName=None,
         output_path=None,
         site_handler=None, input_site_handler=None,
-        max_walltime=4320, cluster_size=1
+        direct_run=False,
+        max_walltime=4320, cluster_size=1,
         ):
         #call the parent class first
-        MyWorkflow.__init__(self,
+        Workflow.__init__(self,
             input_path = input_path,
             inputSuffixList=inputSuffixList,
             pegasusFolderName=pegasusFolderName,
@@ -38,13 +39,13 @@ class WordCountFiles(MyWorkflow):
             site_handler=site_handler,
             input_site_handler=input_site_handler,
             cluster_size=cluster_size,
-            
+            direct_run=direct_run,
             debug=False, needSSHDBTunnel=False, report=False)
     
     def registerExecutables(self):
         """
         """
-        MyWorkflow.registerExecutables(self)
+        Workflow.registerExecutables(self)
         # accessed as self.sleep.
         self.registerOneExecutable(path="/bin/sleep",
             clusterSizeMultiplier=1)
@@ -65,8 +66,9 @@ class WordCountFiles(MyWorkflow):
         #   Clustering will disable break-up (by Pegasus) of long arguments
         #     during job planning.
         self.registerOneExecutable(
+            name='mergeWC',
             path=getAbsPathOutOfExecutable(self.pipe2File),
-            name='mergeWC', clusterSizeMultiplier=0)
+            clusterSizeMultiplier=0)
 
     def run(self):
         ## setup_run() will call registerExecutables()
@@ -126,20 +128,7 @@ class WordCountFiles(MyWorkflow):
         self.addInputToMergeJob(mergeJob=mergeJob, parentJobLs=[sleepJob])
 
         # end_run() will output the DAG to output_path
-        #self.end_run()
-        
-        # plan and submit the workflow for execution
-        self.plan(submit=True)
-
-        # braindump becomes accessible following a call to wf.plan()
-        print(self.braindump.submit_dir)
-
-        # wait for workflow execution to complete
-        self.wait()
-
-        # workflow debugging and statistics
-        self.analyze()
-        self.statistics()
+        self.end_run()
 
 
 if __name__ == '__main__':
@@ -186,6 +175,8 @@ if __name__ == '__main__':
     ap.add_argument("--max_walltime", type=int, default=4320,
         help='Default: %(default)s. Maximum run time (minutes) for any job. '
         '4320=3 days. Used in addGenericJob().')
+    ap.add_argument("--direct_run", action='store_true',
+        help='Run the workflow directly, with no need to run pegasus-plan.')
     args = ap.parse_args()
     instance = WordCountFiles(
         input_path=args.input_path,
