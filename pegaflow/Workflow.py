@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, TextIO, Union
 
 # --- Import Pegasus API -----------------------------------------------------------
-from .api import Directory, File, FileServer, Job, Namespace, Operation, \
+from .api import Directory, File, FileServer, Job, Operation, \
     Properties, ReplicaCatalog, Site, SiteCatalog, Transformation, \
     TransformationCatalog
 from .api import Arch, OS
@@ -263,15 +263,16 @@ class Workflow(PegaWorkflow):
                     .add_file_servers(FileServer("file://" + local_storage_dir, Operation.ALL))
                 )
 
-        exec_site = Site(exec_site_name)\
-            .add_directories(
-                Directory(Directory.SHARED_SCRATCH, shared_scratch_dir)
-                    .add_file_servers(FileServer("file://" + shared_scratch_dir, Operation.ALL)),
-            )\
-            .add_env(key="PEGASUS_HOME", value="/usr")\
-            .add_pegasus_profile(style="condor")\
-            .add_condor_profile(universe="vanilla")\
-            .add_profiles(Namespace.PEGASUS, key="data.configuration", value="sharedfs")
+        exec_site = Site(exec_site_name)
+        exec_site.add_directories(
+            Directory(Directory.SHARED_SCRATCH, shared_scratch_dir)
+                .add_file_servers(FileServer("file://" + shared_scratch_dir, Operation.ALL)),
+            )
+        exec_site.add_env(key="PEGASUS_HOME", value="/usr")
+        exec_site.add_pegasus_profile(style="condor")
+        exec_site.add_pegasus_profile(data_configuration="sharedfs")
+        exec_site.add_condor_profile(universe="vanilla")
+            #.add_profiles(Namespace.PEGASUS, key="data.configuration", value="sharedfs")
             #.add_env(key="PATH", value="/y/program/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
         """
         .add_env(key="PEGASUS_HOME", value="/usr") is needed because of this error
