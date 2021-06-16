@@ -1,68 +1,38 @@
-#  Copyright 2007-2014 University Of Southern California
-#
-#  Licensed under the Apache License, Version 2.0 (the "License");
-#  you may not use this file except in compliance with the License.
-#  You may obtain a copy of the License at
-#
-#  http://www.apache.org/licenses/LICENSE-2.0
-#
-#  Unless required by applicable law or agreed to in writing,
-#  software distributed under the License is distributed on an "AS IS" BASIS,
-#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#  See the License for the specific language governing permissions and
-#  limitations under the License.
-
-__author__ = 'Rajiv Mayani'
-
 import hashlib
-import json
 import logging
-import StringIO
 
-from flask import current_app, g, make_response, request
-from pegaflow.service import cache
-from pegaflow.service.base import InvalidJSONError, OrderedDict
-from pegaflow.service.monitoring import monitoring_routes
-from pegaflow.service.monitoring.queries import (
-    MasterWorkflowQueries, StampedeWorkflowQueries
+from flask import g, make_response, request
+
+from Pegasus.service import cache
+from Pegasus.service._serialize import jsonify
+from Pegasus.service.base import OrderedDict
+from Pegasus.service.monitoring import monitoring as blueprint
+from Pegasus.service.monitoring.queries import (
+    MasterWorkflowQueries,
+    StampedeWorkflowQueries,
 )
-from pegaflow.service.monitoring.utils import jsonify
 
 log = logging.getLogger(__name__)
 
-JSON_HEADER = {'Content-Type': 'application/json'}
+JSON_HEADER = {"Content-Type": "application/json"}
 
 
-@monitoring_routes.url_value_preprocessor
+@blueprint.url_value_preprocessor
 def pull_m_wf_id(endpoint, values):
     """
     If the requested endpoint contains a value for m_wf_id variable then extract it and set it in g.m_wf_id.
     """
-    if values and 'm_wf_id' in values:
-        g.m_wf_id = values['m_wf_id']
+    if values and "m_wf_id" in values:
+        g.m_wf_id = values["m_wf_id"]
 
 
-@monitoring_routes.url_defaults
-def add_m_wf_id(endpoint, values):
-    """
-    If the endpoint expects m_wf_id, then set it's value to g.url_m_wf_id.
-    """
-    if current_app.url_map.is_endpoint_expecting(
-        endpoint, 'm_wf_id'
-    ) and 'm_wf_id' not in values and 'url_m_wf_id' in g:
-        values.setdefault('m_wf_id', g.url_m_wf_id)
-
-
-@monitoring_routes.url_value_preprocessor
+@blueprint.url_value_preprocessor
 def pull_url_context(endpoint, values):
     """
     Create a context which can be used when generating url in link section of the responses.
     """
     url_context = {}
-    keys = [
-        'wf_id', 'job_id', 'task_id', 'job_instance_id', 'host_id',
-        'instance_id'
-    ]
+    keys = ["wf_id", "job_id", "task_id", "job_instance_id", "host_id", "instance_id"]
 
     if values:
         for key in keys:
@@ -74,58 +44,43 @@ def pull_url_context(endpoint, values):
                 g.url_context = url_context
 
 
-@monitoring_routes.url_defaults
-def add_url_context(endpoint, values):
-    """
-    If there is a URL context, gene
-    """
-    if values and 'url_context' in g:
-        for key, value in g.url_context.items():
-            if current_app.url_map.is_endpoint_expecting(endpoint, key):
-                values.setdefault(key, value)
-
-
-@monitoring_routes.before_request
+@blueprint.before_request
 def compute_stampede_db_url():
     """
     If the requested endpoint requires connecting to a STAMPEDE database, then determine STAMPEDE DB URL and store it
     in g.stampede_db_url. Also, set g.m_wf_id to be the root workflow's uuid
     """
-    if '/workflow' not in request.path or 'm_wf_id' not in g:
+    if "/workflow" not in request.path or "m_wf_id" not in g:
         return
 
     md5sum = hashlib.md5()
-    md5sum.update(g.master_db_url)
+    md5sum.update(g.master_db_url.encode("utf-8"))
     m_wf_id = g.m_wf_id
 
     def _get_cache_key(key_suffix):
-        return '%s.%s' % (md5sum.hexdigest(), key_suffix)
+        return "{}.{}".format(md5sum.hexdigest(), key_suffix)
 
     cache_key = _get_cache_key(m_wf_id)
 
     if cache.get(cache_key):
-        log.debug('Cache Hit: compute_stampede_db_url %s' % cache_key)
+        log.debug("Cache Hit: compute_stampede_db_url %s" % cache_key)
         root_workflow = cache.get(cache_key)
 
     else:
-        log.debug('Cache Miss: compute_stampede_db_url %s' % cache_key)
+        log.debug("Cache Miss: compute_stampede_db_url %s" % cache_key)
         queries = MasterWorkflowQueries(g.master_db_url)
         root_workflow = queries.get_root_workflow(m_wf_id)
         queries.close()
 
-        cache.set(
-            _get_cache_key(root_workflow.wf_id), root_workflow, timeout=600
-        )
-        cache.set(
-            _get_cache_key(root_workflow.wf_uuid), root_workflow, timeout=600
-        )
+        cache.set(_get_cache_key(root_workflow.wf_id), root_workflow, timeout=600)
+        cache.set(_get_cache_key(root_workflow.wf_uuid), root_workflow, timeout=600)
 
     g.url_m_wf_id = root_workflow.wf_id
     g.m_wf_id = root_workflow.wf_uuid
     g.stampede_db_url = root_workflow.db_url
 
 
-@monitoring_routes.before_request
+@blueprint.before_request
 def get_query_args():
     g.query_args = {}
 
@@ -134,14 +89,15 @@ def get_query_args():
             return int(value)
         except ValueError as e:
             log.exception(
-                'Query Argument %s = %s is not a valid int' % (q_arg, value)
+                "Query Argument {} = {} is not a valid int".format(q_arg, value)
             )
             e = ValueError(
-                'Expecting integer for argument %s, found %r' %
-                (q_arg, str(value))
+                "Expecting integer for argument {}, found {!r}".format(
+                    q_arg, str(value)
+                )
             )
-            e.codes = ('INVALID_QUERY_ARGUMENT', 400)
-            raise e
+            e.codes = ("INVALID_QUERY_ARGUMENT", 400)
+            raise e from None
 
     def to_str(q_arg, value):
         return value
@@ -149,41 +105,37 @@ def get_query_args():
     def to_bool(q_arg, value):
         value = value.strip().lower()
 
-        if value in set(['1', 'true']):
+        if value in {"1", "true"}:
             return True
 
-        elif value in set(['0', 'false']):
+        elif value in {"0", "false"}:
             return False
 
         else:
             log.exception(
-                'Query Argument %s = %s is not a valid boolean' %
-                (q_arg, value)
+                "Query Argument {} = {} is not a valid boolean".format(q_arg, value)
             )
             e = ValueError(
-                'Expecting boolean for argument %s, found %r' %
-                (q_arg, str(value))
+                "Expecting boolean for argument {}, found {!r}".format(
+                    q_arg, str(value)
+                )
             )
-            e.codes = ('INVALID_QUERY_ARGUMENT', 400)
+            e.codes = ("INVALID_QUERY_ARGUMENT", 400)
             raise e
 
     query_args = OrderedDict(
         [
-            ('pretty-print', to_bool), ('start-index', to_int),
-            ('max-results', to_int), ('query', to_str), ('order', to_str)
+            ("pretty-print", to_bool),
+            ("start-index", to_int),
+            ("max-results", to_int),
+            ("query", to_str),
+            ("order", to_str),
         ]
     )
 
-    is_post = request.method == 'POST'
-
     for arg, cast in query_args.items():
         if arg in request.args:
-            g.query_args[arg.replace('-',
-                                     '_')] = cast(arg, request.args.get(arg))
-
-        # POST Query Argument overrides GET Query Argument with the same name
-        if is_post and arg in request.form:
-            g.query_args[arg.replace('-', '_')] = cast(arg, request.form[arg])
+            g.query_args[arg.replace("-", "_")] = cast(arg, request.args.get(arg))
 
 
 """
@@ -211,8 +163,7 @@ Root Workflow
 """
 
 
-@monitoring_routes.route('/root')
-@monitoring_routes.route('/root/query', methods=['POST'])
+@blueprint.route("/root")
 def get_root_workflows(username):
     """
     Returns a collection of root level workflows.
@@ -236,8 +187,8 @@ def get_root_workflows(username):
     paged_response = queries.get_root_workflows(**g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -247,7 +198,7 @@ def get_root_workflows(username):
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route('/root/<string:m_wf_id>')
+@blueprint.route("/root/<string:m_wf_id>")
 def get_root_workflow(username, m_wf_id):
     """
     Returns root level workflow identified by m_wf_id.
@@ -304,10 +255,7 @@ Workflow
 """
 
 
-@monitoring_routes.route('/root/<string:m_wf_id>/workflow')
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/query', methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow")
 def get_workflows(username, m_wf_id):
     """
     Returns a collection of workflows.
@@ -332,8 +280,8 @@ def get_workflows(username, m_wf_id):
     paged_response = queries.get_workflows(g.m_wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -343,7 +291,7 @@ def get_workflows(username, m_wf_id):
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route('/root/<string:m_wf_id>/workflow/<string:wf_id>')
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>")
 def get_workflow(username, m_wf_id, wf_id):
     """
     Returns workflow identified by m_wf_id, wf_id.
@@ -383,11 +331,7 @@ Workflow Meta
 """
 
 
-@monitoring_routes.route('/root/<string:m_wf_id>/workflow/<string:wf_id>/meta')
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/meta/query',
-    methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/meta")
 def get_workflow_meta(username, m_wf_id, wf_id):
     """
     Returns a collection of workflow's metadata.
@@ -412,8 +356,8 @@ def get_workflow_meta(username, m_wf_id, wf_id):
     paged_response = queries.get_workflow_meta(g.m_wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -451,13 +395,7 @@ Workflow Files
 """
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/files'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/files/query',
-    methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/files")
 def get_workflow_files(username, m_wf_id, wf_id):
     """
     Returns a collection of workflows.
@@ -482,8 +420,8 @@ def get_workflow_files(username, m_wf_id, wf_id):
     paged_response = queries.get_workflow_files(g.m_wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -509,21 +447,8 @@ Workflow State
 """
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/state'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/state;recent=<boolean:recent>'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/state/query',
-    methods=['POST']
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/state;recent=<boolean:recent>/query',
-    methods=['POST']
-)
-def get_workflow_state(username, m_wf_id, wf_id, recent=False):
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/state")
+def get_workflow_state(username, m_wf_id, wf_id):
     """
     Returns a collection of Workflow States.
 
@@ -531,7 +456,6 @@ def get_workflow_state(username, m_wf_id, wf_id, recent=False):
     :query int max-results: Return a maximum of <max-results> records
     :query string query: Search criteria
     :query string order: Sorting criteria
-    :query boolean recent: Get most recent workflow state
     :query boolean pretty-print: Return formatted JSON response
 
     :statuscode 200: OK
@@ -545,13 +469,11 @@ def get_workflow_state(username, m_wf_id, wf_id, recent=False):
     """
     queries = StampedeWorkflowQueries(g.stampede_db_url)
 
-    paged_response = queries.get_workflow_state(
-        wf_id, recent=recent, **g.query_args
-    )
+    paged_response = queries.get_workflow_state(wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -584,11 +506,7 @@ Job
 """
 
 
-@monitoring_routes.route('/root/<string:m_wf_id>/workflow/<string:wf_id>/job')
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/query',
-    methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/job")
 def get_workflow_jobs(username, m_wf_id, wf_id):
     """
     Returns a collection of Jobs.
@@ -613,8 +531,8 @@ def get_workflow_jobs(username, m_wf_id, wf_id):
     paged_response = queries.get_workflow_jobs(wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -624,9 +542,7 @@ def get_workflow_jobs(username, m_wf_id, wf_id):
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>'
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>")
 def get_job(username, m_wf_id, wf_id, job_id):
     """
     Returns job identified by m_wf_id, wf_id, job_id.
@@ -670,11 +586,7 @@ Host
 """
 
 
-@monitoring_routes.route('/root/<string:m_wf_id>/workflow/<string:wf_id>/host')
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/host/query',
-    methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/host")
 def get_workflow_hosts(username, m_wf_id, wf_id):
     """
     Returns a collection of Hosts.
@@ -699,8 +611,8 @@ def get_workflow_hosts(username, m_wf_id, wf_id):
     paged_response = queries.get_workflow_hosts(wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -710,9 +622,7 @@ def get_workflow_hosts(username, m_wf_id, wf_id):
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/host/<int:host_id>'
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/host/<int:host_id>")
 def get_host(username, m_wf_id, wf_id, host_id):
     """
     Returns host identified by m_wf_id, wf_id, host_id.
@@ -754,23 +664,10 @@ Job State
 """
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance/<int:job_instance_id>/state'
+@blueprint.route(
+    "/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance/<int:job_instance_id>/state"
 )
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance/<int:job_instance_id>/state;recent=<boolean:recent>'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance/<int:job_instance_id>/state/query',
-    methods=['POST']
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance/<int:job_instance_id>/state;recent=<boolean:recent>/query',
-    methods=['POST']
-)
-def get_job_instance_states(
-    username, m_wf_id, wf_id, job_id, job_instance_id, recent=False
-):
+def get_job_instance_states(username, m_wf_id, wf_id, job_id, job_instance_id):
     """
     Returns a collection of Job States.
 
@@ -778,7 +675,6 @@ def get_job_instance_states(
     :query int max-results: Return a maximum of <max-results> records
     :query string query: Search criteria
     :query string order: Sorting criteria
-    :query boolean recent: Get most recent job state
     :query boolean pretty-print: Return formatted JSON response
 
     :statuscode 200: OK
@@ -793,12 +689,12 @@ def get_job_instance_states(
     queries = StampedeWorkflowQueries(g.stampede_db_url)
 
     paged_response = queries.get_job_instance_states(
-        wf_id, job_id, job_instance_id, recent=recent, **g.query_args
+        wf_id, job_id, job_instance_id, **g.query_args
     )
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -827,11 +723,7 @@ Task
 """
 
 
-@monitoring_routes.route('/root/<string:m_wf_id>/workflow/<string:wf_id>/task')
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/task/query',
-    methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/task")
 def get_workflow_tasks(username, m_wf_id, wf_id):
     """
     Returns a collection of Tasks.
@@ -856,8 +748,8 @@ def get_workflow_tasks(username, m_wf_id, wf_id):
     paged_response = queries.get_workflow_tasks(wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -867,13 +759,7 @@ def get_workflow_tasks(username, m_wf_id, wf_id):
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/task'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/task/query',
-    methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/task")
 def get_job_tasks(username, m_wf_id, wf_id, job_id):
     """
     Returns a collection of Tasks.
@@ -898,8 +784,8 @@ def get_job_tasks(username, m_wf_id, wf_id, job_id):
     paged_response = queries.get_job_tasks(wf_id, job_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -909,9 +795,7 @@ def get_job_tasks(username, m_wf_id, wf_id, job_id):
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/task/<int:task_id>'
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/task/<int:task_id>")
 def get_task(username, m_wf_id, wf_id, task_id):
     """
     Returns task identified by m_wf_id, wf_id, task_id.
@@ -951,12 +835,8 @@ Task Meta
 """
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/task/<int:task_id>/meta'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/task/<int:task_id>/meta/query',
-    methods=['POST']
+@blueprint.route(
+    "/root/<string:m_wf_id>/workflow/<string:wf_id>/task/<int:task_id>/meta"
 )
 def get_task_meta(username, m_wf_id, wf_id, task_id):
     """
@@ -982,8 +862,8 @@ def get_task_meta(username, m_wf_id, wf_id, task_id):
     paged_response = queries.get_task_meta(task_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -1025,21 +905,10 @@ Job Instance
 """
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance'
+@blueprint.route(
+    "/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance"
 )
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance;recent=<boolean:recent>'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance/query',
-    methods=['POST']
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance;recent=<boolean:recent>/query',
-    methods=['POST']
-)
-def get_job_instances(username, m_wf_id, wf_id, job_id, recent=False):
+def get_job_instances(username, m_wf_id, wf_id, job_id):
     """
     Returns a collection of JobInstances.
 
@@ -1061,12 +930,15 @@ def get_job_instances(username, m_wf_id, wf_id, job_id, recent=False):
     queries = StampedeWorkflowQueries(g.stampede_db_url)
 
     paged_response = queries.get_job_instances(
-        wf_id, job_id, recent=recent, **g.query_args
+        wf_id,
+        job_id,
+        recent=request.args.get("recent", "false") == "true",
+        **g.query_args,
     )
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -1076,8 +948,8 @@ def get_job_instances(username, m_wf_id, wf_id, job_id, recent=False):
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job-instance/<int:job_instance_id>'
+@blueprint.route(
+    "/root/<string:m_wf_id>/workflow/<string:wf_id>/job-instance/<int:job_instance_id>"
 )
 def get_job_instance(username, m_wf_id, wf_id, job_instance_id):
     """
@@ -1128,13 +1000,7 @@ Invocation
 """
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/invocation'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/invocation/query',
-    methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/invocation")
 def get_workflow_invocations(username, m_wf_id, wf_id):
     """
     Returns a collection of Invocations.
@@ -1159,8 +1025,8 @@ def get_workflow_invocations(username, m_wf_id, wf_id):
     paged_response = queries.get_workflow_invocations(wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -1170,16 +1036,10 @@ def get_workflow_invocations(username, m_wf_id, wf_id):
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance/<int:job_instance_id>/invocation'
+@blueprint.route(
+    "/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance/<int:job_instance_id>/invocation"
 )
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/<int:job_id>/job-instance/<int:job_instance_id>/invocation/query',
-    methods=['POST']
-)
-def get_job_instance_invocations(
-    username, m_wf_id, wf_id, job_id, job_instance_id
-):
+def get_job_instance_invocations(username, m_wf_id, wf_id, job_id, job_instance_id):
     queries = StampedeWorkflowQueries(g.stampede_db_url)
 
     paged_response = queries.get_job_instance_invocations(
@@ -1187,8 +1047,8 @@ def get_job_instance_invocations(
     )
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -1198,8 +1058,8 @@ def get_job_instance_invocations(
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/invocation/<int:invocation_id>'
+@blueprint.route(
+    "/root/<string:m_wf_id>/workflow/<string:wf_id>/invocation/<int:invocation_id>"
 )
 def get_invocation(username, m_wf_id, wf_id, invocation_id):
     """
@@ -1228,124 +1088,11 @@ def get_invocation(username, m_wf_id, wf_id, invocation_id):
 
 
 """
-Batch Request
-
-[
-    {
-        "method" : <string:method>,
-        "path"   : <string:path>,
-        "body"   : <dict:body>
-    },
-    {
-        "method" : <string:method>,
-        "path"   : <string:path>,
-        "body"   : <dict:body>
-    }
-]
-
-Batch Response
-
-[
-    {
-        "status"   : <int:status_code>,
-        "response" : <string:response>
-    },
-    {
-        "status"   : <int:status_code>,
-        "response" : <string:response>
-    }
-]
-
+Utilities
 """
 
 
-def _read_response(response):
-    output = StringIO.StringIO()
-    try:
-        for line in response.response:
-            output.write(line)
-
-        return output.getvalue()
-
-    finally:
-        output.close()
-
-
-@monitoring_routes.route('/batch', methods=['POST'])
-def batch(username):
-    """
-    Execute multiple requests, submitted as a batch.
-
-    :statuscode 207: Multi status
-    :statuscode 400: Bad request
-    :statuscode 401: Authentication failure
-    :statuscode 403: Authorization failure
-
-    :return type: Collection
-    :return resource: Responses
-    """
-    try:
-        requests = json.loads(request.data)
-    except ValueError as e:
-        log.exception('Invalid JSON')
-        raise InvalidJSONError(e.message)
-
-    responses = StringIO.StringIO()
-    responses.write('[')
-    headers = [('Authorization', request.headers.get('Authorization'))
-               ] if request.authorization else []
-
-    application = current_app._get_current_object()
-    for index, req in enumerate(requests):
-        method = req['method']
-        path = req['path']
-        body = req.get('body', None)
-
-        with application.app_context():
-            with application.test_request_context(
-                path, method=method, data=body, headers=headers
-            ):
-                try:
-                    # Pre process Request
-                    rv = application.preprocess_request()
-
-                    if rv is None:
-                        # Main Dispatch
-                        rv = application.dispatch_request()
-
-                except Exception as e:
-                    rv = application.handle_user_exception(e)
-
-                response = application.make_response(rv)
-
-                # Post process Request
-                response = application.process_response(response)
-
-        responses.write(
-            '{"status": %d,"response": %s}' %
-            (response.status_code, _read_response(response))
-        )
-
-        if index + 1 < len(requests):
-            responses.write(',')
-
-    responses.write(']')
-
-    return make_response(responses.getvalue(), 207, JSON_HEADER)
-
-
-"""
-Views
-"""
-
-
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/running'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/running/query',
-    methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/job/running")
 def get_running_jobs(username, m_wf_id, wf_id):
     """
     Returns a collection of running Jobs.
@@ -1370,8 +1117,8 @@ def get_running_jobs(username, m_wf_id, wf_id):
     paged_response = queries.get_running_jobs(wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -1381,13 +1128,7 @@ def get_running_jobs(username, m_wf_id, wf_id):
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/successful'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/successful/query',
-    methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/job/successful")
 def get_successful_jobs(username, m_wf_id, wf_id):
     """
     Returns a collection of successful Jobs.
@@ -1412,8 +1153,8 @@ def get_successful_jobs(username, m_wf_id, wf_id):
     paged_response = queries.get_successful_jobs(wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -1423,13 +1164,7 @@ def get_successful_jobs(username, m_wf_id, wf_id):
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/failed'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/failed/query',
-    methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/job/failed")
 def get_failed_jobs(username, m_wf_id, wf_id):
     """
     Returns a collection of failed Jobs.
@@ -1454,8 +1189,8 @@ def get_failed_jobs(username, m_wf_id, wf_id):
     paged_response = queries.get_failed_jobs(wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response
@@ -1465,13 +1200,7 @@ def get_failed_jobs(username, m_wf_id, wf_id):
     return make_response(response_json, 200, JSON_HEADER)
 
 
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/failing'
-)
-@monitoring_routes.route(
-    '/root/<string:m_wf_id>/workflow/<string:wf_id>/job/failing/query',
-    methods=['POST']
-)
+@blueprint.route("/root/<string:m_wf_id>/workflow/<string:wf_id>/job/failing")
 def get_failing_jobs(username, m_wf_id, wf_id):
     """
     Returns a collection of failing Jobs.
@@ -1496,8 +1225,8 @@ def get_failing_jobs(username, m_wf_id, wf_id):
     paged_response = queries.get_failing_jobs(wf_id, **g.query_args)
 
     if paged_response.total_records == 0:
-        log.debug('Total records is 0; returning HTTP 204 No content')
-        return make_response('', 204, JSON_HEADER)
+        log.debug("Total records is 0; returning HTTP 204 No content")
+        return make_response("", 204, JSON_HEADER)
 
     #
     # Generate JSON Response

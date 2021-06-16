@@ -12,39 +12,52 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-__author__ = 'Rajiv Mayani'
+__author__ = "Rajiv Mayani"
 
 import hashlib
+import logging
 
-from pegaflow.db import connection
-from pegaflow.db.admin.admin_loader import DBAdminError
-from pegaflow.db.errors import StampedeDBNotFoundError
-from pegaflow.db.schema import *
-from pegaflow.service import cache
-from pegaflow.service.base import (
-    BaseOrderParser, BaseQueryParser, InvalidOrderError,
-    InvalidQueryError, OrderedDict, OrderedSet, PagedResponse
-)
-from pegaflow.service.monitoring.resources import (
-    CombinationResource, HostResource, InvocationResource,
-    JobInstanceResource, JobResource, JobstateResource, RCLFNResource,
-    RCMetaResource, RCPFNResource, RootWorkflowResource,
-    RootWorkflowstateResource, TaskMetaResource, TaskResource,
-    WorkflowMetaResource, WorkflowResource, WorkflowstateResource
-)
-from pegaflow.service.monitoring.utils import csv_to_json
-from sqlalchemy.orm import aliased, defer
+from sqlalchemy.orm import aliased, defer, joinedload
 from sqlalchemy.orm.exc import NoResultFound
+from sqlalchemy.sql.expression import and_, desc, distinct, func
+
+from Pegasus.db import connection
+from Pegasus.db.admin.admin_loader import DBAdminError
+from Pegasus.db.errors import StampedeDBNotFoundError
+from Pegasus.db.schema import (
+    RCLFN,
+    RCPFN,
+    Host,
+    Invocation,
+    Job,
+    JobInstance,
+    Jobstate,
+    MasterWorkflow,
+    MasterWorkflowstate,
+    RCMeta,
+    Task,
+    TaskMeta,
+    Workflow,
+    WorkflowFiles,
+    WorkflowMeta,
+    Workflowstate,
+)
+from Pegasus.service import cache
+from Pegasus.service._query import InvalidQueryError, query_parse
+from Pegasus.service._sort import InvalidSortError, sort_parse
+from Pegasus.service.base import PagedResponse
 
 log = logging.getLogger(__name__)
 
 
-class WorkflowQueries(object):
+class WorkflowQueries:
     def __init__(self, connection_string, use_cache=True):
         if connection_string is None:
-            raise ValueError('Connection string is required')
+            raise ValueError("Connection string is required")
 
-        self._conn_string_csum = hashlib.md5(connection_string).hexdigest()
+        self._conn_string_csum = hashlib.md5(
+            connection_string.encode("utf-8")
+        ).hexdigest()
 
         try:
             self.session = connection.connect(connection_string)
@@ -67,154 +80,104 @@ class WorkflowQueries(object):
         if isinstance(use_cache, bool):
             self._use_cache = use_cache
         else:
-            raise TypeError('Expecting boolean, found %s' % type(use_cache))
+            raise TypeError("Expecting boolean, found %s" % type(use_cache))
 
     def _cache_key_from_query(self, q):
         statement = q.with_labels().statement
         compiled = statement.compile()
         params = compiled.params
 
-        cache_key = ' '.join(
-            [self._conn_string_csum, str(compiled)] +
-            [str(params[k]) for k in sorted(params)]
+        cache_key = " ".join(
+            [self._conn_string_csum, str(compiled)]
+            + [str(params[k]) for k in sorted(params)]
         )
-        return hashlib.md5(cache_key).hexdigest()
+        return hashlib.md5(cache_key.encode("utf-8")).hexdigest()
 
     def _get_count(self, q, use_cache=True, timeout=60):
-        cache_key = '%s.count' % self._cache_key_from_query(q)
+        cache_key = "%s.count" % self._cache_key_from_query(q)
         if use_cache and cache.get(cache_key):
-            log.debug('Cache Hit: %s' % cache_key)
+            log.debug("Cache Hit: %s" % cache_key)
             count = cache.get(cache_key)
 
         else:
-            log.debug('Cache Miss: %s' % cache_key)
+            log.debug("Cache Miss: %s" % cache_key)
             count = q.count()
-            t = timeout(count) if hasattr(timeout, '__call__') else timeout
+            t = timeout(count) if callable(timeout) else timeout
             cache.set(cache_key, count, t)
 
         return count
 
     def _get_all(self, q, use_cache=True, timeout=60):
-        cache_key = '%s.all' % self._cache_key_from_query(q)
+        cache_key = "%s.all" % self._cache_key_from_query(q)
         if use_cache and cache.get(cache_key):
-            log.debug('Cache Hit: %s' % cache_key)
+            log.debug("Cache Hit: %s" % cache_key)
             record = cache.get(cache_key)
 
         else:
-            log.debug('Cache Miss: %s' % cache_key)
+            log.debug("Cache Miss: %s" % cache_key)
             record = q.all()
-            t = timeout(record) if hasattr(timeout, '__call__') else timeout
+            t = timeout(record) if callable(timeout) else timeout
             cache.set(cache_key, record, t)
 
         return record
 
     def _get_one(self, q, use_cache=True, timeout=60):
-        cache_key = '%s.one' % self._cache_key_from_query(q)
+        cache_key = "%s.one" % self._cache_key_from_query(q)
         if use_cache and cache.get(cache_key):
-            log.debug('Cache Hit: %s' % cache_key)
+            log.debug("Cache Hit: %s" % cache_key)
             record = cache.get(cache_key)
 
         else:
-            log.debug('Cache Miss: %s' % cache_key)
+            log.debug("Cache Miss: %s" % cache_key)
             record = q.one()
-            t = timeout(record) if hasattr(timeout, '__call__') else timeout
+            t = timeout(record) if callable(timeout) else timeout
             cache.set(cache_key, record, t)
 
         return record
 
     @staticmethod
-    def _evaluate_query(q, query, resource):
+    def _evaluate_query(q, query, **resource):
         if not query:
             return q
 
-        comparator = {
-            '=': '__eq__',
-            '!=': '__ne__',
-            '<': '__lt__',
-            '<=': '__le__',
-            '>': '__gt__',
-            '>=': '__ge__',
-            'LIKE': 'like',
-            'IN': 'in_'
-        }
-
-        operators = {'AND': and_, 'OR': or_}
-
-        operands = []
-
-        def condition_expansion(expr, field):
-            operands.append(getattr(field, comparator[expr[1]])(expr[2]))
-
         try:
-            expression = BaseQueryParser(query).evaluate()
-
-            for token in expression:
-                if isinstance(token, tuple):
-                    if isinstance(token[2], tuple):
-                        identifier = token[2][1]
-                        token = (
-                            token[0], token[1],
-                            resource.get_mapped_field(token[2][1])
-                        )
-
-                    identifier = token[0]
-                    condition_expansion(
-                        token, resource.get_mapped_field(identifier)
-                    )
-
-                elif isinstance(token, str) or isinstance(token, unicode):
-
-                    operand_2 = operands.pop()
-                    operand_1 = operands.pop()
-
-                    if token in operators:
-                        operands.append(operators[token](operand_1, operand_2))
-
-            q = q.filter(operands.pop())
-
+            x = query_parse(query, **resource)
+            q = q.filter(x[0])
         except (KeyError, AttributeError):
-            log.exception('Invalid field %s' % identifier)
-            raise InvalidQueryError('Invalid field %s' % identifier)
-
-        except IndexError:
-            log.exception('Invalid expression %s' % query)
-            raise InvalidQueryError('Invalid expression %s' % query)
+            log.exception("Invalid query %s" % query)
+            raise InvalidQueryError("Invalid query %s" % query)
+        except NameError as e:
+            log.exception("Invalid field %s" % e)
+            raise InvalidQueryError("Invalid field %s" % e)
+        except Exception:
+            log.exception("Invalid query %s" % query)
+            raise InvalidQueryError("Invalid query %s" % query)
 
         return q
 
     @staticmethod
-    def _add_ordering(q, order, resource):
+    def _add_ordering(q, order, **resource):
         if not q or not order or not resource:
             return q
 
-        order_parser = BaseOrderParser(order)
-        sort_order = order_parser.get_sort_order()
+        sort_order = sort_parse(order)
 
-        for identifier, sort_dir in sort_order:
+        for prefix, identifier, sort_dir in sort_order:
             try:
-                if isinstance(resource, CombinationResource):
-                    field = resource.get_mapped_field(identifier)
-
-                else:
-                    field = resource.get_mapped_field(
-                        identifier, ignore_prefix=True
-                    )
-
-                if sort_dir == 'ASC':
-                    q = q.order_by(field)
-                else:
-                    q = q.order_by(desc(field))
-
+                field = getattr(resource[prefix], identifier)
             except (KeyError, AttributeError):
-                log.exception('Invalid field %r' % identifier)
-                raise InvalidOrderError('Invalid field %r' % identifier)
+                log.exception("Invalid field {}.{}".format(prefix, identifier))
+                raise InvalidSortError("Invalid field %r" % identifier)
+
+            if sort_dir == "ASC":
+                q = q.order_by(field)
+            else:
+                q = q.order_by(desc(field))
 
         return q
 
     @staticmethod
-    def _add_pagination(
-        q, start_index=None, max_results=None, total_records=None
-    ):
+    def _add_pagination(q, start_index=None, max_results=None, total_records=None):
         """
         LIMIT <skip>, <count>       - Valid
         LIMIT <count> OFFSET <skip> - Valid
@@ -260,68 +223,59 @@ class MasterWorkflowQueries(WorkflowQueries):
         :param order: Sorting criteria
         :param use_cache: If available, use cached results
 
-        :return: Collection of tuples (DashboardWorkflow, DashboardWorkflowstate)
+        :return: Collection of tuples (MasterWorkflow, MasterWorkflowstate)
         """
 
         #
         # Construct SQLAlchemy Query `q` to count.
         #
-        q = self.session.query(DashboardWorkflow)
+        q = self.session.query(MasterWorkflow)
 
         total_records = total_filtered = self._get_count(q, use_cache)
 
         if total_records == 0:
-            log.debug('total_records 0')
+            log.debug("total_records 0")
             return PagedResponse([], 0, 0)
 
         #
         # Finish Construction of Base SQLAlchemy Query `q`
         #
         qws = self._get_max_master_workflow_state()
-        qws = qws.subquery('master_workflowstate')
+        qws = qws.subquery("master_workflowstate")
 
-        alias = aliased(DashboardWorkflowstate, qws)
+        alias = aliased(MasterWorkflowstate, qws)
 
-        q = q.outerjoin(qws, DashboardWorkflow.wf_id == qws.c.wf_id)
+        q = q.outerjoin(qws, MasterWorkflow.wf_id == qws.c.wf_id)
         q = q.add_entity(alias)
 
         #
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            resource = CombinationResource(
-                RootWorkflowResource(), RootWorkflowstateResource(alias)
-            )
-
-            q = self._evaluate_query(q, query, resource)
+            q = self._evaluate_query(q, query, r=MasterWorkflow, ws=alias)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, RootWorkflowResource())
+            q = self._add_ordering(q, order, r=MasterWorkflow)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
         for i in range(len(records)):
             new_record = records[i][0]
             new_record.workflow_state = records[i][1]
+            new_record.__includes__ = ("workflow_state",)
             records[i] = new_record
 
         return PagedResponse(records, total_records, total_filtered)
@@ -335,25 +289,25 @@ class MasterWorkflowQueries(WorkflowQueries):
 
         :return: Root Workflow object
         """
-        q = self.session.query(DashboardWorkflow)
+        q = self.session.query(MasterWorkflow)
 
         if m_wf_id is None:
-            raise ValueError('m_wf_id cannot be None')
+            raise ValueError("m_wf_id cannot be None")
 
         m_wf_id = str(m_wf_id)
         if m_wf_id.isdigit():
-            q = q.filter(DashboardWorkflow.wf_id == m_wf_id)
+            q = q.filter(MasterWorkflow.wf_id == m_wf_id)
         else:
-            q = q.filter(DashboardWorkflow.wf_uuid == m_wf_id)
+            q = q.filter(MasterWorkflow.wf_uuid == m_wf_id)
 
         #
         # Finish Construction of Base SQLAlchemy Query `q`
         #
         qws = self._get_max_master_workflow_state(m_wf_id=m_wf_id)
-        qws = qws.subquery('master_workflowstate')
+        qws = qws.subquery("master_workflowstate")
 
-        q = q.outerjoin(qws, DashboardWorkflow.wf_id == qws.c.wf_id)
-        q = q.add_entity(aliased(DashboardWorkflowstate, qws))
+        q = q.outerjoin(qws, MasterWorkflow.wf_id == qws.c.wf_id)
+        q = q.add_entity(aliased(MasterWorkflowstate, qws))
 
         try:
             record_tuple = self._get_one(q, use_cache)
@@ -362,33 +316,26 @@ class MasterWorkflowQueries(WorkflowQueries):
             return record
 
         except NoResultFound as e:
-            log.exception(
-                'Not Found: Root Workflow for given m_wf_id (%s)' % m_wf_id
-            )
+            log.exception("Not Found: Root Workflow for given m_wf_id (%s)" % m_wf_id)
             raise e
 
-    def _get_max_master_workflow_state(
-        self, m_wf_id=None, mws=DashboardWorkflowstate
-    ):
+    def _get_max_master_workflow_state(self, m_wf_id=None, mws=MasterWorkflowstate):
         qmax = self._get_recent_master_workflow_state(m_wf_id, mws)
-        qmax = qmax.subquery('max_timestamp')
+        qmax = qmax.subquery("max_timestamp")
 
         q = self.session.query(mws)
         q = q.join(
-            qmax,
-            and_(mws.wf_id == qmax.c.wf_id, mws.timestamp == qmax.c.max_time)
+            qmax, and_(mws.wf_id == qmax.c.wf_id, mws.timestamp == qmax.c.max_time)
         )
 
         return q
 
-    def _get_recent_master_workflow_state(
-        self, m_wf_id=None, mws=DashboardWorkflowstate
-    ):
+    def _get_recent_master_workflow_state(self, m_wf_id=None, mws=MasterWorkflowstate):
         q = self.session.query(mws.wf_id)
-        q = q.add_column(func.max(mws.timestamp).label('max_time'))
+        q = q.add_columns(func.max(mws.timestamp).label("max_time"))
 
         if m_wf_id:
-            log.debug('filter on m_wf_id')
+            log.debug("filter on m_wf_id")
             q = q.filter(mws.wf_id == m_wf_id)
 
         q = q.group_by(mws.wf_id)
@@ -399,7 +346,7 @@ class MasterWorkflowQueries(WorkflowQueries):
 class StampedeWorkflowQueries(WorkflowQueries):
     def wf_uuid_to_wf_id(self, wf_id):
         if wf_id is None:
-            raise ValueError('wf_id cannot be None')
+            raise ValueError("wf_id cannot be None")
 
         wf_id = str(wf_id)
         if not wf_id.isdigit():
@@ -454,29 +401,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(q, query, WorkflowResource())
+            q = self._evaluate_query(q, query, w=Workflow)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, WorkflowResource())
+            q = self._add_ordering(q, order, w=Workflow)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
@@ -540,29 +481,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(q, query, WorkflowMetaResource())
+            q = self._evaluate_query(q, query, wm=WorkflowMeta)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, WorkflowMetaResource())
+            q = self._add_ordering(q, order, wm=WorkflowMeta)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
@@ -604,83 +539,54 @@ class StampedeWorkflowQueries(WorkflowQueries):
         if total_records == 0:
             return PagedResponse([], 0, 0)
 
-        q_in = self.session.query(distinct(RCLFN.lfn_id).label('lfn_id'))
-        q_in = q_in.join(WorkflowFiles, WorkflowFiles.wf_id == wf_id)
-        q_in = q_in.outerjoin(RCPFN, RCLFN.lfn_id == RCPFN.lfn_id)
-        q_in = q_in.outerjoin(RCMeta, RCLFN.lfn_id == RCMeta.lfn_id)
+        q = (
+            self.session.query(WorkflowFiles)
+            .options(
+                joinedload(WorkflowFiles.lfn).joinedload(RCLFN.pfns),
+                joinedload(WorkflowFiles.lfn).joinedload(RCLFN.meta),
+            )
+            .filter(WorkflowFiles.wf_id == wf_id)
+        )
 
         #
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q_in = self._evaluate_query(
-                q_in, query,
-                CombinationResource(
-                    RCLFNResource(), RCPFNResource(), RCMetaResource()
-                )
-            )
-            total_filtered = self._get_count(q_in, use_cache)
+            q = self._evaluate_query(q, query, l=RCLFN, p=RCPFN, rm=RCMeta)
+            total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q_in = WorkflowQueries._add_pagination(
-            q_in, start_index, max_results, total_filtered
-        )
-
-        #
-        # Finish Construction of Base SQLAlchemy Query `q`
-        #
-        q_in = q_in.subquery('distinct_lfns')
-        q = self.session.query(RCLFN, WorkflowFiles, RCPFN, RCMeta)
-        q = q.outerjoin(WorkflowFiles, RCLFN.lfn_id == WorkflowFiles.lfn_id)
-        q = q.outerjoin(RCPFN, RCLFN.lfn_id == RCPFN.lfn_id)
-        q = q.outerjoin(RCMeta, RCLFN.lfn_id == RCMeta.lfn_id)
-        q = q.join(q_in, RCLFN.lfn_id == q_in.c.lfn_id)
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(
-                q, order,
-                CombinationResource(
-                    RCLFNResource(), RCPFNResource(), RCMetaResource()
-                )
-            )
+            q = self._add_ordering(q, order, l=RCLFN, p=RCPFN, rm=RCMeta)
 
         records = self._get_all(q, use_cache)
 
-        schema = OrderedDict(
-            [
-                (RCLFN, 'root'), (WorkflowFiles, ('extras', RCLFN, None)),
-                (RCPFN, ('pfns', RCLFN,
-                         OrderedSet)), (RCMeta, ('meta', RCLFN, OrderedSet))
-            ]
-        )
+        _records = []
+        for r in records:
+            o = {k: getattr(r, k) for k in r.__table__.columns.keys()}
+            o["lfn"] = r.lfn.lfn
+            o["pfns"] = r.lfn.pfns
+            o["meta"] = r.lfn.meta
+            _records.append(o)
 
-        index = OrderedDict(
-            [(RCLFN, 0), (WorkflowFiles, 1), (RCPFN, 2), (RCMeta, 3)]
-        )
-
-        records = csv_to_json(records, schema, index)
-
-        return PagedResponse(records, total_records, total_filtered)
+        return PagedResponse(_records, total_records, total_filtered)
 
     # Workflow State
 
     def get_workflow_state(
         self,
         wf_id,
-        recent=False,
         start_index=None,
         max_results=None,
         query=None,
@@ -692,7 +598,6 @@ class StampedeWorkflowQueries(WorkflowQueries):
         Returns a collection of the Workflowstate objects.
 
         :param wf_id: wf_id is wf_id iff it consists only of digits, otherwise it is wf_uuid
-        :param recent: Get the most recent results
         :param start_index: Return results starting from record `start_index`
         :param max_results: Return a maximum of `max_results` records
         :param query: Filtering criteria
@@ -712,51 +617,32 @@ class StampedeWorkflowQueries(WorkflowQueries):
         q = self.session.query(Workflowstate)
         q = q.filter(Workflowstate.wf_id == wf_id)
 
-        total_records = total_filtered = self._get_count(
-            q, use_cache, timeout=timeout
-        )
+        total_records = total_filtered = self._get_count(q, use_cache, timeout=timeout)
 
         if total_records == 0:
             return PagedResponse([], 0, 0)
 
-        if recent:
-            qws = self._get_recent_workflow_state(wf_id)
-            qws = qws.subquery('max_ws')
-            q = q.join(
-                qws,
-                and_(
-                    Workflowstate.wf_id == qws.c.wf_id,
-                    Workflowstate.timestamp == qws.c.max_time
-                )
-            )
-
         #
         # Construct SQLAlchemy Query `q` to filter.
         #
-        if query or recent:
-            q = self._evaluate_query(q, query, WorkflowstateResource())
+        if query:
+            q = self._evaluate_query(q, query, ws=Workflowstate)
             total_filtered = self._get_count(q, use_cache, timeout=timeout)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, WorkflowstateResource())
+            q = self._add_ordering(q, order, ws=Workflowstate)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache, timeout=timeout)
 
@@ -764,22 +650,21 @@ class StampedeWorkflowQueries(WorkflowQueries):
 
     def _get_max_workflow_state(self, wf_id=None, ws=Workflowstate):
         qmax = self._get_recent_workflow_state(wf_id, ws)
-        qmax = qmax.subquery('max_timestamp')
+        qmax = qmax.subquery("max_timestamp")
 
         q = self.session.query(ws)
         q = q.join(
-            qmax,
-            and_(ws.wf_id == qmax.c.wf_id, ws.timestamp == qmax.c.max_time)
+            qmax, and_(ws.wf_id == qmax.c.wf_id, ws.timestamp == qmax.c.max_time)
         )
 
         return q
 
     def _get_recent_workflow_state(self, wf_id=None, ws=Workflowstate):
         q = self.session.query(ws.wf_id)
-        q = q.add_column(func.max(ws.timestamp).label('max_time'))
+        q = q.add_columns(func.max(ws.timestamp).label("max_time"))
 
         if wf_id:
-            log.debug('filter on wf_id')
+            log.debug("filter on wf_id")
             q = q.filter(ws.wf_id == wf_id)
 
         q = q.group_by(ws.wf_id)
@@ -827,29 +712,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(q, query, JobResource())
+            q = self._evaluate_query(q, query, j=Job)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, JobResource())
+            q = self._add_ordering(q, order, j=Job)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
@@ -865,7 +744,7 @@ class StampedeWorkflowQueries(WorkflowQueries):
         :return: job record
         """
         if job_id is None:
-            raise ValueError('job_id cannot be None')
+            raise ValueError("job_id cannot be None")
 
         q = self.session.query(Job)
         q = q.filter(Job.job_id == job_id)
@@ -916,29 +795,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(q, query, HostResource())
+            q = self._evaluate_query(q, query, h=Host)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, HostResource())
+            q = self._add_ordering(q, order, h=Host)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
@@ -954,7 +827,7 @@ class StampedeWorkflowQueries(WorkflowQueries):
         :return: host record
         """
         if host_id is None or not str(host_id).isdigit():
-            raise ValueError('host_id cannot be None')
+            raise ValueError("host_id cannot be None")
 
         q = self.session.query(Host)
         q = q.filter(Host.host_id == host_id)
@@ -971,7 +844,6 @@ class StampedeWorkflowQueries(WorkflowQueries):
         wf_id,
         job_id,
         job_instance_id,
-        recent=False,
         start_index=None,
         max_results=None,
         query=None,
@@ -985,7 +857,6 @@ class StampedeWorkflowQueries(WorkflowQueries):
         :param wf_id: wf_id is wf_id iff it consists only of digits, otherwise it is wf_uuid
         :param job_id: job_id associated with the job instance states
         :param job_instance_id: job_instance_id associated with the job instance states
-        :param recent: Get the most recent results
         :param start_index: Return results starting from record `start_index`
         :param max_results: Return a maximum of `max_results` records
         :param query: Filtering criteria
@@ -998,10 +869,7 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to count.
         #
         q = self.session.query(Jobstate)
-        q = q.join(
-            JobInstance,
-            JobInstance.job_instance_id == Jobstate.job_instance_id
-        )
+        q = q.join(JobInstance, JobInstance.job_instance_id == Jobstate.job_instance_id)
         q = q.join(Job, Job.job_id == JobInstance.job_id)
 
         q = q.filter(Job.wf_id == wf_id)
@@ -1014,44 +882,27 @@ class StampedeWorkflowQueries(WorkflowQueries):
         if total_records == 0:
             return PagedResponse([], 0, 0)
 
-        if recent:
-            qjsss = self._get_recent_job_state(job_instance_id)
-            qjsss = qjsss.subquery('max_jsss')
-            q = q.join(
-                qjsss,
-                and_(
-                    Jobstate.job_instance_id == qjsss.c.job_instance_id,
-                    Jobstate.jobstate_submit_seq == qjsss.c.max_jsss
-                )
-            )
-
         #
         # Construct SQLAlchemy Query `q` to filter.
         #
-        if query or recent:
-            q = self._evaluate_query(q, query, JobstateResource())
+        if query:
+            q = self._evaluate_query(q, query, js=Jobstate)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, JobstateResource())
+            q = self._add_ordering(q, order, js=Jobstate)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
@@ -1059,10 +910,10 @@ class StampedeWorkflowQueries(WorkflowQueries):
 
     def _get_recent_job_state(self, job_instance_id=None, js=Jobstate):
         q = self.session.query(js.job_instance_id)
-        q = q.add_column(func.max(js.jobstate_submit_seq).label('max_jsss'))
+        q = q.add_columns(func.max(js.jobstate_submit_seq).label("max_jsss"))
 
         if job_instance_id:
-            log.debug('filter on job_instance_id')
+            log.debug("filter on job_instance_id")
             q = q.filter(js.job_instance_id == job_instance_id)
 
         q = q.group_by(js.job_instance_id)
@@ -1110,29 +961,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(q, query, TaskResource())
+            q = self._evaluate_query(q, query, t=Task)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, TaskResource())
+            q = self._add_ordering(q, order, t=Task)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
@@ -1177,29 +1022,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(q, query, TaskResource())
+            q = self._evaluate_query(q, query, t=Task)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, TaskResource())
+            q = self._add_ordering(q, order, t=Task)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
@@ -1217,7 +1056,7 @@ class StampedeWorkflowQueries(WorkflowQueries):
         q = self.session.query(Task)
 
         if task_id is None:
-            raise ValueError('task_id cannot be None')
+            raise ValueError("task_id cannot be None")
 
         q = q.filter(Task.task_id == task_id)
 
@@ -1264,29 +1103,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(q, query, TaskMetaResource())
+            q = self._evaluate_query(q, query, tm=TaskMeta)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, TaskMetaResource())
+            q = self._add_ordering(q, order, tm=TaskMeta)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
@@ -1336,42 +1169,36 @@ class StampedeWorkflowQueries(WorkflowQueries):
 
         if recent:
             qjss = self._get_recent_job_instance(job_id)
-            qjss = qjss.subquery('max_jss')
+            qjss = qjss.subquery("max_jss")
             q = q.join(
                 qjss,
                 and_(
                     JobInstance.job_id == qjss.c.job_id,
-                    JobInstance.job_submit_seq == qjss.c.max_jss
-                )
+                    JobInstance.job_submit_seq == qjss.c.max_jss,
+                ),
             )
 
         #
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query or recent:
-            q = self._evaluate_query(q, query, JobInstanceResource())
+            q = self._evaluate_query(q, query, ji=JobInstance)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, JobInstanceResource())
+            q = self._add_ordering(q, order, ji=JobInstance)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
@@ -1392,7 +1219,7 @@ class StampedeWorkflowQueries(WorkflowQueries):
             return 300 if ji and ji.exitcode is not None else timeout
 
         if job_instance_id is None:
-            raise ValueError('job_instance_id cannot be None')
+            raise ValueError("job_instance_id cannot be None")
 
         q = self.session.query(JobInstance)
         q = q.filter(JobInstance.job_instance_id == job_instance_id)
@@ -1404,10 +1231,10 @@ class StampedeWorkflowQueries(WorkflowQueries):
 
     def _get_recent_job_instance(self, job_id=None, ji=JobInstance):
         q = self.session.query(ji.job_id)
-        q = q.add_column(func.max(ji.job_submit_seq).label('max_jss'))
+        q = q.add_columns(func.max(ji.job_submit_seq).label("max_jss"))
 
         if job_id:
-            log.debug('filter on job_id')
+            log.debug("filter on job_id")
             q = q.filter(ji.job_id == job_id)
 
         q = q.group_by(ji.job_id)
@@ -1455,29 +1282,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(q, query, InvocationResource())
+            q = self._evaluate_query(q, query, i=Invocation)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, InvocationResource())
+            q = self._add_ordering(q, order, i=Invocation)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
@@ -1527,29 +1348,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(q, query, InvocationResource())
+            q = self._evaluate_query(q, query, i=Invocation)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(q, order, InvocationResource())
+            q = self._add_ordering(q, order, i=Invocation)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
 
@@ -1565,7 +1380,7 @@ class StampedeWorkflowQueries(WorkflowQueries):
         :return: invocation record
         """
         if invocation_id is None or not str(invocation_id).isdigit():
-            raise ValueError('invocation_id cannot be None')
+            raise ValueError("invocation_id cannot be None")
 
         q = self.session.query(Invocation)
         q = q.filter(Invocation.invocation_id == invocation_id)
@@ -1610,19 +1425,19 @@ class StampedeWorkflowQueries(WorkflowQueries):
         q = q.filter(Job.job_id == JobInstance.job_id)
 
         q = q.filter(Job.wf_id == wf_id)
-        q = q.filter(JobInstance.exitcode == None)
+        q = q.filter(JobInstance.exitcode == None)  # noqa: E711
 
         # Recent
         qjss = self._get_recent_job_instance()
-        qjss = qjss.filter(JobInstance.exitcode != None)
-        qjss = qjss.subquery('max_jss')
+        qjss = qjss.filter(JobInstance.exitcode != None)  # noqa: E711
+        qjss = qjss.subquery("max_jss")
 
         q = q.join(
             qjss,
             and_(
                 JobInstance.job_id == qjss.c.job_id,
-                JobInstance.job_submit_seq == qjss.c.max_jss
-            )
+                JobInstance.job_submit_seq == qjss.c.max_jss,
+            ),
         )
 
         total_records = total_filtered = self._get_count(q, use_cache)
@@ -1634,35 +1449,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(
-                q, query,
-                CombinationResource(JobResource(), JobInstanceResource())
-            )
+            q = self._evaluate_query(q, query, j=Job, ji=JobInstance)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(
-                q, order,
-                CombinationResource(JobResource(), JobInstanceResource())
-            )
+            q = self._add_ordering(q, order, j=Job, ji=JobInstance)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
         records = self._merge_job_instance(records)
@@ -1702,21 +1505,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         q = q.filter(Job.job_id == JobInstance.job_id)
 
         q = q.filter(Job.wf_id == wf_id)
-        q = q.filter(JobInstance.exitcode != None
-                     ).filter(JobInstance.exitcode == 0)
+        q = q.filter(JobInstance.exitcode != None).filter(
+            JobInstance.exitcode == 0
+        )  # noqa: E711
 
         # Recent
         qjss = self._get_recent_job_instance()
-        qjss = qjss.filter(JobInstance.exitcode != None
-                           ).filter(JobInstance.exitcode == 0)
-        qjss = qjss.subquery('max_jss')
+        qjss = qjss.filter(JobInstance.exitcode != None).filter(
+            JobInstance.exitcode == 0
+        )  # noqa: E711
+        qjss = qjss.subquery("max_jss")
 
         q = q.join(
             qjss,
             and_(
                 JobInstance.job_id == qjss.c.job_id,
-                JobInstance.job_submit_seq == qjss.c.max_jss
-            )
+                JobInstance.job_submit_seq == qjss.c.max_jss,
+            ),
         )
 
         total_records = total_filtered = self._get_count(q, use_cache)
@@ -1728,35 +1533,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(
-                q, query,
-                CombinationResource(JobResource(), JobInstanceResource())
-            )
+            q = self._evaluate_query(q, query, j=Job, ji=JobInstance)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(
-                q, order,
-                CombinationResource(JobResource(), JobInstanceResource())
-            )
+            q = self._add_ordering(q, order, j=Job, ji=JobInstance)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
         records = self._merge_job_instance(records)
@@ -1796,21 +1589,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         q = q.filter(Job.job_id == JobInstance.job_id)
 
         q = q.filter(Job.wf_id == wf_id)
-        q = q.filter(JobInstance.exitcode != None
-                     ).filter(JobInstance.exitcode != 0)
+        q = q.filter(JobInstance.exitcode != None).filter(
+            JobInstance.exitcode != 0
+        )  # noqa: E711
 
         # Recent
         qjss = self._get_recent_job_instance()
-        qjss = qjss.filter(JobInstance.exitcode != None
-                           ).filter(JobInstance.exitcode != 0)
-        qjss = qjss.subquery('max_jss')
+        qjss = qjss.filter(JobInstance.exitcode != None).filter(
+            JobInstance.exitcode != 0
+        )  # noqa: E711
+        qjss = qjss.subquery("max_jss")
 
         q = q.join(
             qjss,
             and_(
                 JobInstance.job_id == qjss.c.job_id,
-                JobInstance.job_submit_seq == qjss.c.max_jss
-            )
+                JobInstance.job_submit_seq == qjss.c.max_jss,
+            ),
         )
 
         total_records = total_filtered = self._get_count(q, use_cache)
@@ -1822,35 +1617,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(
-                q, query,
-                CombinationResource(JobResource(), JobInstanceResource())
-            )
+            q = self._evaluate_query(q, query, j=Job, ji=JobInstance)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(
-                q, order,
-                CombinationResource(JobResource(), JobInstanceResource())
-            )
+            q = self._add_ordering(q, order, j=Job, ji=JobInstance)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
         records = self._merge_job_instance(records)
@@ -1889,19 +1672,20 @@ class StampedeWorkflowQueries(WorkflowQueries):
         )
 
         q = q.filter(Job.wf_id == wf_id)
-        q = q.filter(JobInstance.exitcode != None
-                     ).filter(JobInstance.exitcode != 0)
+        q = q.filter(JobInstance.exitcode != None).filter(
+            JobInstance.exitcode != 0
+        )  # noqa: E711
 
         q = q.filter(Job.job_id == JobInstance.job_id)
 
         # Running
-        j = orm.aliased(Job, name='j')
-        ji = orm.aliased(JobInstance, name='ji')
+        j = aliased(Job, name="j")
+        ji = aliased(JobInstance, name="ji")
 
         qr = self.session.query(distinct(j.job_id))
 
         qr = qr.filter(j.wf_id == wf_id)
-        qr = qr.filter(ji.exitcode == None)
+        qr = qr.filter(ji.exitcode == None)  # noqa: E711
 
         qr = qr.filter(j.job_id == ji.job_id)
         qr = qr.subquery()
@@ -1911,16 +1695,17 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Recent
         qjss = self._get_recent_job_instance()
         qjss = qjss.filter(Job.wf_id == wf_id)
-        qjss = qjss.filter(JobInstance.exitcode != None
-                           ).filter(JobInstance.exitcode != 0)
+        qjss = qjss.filter(JobInstance.exitcode != None).filter(
+            JobInstance.exitcode != 0
+        )  # noqa: E711
 
         qjss = qjss.filter(Job.job_id == JobInstance.job_id)
-        qjss = qjss.subquery('allmaxjss')
+        qjss = qjss.subquery("allmaxjss")
 
         q = q.filter(
             and_(
                 JobInstance.job_id == qjss.c.job_id,
-                JobInstance.job_submit_seq == qjss.c.max_jss
+                JobInstance.job_submit_seq == qjss.c.max_jss,
             )
         )
 
@@ -1933,35 +1718,23 @@ class StampedeWorkflowQueries(WorkflowQueries):
         # Construct SQLAlchemy Query `q` to filter.
         #
         if query:
-            q = self._evaluate_query(
-                q, query,
-                CombinationResource(JobResource(), JobInstanceResource())
-            )
+            q = self._evaluate_query(q, query, j=Job, ji=JobInstance)
             total_filtered = self._get_count(q, use_cache)
 
-            if total_filtered == 0 or (
-                start_index and start_index >= total_filtered
-            ):
-                log.debug(
-                    'total_filtered is 0 or start_index >= total_filtered'
-                )
+            if total_filtered == 0 or (start_index and start_index >= total_filtered):
+                log.debug("total_filtered is 0 or start_index >= total_filtered")
                 return PagedResponse([], total_records, total_filtered)
 
         #
         # Construct SQLAlchemy Query `q` to sort
         #
         if order:
-            q = self._add_ordering(
-                q, order,
-                CombinationResource(JobResource(), JobInstanceResource())
-            )
+            q = self._add_ordering(q, order, j=Job, ji=JobInstance)
 
         #
         # Construct SQLAlchemy Query `q` to paginate.
         #
-        q = WorkflowQueries._add_pagination(
-            q, start_index, max_results, total_filtered
-        )
+        q = WorkflowQueries._add_pagination(q, start_index, max_results, total_filtered)
 
         records = self._get_all(q, use_cache)
         records = self._merge_job_instance(records)
@@ -1974,6 +1747,8 @@ class StampedeWorkflowQueries(WorkflowQueries):
             for i in range(len(records)):
                 new_record = records[i][0]
                 new_record.job_instance = records[i][1]
+                new_record.__includes__ = ("job_instance",)
                 records[i] = new_record
 
         return records
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     

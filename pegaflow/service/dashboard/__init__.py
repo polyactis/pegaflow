@@ -1,9 +1,5 @@
 from flask import Blueprint
 
-dashboard_routes = Blueprint('dashboard_routes', __name__)
+blueprint = Blueprint("dashboard", __name__)
 
-from pegaflow.service.dashboard import views
-
-from pegaflow.service import app
-
-app.register_blueprint(dashboard_routes)
+from Pegasus.service.dashboard import views  # noqa: E402,F401 isort:skip

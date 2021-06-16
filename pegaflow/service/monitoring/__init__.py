@@ -12,16 +12,10 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-__author__ = 'Rajiv Mayani'
+__author__ = "Rajiv Mayani"
 
 from flask import Blueprint
 
-monitoring_routes = Blueprint('monitoring_routes', __name__)
+monitoring = Blueprint("monitoring", __name__)
 
-from pegaflow.service.monitoring import views, errors
-
-from pegaflow.service import app
-
-app.register_blueprint(
-    monitoring_routes, url_prefix='/api/v1/user/<string:username>'
-)
+from Pegasus.service.monitoring import views, errors  # noqa: E402,F401 isort:skip
