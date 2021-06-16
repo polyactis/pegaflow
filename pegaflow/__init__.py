@@ -302,6 +302,7 @@ def registerOneInputFile(workflow:PegaWorkflow, input_path:str, site_handler:str
             pegasusFileName = os.path.join(folderName, os.path.basename(
                 input_path))
     pegasusFile = File(pegasusFileName)
+    pegasusFile.name = pegasusFileName
     if checkFileExistence and not os.path.isfile(input_path):
         logging.error(f"From registerOneInputFile(): {input_path} does not exist.")
         raise
@@ -339,8 +340,10 @@ def registerFilesOfInputDir(workflow:PegaWorkflow, inputDir:str, input_path_list
             #skip input whose suffix is not in inputSuffixSet if inputSuffixSet
             #  is a non-empty set.
             continue
-        input_file = File(os.path.join(pegasusFolderName,
-            os.path.basename(input_path)))
+        lfn = os.path.join(pegasusFolderName,
+            os.path.basename(input_path))
+        input_file = File(lfn)
+        input_file.name = lfn
         input_file.abspath = os.path.abspath(input_path)
         input_file.absPath = input_file.abspath
         workflow.replica_catalog.add_replica(site_handler, lfn=input_file,

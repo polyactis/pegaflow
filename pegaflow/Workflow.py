@@ -639,11 +639,13 @@ class Workflow(PegaWorkflow):
                 continue
 
             # Add the file to the replica catalog
-            lfn = File(os.path.join(pegasusFolderName, os.path.basename(input_path)))
-            self.replica_catalog.add_replica(input_site_handler, lfn=lfn, pfn=input_path)
-            lfn.abspath = input_path
-            jobData = PassingData(output=lfn, job=None, jobLs=[],
-                        file=lfn, fileLs=[lfn], indexFileLs=[])
+            lfn = os.path.join(pegasusFolderName, os.path.basename(input_path))
+            input_file = File(lfn)
+            input_file.name = lfn
+            self.replica_catalog.add_replica(input_site_handler, lfn=input_file, pfn=input_path)
+            input_file.abspath = input_path
+            jobData = PassingData(output=input_file, job=None, jobLs=[],
+                file=input_file, fileLs=[input_file], indexFileLs=[])
             # Find all index files if indexFileSuffixSet is given.
             if indexFileSuffixSet:
                 for indexFileSuffix in indexFileSuffixSet:
@@ -709,6 +711,7 @@ class Workflow(PegaWorkflow):
                 pegasusFileName = os.path.join(folderName,
                     os.path.basename(input_path))
         pegasusFile = File(pegasusFileName)
+        pegasusFile.name = pegasusFileName
         if checkFileExistence and not os.path.isfile(input_path):
             logging.error(f"From registerOneInputFile(): {input_path} does not exist.")
             raise
@@ -1108,7 +1111,7 @@ class Workflow(PegaWorkflow):
         setJobResourceRequirement(job, job_max_memory=job_max_memory,
             sshDBTunnel=sshDBTunnel,\
             no_of_cpus=no_of_cpus, walltime=walltime)
-        self.addJob(job)
+        self.add_jobs(job)
         job.parentJobLs = []
         if parentJob:
             isAdded = self.addJobDependency(parentJob=parentJob, childJob=job)
