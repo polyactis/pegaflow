@@ -37,10 +37,10 @@ test_OO:
     - echo "Generate and run the Object-Oriented direct-run workflow ... "
     - cd pegaflow/example/
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/
-      --inputSuffixList .py -l condor --direct_run -o wc.python.code.xml -C 10
+      --inputSuffixList .py -l condor --direct_run -o wc.python.code.yml -C 10
     - pegasus-status submit/wc.python.code.*
     - cat submit/wc.python.code.*/statistics/breakdown.txt
-    - mv output/wc.python.code.*/merged.txt ./
+    - mv wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos
@@ -53,13 +53,13 @@ test_OO_manual:
     - echo "Generate and run the Object-Oriented manul-run workflow ... "
     - cd pegaflow/example/
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/
-      --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
-    - ./submit.sh ./wc.python.code.xml condor
+      --inputSuffixList .py -l condor -o wc.python.code.yml -C 10
+    - ./submit.sh ./wc.python.code.yml condor
     - sleep 10 && pegasus-status submit/wc.python.code.*
     - ../test/pegaflow_monitor -j submit/wc.python.code.*/jobstate.log
     - pegasus-statistics -s all submit/wc.python.code.*
     - cat submit/wc.python.code.*/statistics/breakdown.txt
-    - mv output/wc.python.code.*/merged.txt ./
+    - mv wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos
@@ -73,13 +73,13 @@ test_function:
     - echo "Generate and run the function-example workflow ... "
     - cd pegaflow/example/
     - ./WCFiles_Function.py -i /y/home/huangyu/script/test/python/
-      --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
-    - ./submit.sh ./wc.python.code.xml condor
+      --inputSuffixList .py -l condor -o wc.python.code.yml -C 10
+    - ./submit.sh ./wc.python.code.yml condor
     - sleep 10 && pegasus-status submit/wc.python.code.*
     - ../test/pegaflow_monitor -j submit/wc.python.code.*/jobstate.log
     - pegasus-statistics -s all submit/wc.python.code.*
     - cat submit/wc.python.code.*/statistics/breakdown.txt
-    - mv output/wc.python.code.*/merged.txt ./
+    - mv wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos
@@ -94,11 +94,11 @@ test_local:
     - echo "Force shell execution. No condor required."
     - echo "pegasus.code.generator = Shell" >> pegasusrc
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/
-      --inputSuffixList .py -l local -o wc.python.code.xml -C 1
-    - ./submit.sh ./wc.python.code.xml local
+      --inputSuffixList .py -l local -o wc.python.code.yml -C 1
+    - ./submit.sh ./wc.python.code.yml local
     # pegasus-statistics can not work with locally run workflows.
     - pegasus-status submit/wc.python.code.*
-    - mv output/wc.python.code.*/merged.txt ./
+    - mv wc.python.code.*/merged.txt ./
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos

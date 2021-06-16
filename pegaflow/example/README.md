@@ -1,17 +1,19 @@
-# 1. An example to inherit Workflow.py
+# TOC
 
 - [1. An example to inherit Workflow.py](#1-an-example-to-inherit-workflowpy)
   - [1.1. Test on a Condor cluster](#11-test-on-a-condor-cluster)
+# 1. An example to inherit Workflow.py
 
-[WordCountFiles.py](WordCountFiles.py) is an Object-Oriented example that runs `wc` (word-count) on all files with a given suffix in an input folder.
 
-[WCFiles_Function.py](WCFiles_Function.py) provides the same function as [WordCountFiles.py](WordCountFiles.py), but is written in a procedural-programming way. No classes.
+- [WordCountFiles.py](WordCountFiles.py) is an Object-Oriented example that runs `wc` (word-count) on all files with a given suffix in an input folder.
+- [WCFiles_Function.py](WCFiles_Function.py) provides the same function as [WordCountFiles.py](WordCountFiles.py), but is written in a procedural-programming way. No classes.
 
-[submit.sh](submit.sh) is a workflow submit script that invokes pegasus-plan. It also generates `sites.xml`, a configuration file specific to your workflow (where to store job files, where to run jobs, where to transfer final output). `sites.xml` will be copied into the workflow submit folder (submit/...), during the planning phase. Overwriting it is OK.
+The two programs above also generate `pegasus.properties` and `sites.yml`, a configuration file specific to your workflow (where to store job files, where to run jobs, where to transfer final output). `sites.yml` will be copied into the workflow submit folder (submit/...), during the planning phase. Overwriting it is OK.
 
-[pegasusrc](pegasusrc) contains a few pre-set Pegasus settings that [submit.sh](submit.sh) will read from.
-
-A user should copy both [submit.sh](submit.sh) and [pegasusrc](pegasusrc) to his/her running environment.
+- [submit.sh](submit.sh) is a workflow submit script that invokes pegasus-plan.
+- pegasus.properties, formerly [pegasusrc](pegasusrc), contains a few pre-set Pegasus settings that [submit.sh](submit.sh) will read from.
+- pegasusrc is no longer needed.
+- A user should copy both [submit.sh](submit.sh) to his/her running environment.
 
 To get help on the arguments of [WordCountFiles.py](WordCountFiles.py) or [WCFiles_Function.py](WCFiles_Function.py):
 
@@ -28,14 +30,14 @@ To get help on the arguments of [WordCountFiles.py](WordCountFiles.py) or [WCFil
 ```bash
 # Count all .py files in /usr/lib/python3.6
 # "-C 10" enables job clustering. 10 jobs into one job. 'wc' runs fast. Better to cluster them.
-$ ./WordCountFiles.py -i /usr/lib/python3.6/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
+$ ./WordCountFiles.py -i /usr/lib/python3.6/ --inputSuffixList .py -l condor -o wc.python.code.yml -C 10
 
 # OR run this. WCFiles_Function.py has the same function as WordCountFiles.py but is written in a procedural-programming way.
-$ ./WCFiles_Function.py -i /usr/lib/python3.6/ --inputSuffixList .py -l condor -o wc.python.code.xml -C 10
+$ ./WCFiles_Function.py -i /usr/lib/python3.6/ --inputSuffixList .py -l condor -o wc.python.code.yml -C 10
 
 # Plan and submit the workflow.
-# Try "./submit.sh ./wc.python.code.xml condor 1" if you want to keep intermediate files.
-$ ./submit.sh ./wc.python.code.xml condor
+# Try "./submit.sh ./wc.python.code.yml condor 1" if you want to keep intermediate files.
+$ ./submit.sh ./wc.python.code.yml condor
 
 # A submit folder submit/wc.python... is created to house job description/submit files, job status files, etc.
 

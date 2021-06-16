@@ -187,5 +187,6 @@ if __name__ == '__main__':
         input_site_handler=args.input_site_handler,
         cluster_size=args.cluster_size,
         max_walltime=args.max_walltime,
+        direct_run=args.direct_run,
         )
     instance.run()
