@@ -214,10 +214,10 @@ def setJobResourceRequirement(job:Job=None, job_max_memory=500, no_of_cpus=1,
     if job_max_memory == "" or job_max_memory == 0 or job_max_memory == "0":
         job_max_memory = 500
     if job_max_memory:
-        job.add_globus_profile(max_memory=f"{job_max_memory}MB")
-        job.add_pegasus_profile(memory=f"{job_max_memory}MB")
-        job.add_condor_profile(request_memory=f"{job_max_memory}MB")
-        condorJobRequirementLs.append(f"(memory>={job_max_memory}MB)")
+        job.add_globus_profile(max_memory=f"{job_max_memory}")
+        job.add_pegasus_profile(memory=f"{job_max_memory}")
+        job.add_condor_profile(request_memory=f"{job_max_memory}")
+        condorJobRequirementLs.append(f"(memory>={job_max_memory})")
     
     if no_of_cpus:
         job.add_pegasus_profile(cores=no_of_cpus)
