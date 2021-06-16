@@ -416,11 +416,12 @@ class Workflow(PegaWorkflow):
                 logging.error(f"From constructOneExecutableObject(): "
                     f"Exec {path} does not exist or is not an executable.")
                 sys.exit(3)
+        abspath = os.path.abspath(os.path.expanduser(path))
         executable = Transformation(name, site=self.site_handler, \
-            pfn=os.path.abspath(os.path.expanduser(path)), 
+            pfn=abspath, 
             is_stageable=is_stageable, arch=Arch.X86_64,
             os_type=OS.LINUX)
-        
+        executable.abspath = abspath
         #executable.add_pegasus_profile(clusters_size=3)
         return executable
 
@@ -529,9 +530,6 @@ class Workflow(PegaWorkflow):
         cluster_size = int(defaultClusterSize*clusterSizeMultiplier)
         if cluster_size > 1:
             executable.add_pegasus_profile(clusters_size=cluster_size)
-
-        self.transformation_catalog.add_transformations(executable)
-        setattr(self, executable.name, executable)
         return executable
 
     def registerOneExecutable(self, name=None, path=None,
@@ -551,6 +549,8 @@ class Workflow(PegaWorkflow):
         executable = self.constructOneExecutableObject(name=name, path=path)
         self.setExecutableClusterSize(executable=executable,
             clusterSizeMultiplier=clusterSizeMultiplier)
+        self.transformation_catalog.add_transformations(executable)
+        setattr(self, executable.name, executable)
         return executable
 
     def getFilesWithProperSuffixFromFolder(self, inputFolder=None,

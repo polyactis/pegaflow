@@ -45,10 +45,12 @@ def registerExecutable(workflow:PegaWorkflow, path:str, site_handler:str,
             raise
     if executableName is None:
         executableName = os.path.basename(path)
+    abspath = os.path.abspath(os.path.expanduser(path))
     executable = Transformation(name=executableName, site=site_handler, \
-            pfn=os.path.abspath(os.path.expanduser(path)), 
+            pfn=abspath,
             is_stageable=True, arch=Arch.X86_64,
             os_type=OS.LINUX, version=pegasus_version)
+    executable.abspath = abspath
     workflow.transformation_catalog.add_transformations(executable)
     setattr(workflow, executable.name, executable)
     setExecutableClusterSize(workflow, executable, cluster_size=cluster_size)
@@ -244,9 +246,12 @@ def getAbsPathOutOfExecutable(executable:Transformation):
     This function extracts path out of a registered executable.
         The executable is a registered pegasus executable with PFNs.
     """
-    pfn = (list(executable.pfns)[0])
+    transformation_site_0 = executable.sites.values[0]
+    pfn = transformation_site_0.pfn
+    #pfn = (list(executable.pfns)[0])
     #the url looks like "file:///home/crocea/bin/bwa"
-    return pfn.url[7:]
+    #return pfn.url[7:]
+    return executable.abspath
 
 
 def getAbsPathOutOfFile(file):

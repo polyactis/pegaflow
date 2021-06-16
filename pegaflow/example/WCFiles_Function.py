@@ -4,7 +4,7 @@ A Pegasus example that does not use any class.
 """
 import sys, os
 from argparse import ArgumentParser
-from pegaflow.api import File, Workflow
+from pegaflow.api import File, ReplicaCatalog, TransformationCatalog, Workflow
 import pegaflow
 
 src_dir = os.path.dirname(os.path.abspath(__file__))
@@ -38,6 +38,8 @@ if __name__ == '__main__':
         separator1=',', separator2='-')
     inputSuffixSet = set(inputSuffixList)
     wflow = Workflow("pegasus_test")
+    wflow.add_transformation_catalog(TransformationCatalog())
+    wflow.add_replica_catalog(ReplicaCatalog())
     input_file_list = pegaflow.registerFilesOfInputDir(wflow,
         args.input_folder, inputSuffixSet=inputSuffixSet,
         pegasusFolderName='input', site_handler=args.site_handler,

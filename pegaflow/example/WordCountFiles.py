@@ -67,7 +67,7 @@ class WordCountFiles(Workflow):
         #     during job planning.
         self.registerOneExecutable(
             name='mergeWC',
-            path=getAbsPathOutOfExecutable(self.pipe2File),
+            path=self.pipe2File.abspath,
             clusterSizeMultiplier=0)
 
     def run(self):
