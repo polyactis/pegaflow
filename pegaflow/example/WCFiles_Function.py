@@ -4,10 +4,12 @@ A Pegasus example that does not use any class.
 """
 import sys, os
 from argparse import ArgumentParser
-from pegaflow.api import File, ReplicaCatalog, TransformationCatalog, Workflow
+from pathlib import Path
+from pegaflow.api import File, Properties, ReplicaCatalog, TransformationCatalog, Workflow
 import pegaflow
 
 src_dir = os.path.dirname(os.path.abspath(__file__))
+
 
 if __name__ == '__main__':
     ap = ArgumentParser()
@@ -33,11 +35,18 @@ if __name__ == '__main__':
         " into one job. Good if your workflow contains many quick jobs. "
         "It will reduce Pegasus monitor I/O.")
     args = ap.parse_args()
+    wf_dir = Path(args.output_file).parent.resolve()
     inputSuffixList = pegaflow.getListOutOfStr(
         list_in_str=args.inputSuffixList, data_type=str,
         separator1=',', separator2='-')
     inputSuffixSet = set(inputSuffixList)
+    
+    pegasus_props:Properties = pegaflow.create_pegasus_properties()
+    pegasus_props.write()
+
     wflow = Workflow("pegasus_test")
+    wflow.add_site_catalog(pegaflow.create_site_catalog(wf_dir, 
+        exec_site_name=args.site_handler))
     wflow.add_transformation_catalog(TransformationCatalog())
     wflow.add_replica_catalog(ReplicaCatalog())
     input_file_list = pegaflow.registerFilesOfInputDir(wflow,

@@ -2,7 +2,9 @@ __path__ = __import__("pkgutil").extend_path(__path__, __name__)
 import logging
 import os
 import sys
-from .api import File, Job, Transformation
+from .api import Directory, File, FileServer, Job, Operation, \
+    Properties, ReplicaCatalog, Site, SiteCatalog, Transformation, \
+    TransformationCatalog
 from .api import Arch, OS
 from .api import Workflow as PegaWorkflow
 
@@ -46,6 +48,226 @@ def registerExecutable(workflow:PegaWorkflow, path:str, site_handler:str,
     setExecutableClusterSize(workflow, executable, cluster_size=cluster_size)
     return executable
 
+# --- Site Catalog -------------------------------------------------------------
+def create_site_catalog(wf_dir:str, sc_out_file:str=None, exec_site_name="condor", local_storage_folder_name="output",
+    scratch_folder_name="scratch", write_out=False):
+    """
+    local_storage_folder_name should be a unique workflow-related name and does not overlap with other workflows.
+        It will hold the final output staged out by the end of the workflow.
+    If sc_out_file is None, its default name is sites.yml.
+    """
+    sc = SiteCatalog()
+
+    shared_scratch_dir = os.path.join(wf_dir, scratch_folder_name)
+    local_storage_dir = os.path.join(wf_dir, local_storage_folder_name)
+
+    local_site = Site("local")\
+        .add_directories(
+            Directory(Directory.SHARED_SCRATCH, shared_scratch_dir)
+                .add_file_servers(FileServer("file://" + shared_scratch_dir, Operation.ALL)),
+                    
+            Directory(Directory.LOCAL_STORAGE, local_storage_dir)
+                .add_file_servers(FileServer("file://" + local_storage_dir, Operation.ALL))
+            )
+    sc.add_sites(local_site)
+
+    if exec_site_name!="local":
+        exec_site = Site(exec_site_name)
+        exec_site.add_directories(
+            Directory(Directory.SHARED_SCRATCH, shared_scratch_dir)
+                .add_file_servers(FileServer("file://" + shared_scratch_dir, Operation.ALL)),
+            )
+        exec_site.add_pegasus_profile(style="condor")
+        exec_site.add_condor_profile(universe="vanilla")
+        #.add_profiles(Namespace.PEGASUS, key="data.configuration", value="sharedfs")
+        #.add_env(key="PATH", value="/y/program/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+        sc.add_sites(exec_site)
+    else:
+        exec_site = local_site
+    #if data_configuration=nonsharedfs/condorio (default), all executables will be staged by pegasus or condor.
+    exec_site.add_pegasus_profile(data_configuration="sharedfs")   
+    exec_site.add_env(key="PEGASUS_HOME", value="/usr")
+    if write_out:
+        #If sc_out_file is None, its default name is sites.yml.
+        sc.write(sc_out_file)
+    
+    """
+    .add_env(key="PEGASUS_HOME", value="/usr") is needed because of this error
+        java.lang.RuntimeException: Could not find entry in TC for lfn pegasus::transfer at site condor. 
+        Either add an entry in the TC or make sure that PEGASUS_HOME is set 
+        as an env profile in the site catalog for site condor.  
+        at edu.isi.pegasus.planner.transfer.implementation.AbstractMultipleFTPerXFERJob.createTransferJob(AbstractMultipleFTPerXFERJob.java:124) 
+    """
+
+    """
+    # this is for a pure condor pool, with the nodes not sharing a filesystem.
+    exec_site = Site(exec_site_name)\
+        .add_pegasus_profile(style="condor")\
+        .add_condor_profile(universe="vanilla")\
+        .add_profiles(Namespace.PEGASUS, key="data.configuration", value="condorio")
+    """
+
+    """
+    https://pegasus.isi.edu/documentation/reference-guide/configuration.html
+
+    Property Key: pegasus.data.configuration
+    Profile Key:data.configuration
+    Scope : Properties, Site Catalog
+    Since : 4.0.0
+    Values : sharedfs|nonsharedfs|condorio
+    Default : condorio
+    See Also : pegasus.transfer.bypass.input.staging
+
+    This property sets up Pegasus to run in different
+    environments. For Pegasus 4.5.0 and above, users
+    can set the pegasus profile data.configuration with
+    the sites in their site catalog, to run multisite
+    workflows with each site having a different data
+    configuration.
+
+        sharedfs
+
+    If this is set, Pegasus will be setup to execute
+    jobs on the shared filesystem on the execution site.
+    This assumes, that the head node of a cluster and
+    the worker nodes share a filesystem. The staging
+    site in this case is the same as the execution site.
+    Pegasus adds a create dir job to the executable
+    workflow that creates a workflow specific
+    directory on the shared filesystem . The data
+    transfer jobs in the executable workflow
+    ( stage_in_ , stage_inter_ , stage_out_ )
+    transfer the data to this directory. The compute
+    jobs in the executable workflow are launched in
+    the directory on the shared filesystem.
+
+        condorio
+
+    If this is set, Pegasus will be setup to run jobs
+    in a pure condor pool, with the nodes not sharing
+    a filesystem. Data is staged to the compute nodes
+    from the submit host using Condor File IO. The
+    planner is automatically setup to use the submit
+    host ( site local ) as the **staging site**. All the
+    auxillary jobs added by the planner to the
+    executable workflow ( create dir, data stagein
+    and stage-out, cleanup ) jobs refer to the workflow
+    specific directory on the local site. The data
+    transfer jobs in the executable workflow
+    ( stage_in_ , stage_inter_ , stage_out_ )
+    transfer the data to this directory. When the
+    compute jobs start, the input data for each job is
+    shipped from the workflow specific directory on
+    the submit host to compute/worker node using
+    Condor file IO. The output data for each job is
+    similarly shipped back to the submit host from the
+    compute/worker node. This setup is particularly
+    helpful when running workflows in the cloud
+    environment where setting up a shared filesystem
+    across the VM’s may be tricky.
+
+    pegasus.gridstart                    PegasusLite
+    pegasus.transfer.worker.package      true
+
+
+    **nonsharedfs**
+
+    If this is set, Pegasus will be setup to execute
+    jobs on an execution site without relying on a
+    shared filesystem between the head node and the
+    worker nodes. You can specify staging site
+    ( using –staging-site option to pegasus-plan)
+    to indicate the site to use as a central
+    storage location for a workflow. The staging
+    site is independant of the execution sites on
+    which a workflow executes. All the auxillary
+    jobs added by the planner to the executable
+    workflow ( create dir, data stagein and
+    stage-out, cleanup ) jobs refer to the workflow
+    specific directory on the staging site. The
+    data transfer jobs in the executable workflow
+    ( stage_in_ , stage_inter_ , stage_out_
+    transfer the data to this directory. When the
+    compute jobs start, the input data for each
+    job is shipped from the workflow specific
+    directory on the submit host to compute/worker
+    node using pegasus-transfer. The output data
+    for each job is similarly shipped back to the
+    submit host from the compute/worker node. The
+    protocols supported are at this time SRM,
+    GridFTP, iRods, S3. This setup is particularly
+    helpful when running workflows on OSG where
+    most of the execution sites don’t have enough
+    data storage. Only a few sites have large
+    amounts of data storage exposed that can be used
+    to place data during a workflow run. This setup
+    is also helpful when running workflows in the
+    cloud environment where setting up a
+    shared filesystem across the VM’s may be tricky.
+    On loading this property, internally the
+    following properies are set
+
+    pegasus.gridstart  PegasusLite
+    pegasus.transfer.worker.package      true
+
+    """
+    
+    return sc
+
+
+# --- Configuration (Pegasus Properties) ---------------------------------------
+def create_pegasus_properties():
+    pegasus_props = Properties()
+
+    #pegasus_props["pegasus.monitord.encoding"] = "json"
+    #pegasus_props["pegasus.integrity.checking"] = "none"
+    
+    # 20200512 turn off integrity check for symlinks during stage-in
+    pegasus_props["pegasus.integrity.checking"] = "nosymlink"
+    ## pegasus.dir.storage.deep:
+    # Setting this property to true, 
+    #  the relative submit directory structure is replicated on the output site.
+    pegasus_props["pegasus.dir.storage.deep"] = "false"
+    ## pegasus.dir.useTimestamp:
+    # True results in the timestamp being added to  
+    #  the name of the submit directory.
+    pegasus_props["pegasus.dir.useTimestamp"] = "true"
+
+
+    ## Use symblinks if files are on the same site as the computing nodes.
+    pegasus_props["pegasus.transfer.links"] = "true"
+    ## Pegasus will try any fail jobs three times before stopping.
+    pegasus_props["dagman.retry"] = "3"
+
+    #pegasus.dir.submit.logs  /var/pegasus_tmp/
+    pegasus_props["pegasus.condor.logs.symlink"] = "false"
+
+    ## Force-generation of *.arg files to store ultra-long job arguments.
+    ## During conversion from the dag .xml to *.sub (condor sub files),
+    # if a single argument's length is >2049, it'll be truncated to 2049.
+    # However, if you force pegasus to generate *.arg files as supplement to *.sub files.
+    # The *.arg files won't have this problem.
+    pegasus_props["pegasus.gridstart.invoke.length"] = "2000"
+
+    ## Increase the nubmer of stagein and stageout jobs to 10 (default 4) to reduce parallel IO.
+    pegasus_props["stageout.clusters"] = "10"
+    pegasus_props["stagein.clusters"] = "10"
+
+    ## -B ...: Resize the data section size for stdio capture, default is 262144.
+    #pegasus.gridstart.arguments  -B 400000
+    #pegasus_props["pegasus.gridstart.arguments"] = "-B 50000"
+
+    ## monitord could blow out the memory on large worklfows.
+    # run it later with '--replay' to re-create the jobstate.log file,
+    # or re-populate the stats database from scratch.
+    #pegasus.monitord.event  false
+
+    ## Enable cleanup job clustering. this would reduce the number of jobs on each level to N.
+    #pegasus.file.cleanup.clusters.num  50
+    ## Enable cleanup job clustering. This parameter means N cleanup jobs on each level would be clustered as one job.
+    pegasus_props["pegasus.file.cleanup.clusters.size"] = "15"
+
+    return pegasus_props
 
 class PassingData(object):
     """

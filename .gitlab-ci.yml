@@ -31,23 +31,24 @@ check_version:
     - python3 -c "import pegaflow; print(pegaflow.version)"
 
 
-test_OO:
-  stage: test
-  script:
-    - echo "Generate and run the Object-Oriented direct-run workflow ... "
-    - cd pegaflow/example/
-    - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/
-      --inputSuffixList .py -l condor --direct_run -o wc.python.code.yml -C 10
-    - pegasus-status submit/wc.python.code.*
-    - cat submit/wc.python.code.*/statistics/breakdown.txt
-    - mv wc.python.code.*/merged.txt ./
-  artifacts:
-    name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
-    expire_in: 3 mos
-    paths:
-    - pegaflow/example/merged.txt
+# test_OO_direct_run:
+#   stage: test
+#   script:
+#     - echo "Generate and run the Object-Oriented direct-run workflow ... "
+#     - cd pegaflow/example/
+#     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/
+#       --inputSuffixList .py -l condor --direct_run -o wc.python.code.yml -C 10
+#     - pegasus-status submit/wc.python.code.*
+#     - cat submit/wc.python.code.*/statistics/breakdown.txt
+#     - mv wc.python.code.*/merged.txt ./
+#   artifacts:
+#     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
+#     expire_in: 3 mos
+#     paths:
+#     - pegaflow/example/merged.txt
+#   allow_failure: true
 
-test_OO_manual:
+test_OO:
   stage: test
   script:
     - echo "Generate and run the Object-Oriented manul-run workflow ... "
@@ -104,3 +105,4 @@ test_local:
     expire_in: 3 mos
     paths:
     - pegaflow/example/merged.txt
+  allow_failure: true
