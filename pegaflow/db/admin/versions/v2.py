@@ -4,17 +4,18 @@ DB_VERSION = 2
 
 import logging
 
-from pegaflow.db.admin.admin_loader import *
-from pegaflow.db.admin.versions.base_version import *
-from pegaflow.db.schema import *
 from sqlalchemy.exc import *
+
+from Pegasus.db.admin.admin_loader import *
+from Pegasus.db.admin.versions.base_version import *
+from Pegasus.db.schema import *
 
 log = logging.getLogger(__name__)
 
 
 class Version(BaseVersion):
     def __init__(self, connection):
-        super(Version, self).__init__(connection)
+        super().__init__(connection)
 
     def update(self, force=False):
         log.info("Updating to version %s" % DB_VERSION)
@@ -22,7 +23,7 @@ class Version(BaseVersion):
             res = self.db.query(EnsembleWorkflow.id).limit(1).first()
             if not res:
                 self.db.execute("DROP TABLE ensemble_workflow")
-        except (OperationalError, ProgrammingError) as e:
+        except (OperationalError, ProgrammingError):
             pass
         except Exception as e:
             self.db.rollback()
@@ -31,21 +32,21 @@ class Version(BaseVersion):
             res = self.db.query(Ensemble.id).limit(1).first()
             if not res:
                 self.db.execute("DROP TABLE ensemble")
-        except (OperationalError, ProgrammingError) as e:
+        except (OperationalError, ProgrammingError):
             pass
         except Exception as e:
             self.db.rollback()
             raise DBAdminError(e)
 
         try:
-            pg_ensemble.create(self.db.get_bind(), checkfirst=True)
+            Ensemble.__table__.create(self.db.get_bind(), checkfirst=True)
         except (OperationalError, ProgrammingError):
             pass
         except Exception as e:
             self.db.rollback()
             raise DBAdminError(e)
         try:
-            pg_ensemble_workflow.create(self.db.get_bind(), checkfirst=True)
+            EnsembleWorkflow.__table__.create(self.db.get_bind(), checkfirst=True)
         except (OperationalError, ProgrammingError):
             pass
         except Exception as e:
@@ -71,8 +72,7 @@ class Version(BaseVersion):
         data = None
         data2 = None
         try:
-            data = self.db.execute("SELECT COUNT(wf_id) FROM master_workflow"
-                                   ).first()
+            data = self.db.execute("SELECT COUNT(wf_id) FROM master_workflow").first()
         except (OperationalError, ProgrammingError):
             pass
         except Exception as e:
@@ -104,9 +104,7 @@ class Version(BaseVersion):
             else:
                 self._execute("DROP TABLE master_workflow")
 
-        self._execute(
-            "ALTER TABLE workflowstate RENAME TO master_workflowstate"
-        )
+        self._execute("ALTER TABLE workflowstate RENAME TO master_workflowstate")
         self._execute("DROP INDEX UNIQUE_WORKFLOWSTATE")
         self._execute(
             "CREATE INDEX UNIQUE_MASTER_WORKFLOWSTATE ON master_workflowstate (wf_id, state, timestamp)"
@@ -114,9 +112,7 @@ class Version(BaseVersion):
         self._execute("ALTER TABLE workflow RENAME TO master_workflow")
         self._execute("DROP INDEX wf_id_KEY")
         self._execute("DROP INDEX wf_uuid_UNIQUE")
-        self._execute(
-            "CREATE INDEX UNIQUE_MASTER_WF_UUID ON master_workflow (wf_uuid)"
-        )
+        self._execute("CREATE INDEX UNIQUE_MASTER_WF_UUID ON master_workflow (wf_uuid)")
 
         self.db.commit()
 

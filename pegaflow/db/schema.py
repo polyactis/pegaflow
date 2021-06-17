@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  Copyright 2018 University Of Southern California
+#  Copyright 2018-2020 University Of Southern California
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -18,100 +18,86 @@
 __author__ = "Monte Goode"
 __author__ = "Karan Vahi"
 __author__ = "Rafael Ferreira da Silva"
+__author__ = "Rajiv Mayani"
 
+import logging
 import time
 import warnings
-import logging
 
-from sqlalchemy import *
-from sqlalchemy import orm
-from sqlalchemy.exc import *
-from sqlalchemy.orm import relation
-from sqlalchemy.dialects import postgresql, mysql, sqlite
+from sqlalchemy.dialects import mysql, postgresql, sqlite
+from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import foreign, mapper, relation
+from sqlalchemy.schema import Column, ForeignKey, Index, MetaData, UniqueConstraint
+from sqlalchemy.sql.expression import and_
+from sqlalchemy.types import (
+    BigInteger,
+    Boolean,
+    DateTime,
+    Enum,
+    Integer,
+    Numeric,
+    String,
+    Text,
+)
 
-from pegaflow.db.ensembles import Ensemble, EnsembleStates
-from pegaflow.db.ensembles import EnsembleWorkflow, EnsembleWorkflowStates
+from Pegasus.db.ensembles import Ensemble as _Ensemble
+from Pegasus.db.ensembles import EnsembleStates
+from Pegasus.db.ensembles import EnsembleWorkflow as _EnsembleWorkflow
+from Pegasus.db.ensembles import EnsembleWorkflowStates, TriggerStates, TriggerType
+
+__all__ = (
+    "DBVersion",
+    "Workflow",
+    "Workflowstate",
+    "WorkflowMeta",
+    "Host",
+    "Job",
+    "JobEdge",
+    "JobInstance",
+    "Jobstate",
+    "Tag",
+    "Task",
+    "TaskEdge",
+    "TaskMeta",
+    "Invocation",
+    "WorkflowFiles",
+    "IntegrityMetrics",
+    "MasterWorkflow",
+    "MasterWorkflowstate",
+    "Ensemble",
+    "EnsembleWorkflow",
+    "Trigger",
+    "RCLFN",
+    "RCPFN",
+    "RCMeta",
+)
 
 log = logging.getLogger(__name__)
 
-metadata = MetaData()
-
 # for SQLite
-warnings.filterwarnings('ignore', '.*does \*not\* support Decimal*.')
+warnings.filterwarnings("ignore", r".*does \*not\* support Decimal*.")
 
 # These are keywords that all tables should have
-table_keywords = {}
-table_keywords['mysql_charset'] = 'latin1'
-table_keywords['mysql_engine'] = 'InnoDB'
+table_keywords = {"mysql_charset": "utf8mb4", "mysql_engine": "InnoDB"}
 
 KeyInteger = BigInteger()
-KeyInteger = KeyInteger.with_variant(postgresql.BIGINT(), 'postgresql')
-KeyInteger = KeyInteger.with_variant(mysql.BIGINT(), 'mysql')
-KeyInteger = KeyInteger.with_variant(sqlite.INTEGER(), 'sqlite')
+KeyInteger = KeyInteger.with_variant(postgresql.BIGINT(), "postgresql")
+KeyInteger = KeyInteger.with_variant(mysql.BIGINT(), "mysql")
+KeyInteger = KeyInteger.with_variant(sqlite.INTEGER(), "sqlite")
+
+TimestampType = Numeric(precision=16, scale=6)
+DurationType = Numeric(precision=10, scale=3)
 
 
 # --------------------------------------------------------------------
-# Method to verify if tables exist or are according to the schema
-# --------------------------------------------------------------------
-def get_missing_tables(db):
-    tables = [
-        db_version,
-        # WORKFLOW
-        st_workflow,
-        st_workflowstate,
-        st_workflow_meta,
-        st_workflow_files,
-        st_host,
-        st_job,
-        st_job_edge,
-        st_job_instance,
-        st_jobstate,
-        st_tag,
-        st_task,
-        st_task_edge,
-        st_task_meta,
-        st_invocation,
-        st_integrity,
-        # MASTER
-        pg_workflow,
-        pg_workflowstate,
-        pg_ensemble,
-        pg_ensemble_workflow,
-        # JDBCRC
-        rc_sequences,
-        rc_lfn,
-        rc_pfn,
-        rc_meta,
-    ]
-    missing_tables = []
-    for table in tables:
-        if not check_table_exists(db, table):
-            missing_tables.append(table.name)
-
-    return missing_tables
 
 
-def check_table_exists(engine, table):
-    try:
-        engine.execute(table.select().limit(1))
-        return True
-
-    except OperationalError as e:
-        if "no such table" in str(e).lower() or "unknown" in str(e).lower() \
-          or "no such column" in str(e).lower():
-            return False
-        raise
-    except ProgrammingError as e:
-        if "doesn't exist" in str(e).lower():
-            return False
-        raise
-# --------------------------------------------------------------------
-
-
-class SABase(object):
+class SABase:
     """
     Base class for all the DB mapper objects.
     """
+
     def _commit(self, session, batch, merge=False):
         if merge:
             session.merge(self)
@@ -145,179 +131,275 @@ class SABase(object):
         self._commit(session, batch, merge=True)
 
     def __repr__(self):
-        retval = '%s:\n' % self.__class__
-        for k,v in self.__dict__.items():
-            if k == '_sa_instance_state':
+        retval = "%s:\n" % self.__class__
+        for k, v in self.__dict__.items():
+            if k == "_sa_instance_state":
                 continue
-            retval += '  * %s : %s\n' % (k,v)
+            retval += "  * {} : {}\n".format(k, v)
         return retval
 
-# Empty classes that will be populated and mapped
-# to tables via the SQLAlch mapper.
 
-# ---------------------------------------------
-# DB Admin
-class DBVersion(SABase):
-    pass
+metadata = MetaData()
+Base = declarative_base(cls=SABase, metadata=metadata)
 
-# ---------------------------------------------
-# STAMPEDE
-class Host(SABase):
-    pass
 
-class Workflow(SABase):
-    pass
+# ----------------------------------------------------------------
+# Method to verify if tables exist or are according to the schema
+# ----------------------------------------------------------------
 
-class Workflowstate(SABase):
-    pass
 
-class WorkflowMeta(SABase):
-    pass
+def get_missing_tables(db):
+    tables = (
+        DBVersion,
+        # WORKFLOW
+        Workflow,
+        Workflowstate,
+        WorkflowMeta,
+        WorkflowFiles,
+        Host,
+        Job,
+        JobEdge,
+        JobInstance,
+        Jobstate,
+        Tag,
+        Task,
+        TaskEdge,
+        TaskMeta,
+        Invocation,
+        IntegrityMetrics,
+        # MASTER
+        MasterWorkflow,
+        MasterWorkflowstate,
+        Ensemble,
+        EnsembleWorkflow,
+        # JDBCRC
+        RCLFN,
+        RCPFN,
+        RCMeta,
+    )
+    missing_tables = []
+    for table in tables:
+        if not check_table_exists(db, table):
+            missing_tables.append(table.__tablename__)
 
-class WorkflowFiles(SABase):
-    pass
+    return missing_tables
 
-class Job(SABase):
-    pass
 
-class JobEdge(SABase):
-    pass
+def check_table_exists(engine, table):
+    try:
+        engine.execute(table.__table__.select().limit(1))
+        return True
 
-class JobInstance(SABase):
-    pass
+    except OperationalError as e:
+        if (
+            "no such table" in str(e).lower()
+            or "unknown" in str(e).lower()
+            or "no such column" in str(e).lower()
+        ):
+            return False
+        raise
+    except ProgrammingError as e:
+        if "doesn't exist" in str(e).lower():
+            return False
+        raise
 
-class Jobstate(SABase):
-    pass
-
-class Tag(SABase):
-    pass
-
-class Task(SABase):
-    pass
-
-class TaskEdge(SABase):
-    pass
-
-class TaskMeta(SABase):
-    pass
-
-class Invocation(SABase):
-    pass
-
-class IntegrityMetrics(SABase):
-    pass
-
-# ---------------------------------------------
-# DASHBOARD
-class DashboardWorkflow(SABase):
-    pass
-
-class DashboardWorkflowstate(SABase):
-    pass
-
-# ---------------------------------------------
-# JDBCRC
-class Sequences(SABase):
-    pass
-
-class RCLFN(SABase):
-    pass
-
-class RCPFN(SABase):
-    pass
-
-class RCMeta(SABase):
-    pass
 
 # ---------------------------------------------
 # DB ADMIN
 # ---------------------------------------------
-db_version = Table('dbversion', metadata,
-    Column('id', KeyInteger, primary_key=True, autoincrement=True, nullable=False),
-    Column('version_number', INT, default=5),
-    Column('version', VARCHAR(50), nullable=False),
-    Column('version_timestamp', INT, nullable=False),
-    sqlite_autoincrement=True
-)
 
-orm.mapper(DBVersion, db_version)
+
+class DBVersion(Base):
+    """."""
+
+    __tablename__ = "dbversion"
+    __table_args__ = (
+        {
+            "mysql_charset": "utf8mb4",
+            "mysql_engine": "InnoDB",
+            "sqlite_autoincrement": True,
+        },
+    )
+
+    id = Column("id", KeyInteger, primary_key=True, autoincrement=True)
+    version_number = Column("version_number", Integer, default=5)
+    version = Column("version", String(50), nullable=False)
+    version_timestamp = Column("version_timestamp", Integer, nullable=False)
 
 
 # ---------------------------------------------
 # STAMPEDE
 # ---------------------------------------------
 
-st_workflow = Table('workflow', metadata,
+
+class Workflow(Base):
+    """."""
+
+    __tablename__ = "workflow"
+
     # ==> Information comes from braindump.txt file
-    Column('wf_id', KeyInteger, primary_key=True, nullable=False),
-    Column('wf_uuid', VARCHAR(255), nullable=False),
-    Column('dag_file_name', VARCHAR(255), nullable=True),
-    Column('timestamp', NUMERIC(precision=16,scale=6), nullable=True),
-    Column('submit_hostname', VARCHAR(255), nullable=True),
-    Column('submit_dir', TEXT, nullable=True),
-    Column('planner_arguments', TEXT, nullable=True),
-    Column('user', VARCHAR(255), nullable=True),
-    Column('grid_dn', VARCHAR(255), nullable=True),
-    Column('planner_version', VARCHAR(255), nullable=True),
-    Column('dax_label', VARCHAR(255), nullable=True),
-    Column('dax_version', VARCHAR(255), nullable=True),
-    Column('dax_file', VARCHAR(255), nullable=True),
-    Column('db_url', TEXT, nullable=True),
-    Column('parent_wf_id', KeyInteger, ForeignKey("workflow.wf_id", ondelete='CASCADE'), nullable=True),
+    wf_id = Column("wf_id", KeyInteger, primary_key=True)
+    wf_uuid = Column("wf_uuid", String(255), nullable=False)
+    dag_file_name = Column("dag_file_name", String(255))
+    timestamp = Column("timestamp", TimestampType)
+    submit_hostname = Column("submit_hostname", String(255))
+    submit_dir = Column("submit_dir", Text)
+    planner_arguments = Column("planner_arguments", Text)
+    user = Column("user", String(255))
+    grid_dn = Column("grid_dn", String(255))
+    planner_version = Column("planner_version", String(255))
+    dax_label = Column("dax_label", String(255))
+    dax_version = Column("dax_version", String(255))
+    dax_file = Column("dax_file", String(255))
+    db_url = Column("db_url", Text)
+    parent_wf_id = Column(
+        "parent_wf_id", KeyInteger, ForeignKey(wf_id, ondelete="CASCADE"),
+    )
     # not marked as FK to not screw up the cascade.
-    Column('root_wf_id', KeyInteger, nullable=True),
-    **table_keywords
+    root_wf_id = Column("root_wf_id", KeyInteger)
+
+    # Relationships
+    root_wf = relation(
+        lambda: Workflow,
+        cascade="all, delete-orphan",
+        single_parent=True,
+        remote_side=(wf_id,),
+    )
+    parent_wf = relation(
+        lambda: Workflow,
+        cascade="all, delete-orphan",
+        single_parent=True,
+        remote_side=(wf_id,),
+    )
+    states = relation(
+        lambda: Workflowstate,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by=lambda: Workflowstate.timestamp,
+    )
+    jobs = relation(
+        lambda: Job,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    job_edges = relation(
+        lambda: JobEdge,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    tasks = relation(
+        lambda: Task,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    task_edges = relation(
+        lambda: TaskEdge,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    invocations = relation(
+        lambda: Invocation,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    hosts = relation(
+        lambda: Host,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    workflow_files = relation(
+        lambda: WorkflowFiles,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    files = relation(
+        lambda: RCLFN,
+        secondary=lambda: WorkflowFiles.__table__,
+        primaryjoin=lambda: Workflow.wf_id == WorkflowFiles.wf_id,
+        secondaryjoin=lambda: WorkflowFiles.lfn_id == RCLFN.lfn_id,
+    )
+    integrity_metrics = relation(
+        lambda: IntegrityMetrics,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    tags = relation(
+        lambda: Tag,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    meta = relation(
+        lambda: WorkflowMeta,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+Workflow.__table_args__ = (
+    UniqueConstraint(Workflow.wf_uuid, name="UNIQUE_WF_UUID"),
+    table_keywords,
 )
 
-Index('wf_id_KEY', st_workflow.c.wf_id, unique=True)
-Index('wf_uuid_UNIQUE', st_workflow.c.wf_uuid, unique=True)
 
-orm.mapper(Workflow, st_workflow, properties = {
-    'child_wf':relation(Workflow, cascade='all, delete-orphan', passive_deletes=True),
-    'child_wfs':relation(Workflowstate, backref='st_workflow', cascade='all, delete-orphan', passive_deletes=True),
-    'child_host':relation(Host, backref='st_workflow', cascade='all, delete-orphan', passive_deletes=True),
-    'child_task':relation(Task, backref='st_workflow', cascade='all, delete-orphan', passive_deletes=True),
-    'child_job':relation(Job, backref='st_workflow', cascade='all, delete-orphan', passive_deletes=True),
-    'child_invocation':relation(Invocation, backref='st_workflow', cascade='all, delete-orphan', passive_deletes=True),
-    'child_task_e':relation(TaskEdge, backref='st_workflow', cascade='all, delete-orphan', passive_deletes=True),
-    'child_job_e':relation(JobEdge, backref='st_workflow', cascade='all, delete-orphan', passive_deletes=True),
-})
+class Workflowstate(Base):
+    """."""
 
+    __tablename__ = "workflowstate"
+    __table_args__ = (table_keywords,)
 
-st_workflowstate = Table('workflowstate', metadata,
     # All three columns are marked as primary key to produce the desired
     # effect - ie: it is the combo of the three columns that make a row
     # unique.
-    Column('wf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='CASCADE'), nullable=False, primary_key=True),
-    Column('state', Enum('WORKFLOW_STARTED', 'WORKFLOW_TERMINATED', name='workflow_state'), nullable=False, primary_key=True),
-    Column('timestamp', NUMERIC(precision=16,scale=6), nullable=False, primary_key=True, default=time.time()),
-    Column('restart_count', INT, nullable=False),
-    Column('status', INT, nullable=True),
-    Column('reason', TEXT, nullable=True),
-    **table_keywords
-)
-
-Index('UNIQUE_WORKFLOWSTATE',
-    st_workflowstate.c.wf_id,
-    st_workflowstate.c.state,
-    st_workflowstate.c.timestamp,
-    unique=True)
-
-orm.mapper(Workflowstate, st_workflowstate)
-
-
-st_workflow_meta = Table('workflow_meta', metadata,
-    Column('wf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='CASCADE'), primary_key=True, nullable=False),
-    Column('key', VARCHAR(255), primary_key=True, nullable=False),
-    Column('value', VARCHAR(255), nullable=False),
-    **table_keywords
-)
-Index('UNIQUE_WORKFLOW_META', st_workflow_meta.c.wf_id, st_workflow_meta.c.key, st_workflow_meta.c.value, unique=True)
-
-orm.mapper(WorkflowMeta, st_workflow_meta)
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(Workflow.wf_id, ondelete="CASCADE"),
+        primary_key=True,
+    )
+    state = Column(
+        "state",
+        Enum("WORKFLOW_STARTED", "WORKFLOW_TERMINATED", name="workflow_state"),
+        primary_key=True,
+    )
+    timestamp = Column(
+        "timestamp", TimestampType, primary_key=True, default=time.time(),
+    )
+    restart_count = Column("restart_count", Integer, nullable=False)
+    status = Column("status", Integer)
+    reason = Column("reason", Text)
 
 
-# st_host definition
+Index("workflowstate_timestamp_COL", Workflowstate.timestamp)
+
+
+class WorkflowMeta(Base):
+    """."""
+
+    __tablename__ = "workflow_meta"
+    __table_args__ = (table_keywords,)
+
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(Workflow.wf_id, ondelete="CASCADE"),
+        primary_key=True,
+    )
+    key = Column("key", String(255), primary_key=True)
+    value = Column("value", String(255), nullable=False)
+
+
+# Host definition
 # ==> Information from kickstart output file
 #
 # site_name = <resource, from invocation element>
@@ -326,259 +408,548 @@ orm.mapper(WorkflowMeta, st_workflow_meta)
 # uname = <combined (system, release, machine) from machine element>
 # total_ram = <ram_total from machine element>
 
-st_host = Table('host', metadata,
-    Column('host_id', KeyInteger, primary_key=True, nullable=False),
-    Column('wf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='CASCADE'), nullable=False),
-    Column('site', VARCHAR(255), nullable=False),
-    Column('hostname', VARCHAR(255), nullable=False),
-    Column('ip', VARCHAR(255), nullable=False),
-    Column('uname', VARCHAR(255), nullable=True),
-    Column('total_memory', Integer, nullable=True),
-    **table_keywords
+
+class Host(Base):
+    """."""
+
+    __tablename__ = "host"
+
+    host_id = Column("host_id", KeyInteger, primary_key=True)
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(Workflow.wf_id, ondelete="CASCADE"),
+        nullable=False,
+    )
+    site = Column("site", String(255), nullable=False)
+    hostname = Column("hostname", String(255), nullable=False)
+    ip = Column("ip", String(255), nullable=False)
+    uname = Column("uname", String(255))
+    total_memory = Column("total_memory", Integer)
+
+
+Host.__table_args__ = (
+    UniqueConstraint(Host.wf_id, Host.site, Host.hostname, Host.ip, name="UNIQUE_HOST"),
+    table_keywords,
 )
 
-Index('UNIQUE_HOST', st_host.c.wf_id, st_host.c.site, st_host.c.hostname, st_host.c.ip, unique=True)
 
-orm.mapper(Host, st_host)
+class Job(Base):
+    """."""
+
+    __tablename__ = "job"
+
+    job_id = Column("job_id", KeyInteger, primary_key=True)
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(Workflow.wf_id, ondelete="CASCADE"),
+        nullable=False,
+    )
+    exec_job_id = Column("exec_job_id", String(255), nullable=False)
+    submit_file = Column("submit_file", String(255), nullable=False)
+    type_desc = Column(
+        "type_desc",
+        Enum(
+            "unknown",
+            "compute",
+            "stage-in-tx",
+            "stage-out-tx",
+            "registration",
+            "inter-site-tx",
+            "create-dir",
+            "staged-compute",
+            "cleanup",
+            "chmod",
+            "dax",
+            "dag",
+            name="job_type_desc",
+        ),
+        nullable=False,
+    )
+    clustered = Column("clustered", Boolean, nullable=False)
+    max_retries = Column("max_retries", Integer, nullable=False)
+    executable = Column("executable", Text, nullable=False)
+    argv = Column("argv", Text)
+    task_count = Column("task_count", Integer, nullable=False)
+
+    # Relationships
+    parents = relation(
+        lambda: Job,
+        backref="children",
+        cascade="all",
+        secondary=lambda: JobEdge.__table__,
+        primaryjoin=lambda: and_(
+            Job.wf_id == JobEdge.wf_id,
+            Job.exec_job_id == foreign(JobEdge.child_exec_job_id),
+        ),
+        secondaryjoin=lambda: and_(
+            Job.wf_id == JobEdge.wf_id,
+            Job.exec_job_id == foreign(JobEdge.parent_exec_job_id),
+        ),
+    )
+    tasks = relation(
+        lambda: Task, backref="job", cascade="all, delete-orphan", passive_deletes=True,
+    )
+    job_instances = relation(
+        lambda: JobInstance,
+        backref="job",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
-# static job table
+Job.__table_args__ = (
+    UniqueConstraint(Job.wf_id, Job.exec_job_id, name="UNIQUE_JOB"),
+    table_keywords,
+)
+Index("job_type_desc_COL", Job.type_desc)
+Index("job_exec_job_id_COL", Job.exec_job_id)
 
-st_job = Table('job', metadata,
-    Column('job_id', KeyInteger, primary_key=True, nullable=False),
-    Column('wf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='CASCADE'), nullable=False),
-    Column('exec_job_id', VARCHAR(255), nullable=False),
-    Column('submit_file', VARCHAR(255), nullable=False),
-    Column('type_desc', Enum('unknown',
-                             'compute',
-                             'stage-in-tx',
-                             'stage-out-tx',
-                             'registration',
-                             'inter-site-tx',
-                             'create-dir',
-                             'staged-compute',
-                             'cleanup',
-                             'chmod',
-                             'dax',
-                             'dag', name='job_type_desc'), nullable=False),
-    Column('clustered', BOOLEAN, nullable=False),
-    Column('max_retries', INT, nullable=False),
-    Column('executable', TEXT, nullable=False),
-    Column('argv', TEXT, nullable=True),
-    Column('task_count', INT, nullable=False),
-    **table_keywords
+
+class JobEdge(Base):
+    """."""
+
+    __tablename__ = "job_edge"
+    __table_args__ = (table_keywords,)
+
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(Workflow.wf_id, ondelete="CASCADE"),
+        primary_key=True,
+    )
+    parent_exec_job_id = Column("parent_exec_job_id", String(255), primary_key=True)
+    child_exec_job_id = Column("child_exec_job_id", String(255), primary_key=True)
+
+
+class JobInstance(Base):
+    """."""
+
+    __tablename__ = "job_instance"
+
+    job_instance_id = Column("job_instance_id", KeyInteger, primary_key=True)
+    job_id = Column(
+        "job_id",
+        KeyInteger,
+        ForeignKey(Job.job_id, ondelete="CASCADE"),
+        nullable=False,
+    )
+    host_id = Column(
+        "host_id", KeyInteger, ForeignKey(Host.host_id, ondelete="SET NULL"),
+    )
+    job_submit_seq = Column("job_submit_seq", Integer, nullable=False)
+    sched_id = Column("sched_id", String(255))
+    site = Column("site", String(255))
+    user = Column("user", String(255))
+    work_dir = Column("work_dir", Text)
+    cluster_start = Column("cluster_start", TimestampType)
+    cluster_duration = Column("cluster_duration", DurationType)
+    local_duration = Column("local_duration", DurationType)
+    subwf_id = Column(
+        "subwf_id", KeyInteger, ForeignKey(Workflow.wf_id, ondelete="SET NULL"),
+    )
+    stdout_file = Column("stdout_file", String(255))
+    stdout_text = Column("stdout_text", Text)
+    stderr_file = Column("stderr_file", String(255))
+    stderr_text = Column("stderr_text", Text)
+    stdin_file = Column("stdin_file", String(255))
+    multiplier_factor = Column("multiplier_factor", Integer, nullable=False, default=1)
+    exitcode = Column("exitcode", Integer)
+
+    # Relationships
+
+    # PM-712 don't want merges to happen to invocation table .
+    # setting lazy = false leads to a big join query when a job_instance is updated
+    # with the postscript status.
+    invocations = relation(
+        lambda: Invocation,
+        backref="job_instance",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    states = relation(
+        lambda: Jobstate,
+        backref="job_instance",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    sub_workflow = relation(
+        lambda: Workflow,
+        backref="job_instance",
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
+    host = relation(
+        lambda: Host,
+        backref="job_instance",
+        cascade="all, delete-orphan",
+        single_parent=True,
+    )
+    integrity_metrics = relation(
+        lambda: IntegrityMetrics,
+        backref="job_instance",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    tag = relation(
+        lambda: Tag,
+        backref="job_instance",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+JobInstance.__table_args__ = (
+    UniqueConstraint(
+        JobInstance.job_id, JobInstance.job_submit_seq, name="UNIQUE_JOB_INSTANCE"
+    ),
+    table_keywords,
 )
 
-Index('job_id_KEY', st_job.c.job_id, unique=True)
-Index('job_type_desc_COL', st_job.c.type_desc)
-Index('job_exec_job_id_COL', st_job.c.exec_job_id)
-Index('UNIQUE_JOB', st_job.c.wf_id, st_job.c.exec_job_id, unique=True)
-
-orm.mapper(Job, st_job, properties = {
-    'child_job_instance':relation(JobInstance, backref='st_job', cascade='all, delete-orphan', passive_deletes=True, lazy=True)
-})
-
-
-
-st_job_edge = Table('job_edge', metadata,
-    Column('wf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='CASCADE'), primary_key=True, nullable=False),
-    Column('parent_exec_job_id', VARCHAR(255), primary_key=True, nullable=False),
-    Column('child_exec_job_id', VARCHAR(255), primary_key=True, nullable=False),
-    **table_keywords
-)
-
-Index('UNIQUE_JOB_EDGE',
-    st_job_edge.c.wf_id,
-    st_job_edge.c.parent_exec_job_id,
-    st_job_edge.c.child_exec_job_id,
-    unique=True)
-
-orm.mapper(JobEdge, st_job_edge)
-
-
-st_job_instance = Table('job_instance', metadata,
-    Column('job_instance_id', KeyInteger, primary_key=True, nullable=False),
-    Column('job_id', KeyInteger, ForeignKey('job.job_id', ondelete='CASCADE'), nullable=False),
-    Column('host_id', KeyInteger, ForeignKey('host.host_id', ondelete='SET NULL'), nullable=True),
-    Column('job_submit_seq', INT, nullable=False),
-    Column('sched_id', VARCHAR(255), nullable=True),
-    Column('site', VARCHAR(255), nullable=True),
-    Column('user', VARCHAR(255), nullable=True),
-    Column('work_dir', TEXT, nullable=True),
-    Column('cluster_start', NUMERIC(16,6), nullable=True),
-    Column('cluster_duration', NUMERIC(10,3), nullable=True),
-    Column('local_duration', NUMERIC(10,3), nullable=True),
-    Column('subwf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='SET NULL'), nullable=True),
-    Column('stdout_file', VARCHAR(255), nullable=True),
-    Column('stdout_text', TEXT, nullable=True),
-    Column('stderr_file', VARCHAR(255), nullable=True),
-    Column('stderr_text', TEXT, nullable=True),
-    Column('stdin_file', VARCHAR(255), nullable=True),
-    Column('multiplier_factor', INT, nullable=False, default=1),
-    Column('exitcode', INT, nullable=True),
-    **table_keywords
-)
-
-Index('job_instance_id_KEY',
-    st_job_instance.c.job_instance_id,
-    unique=True)
-Index('UNIQUE_JOB_INSTANCE',
-    st_job_instance.c.job_id,
-    st_job_instance.c.job_submit_seq,
-    unique=True)
-
-orm.mapper(JobInstance, st_job_instance, properties = {
-    #PM-712 don't want merges to happen to invocation table .
-    #setting lazy = false leads to a big join query when a job_instance is updated
-    #with the postscript status.
-    'child_tsk':relation(Invocation, backref='st_job_instance', cascade='all, delete-orphan', passive_deletes=True, lazy=True),
-    'child_jst':relation(Jobstate, backref='st_job_instance', cascade='all, delete-orphan', passive_deletes=True, lazy=True),
-    'child_integrity':relation(IntegrityMetrics, backref='st_integrity', cascade='all, delete-orphan', passive_deletes=True, lazy=True),
-    'child_tag':relation(Tag, backref='st_tag', cascade='all, delete-orphan', passive_deletes=True, lazy=True),
-})
-
-
-# st_jobstate definition
+# Jobstate definition
 # ==> Same information that currently goes into jobstate.log file,
 #       obtained from dagman.out file
 #
-# job_id = from st_job table (autogenerated)
+# job_id = from Job table (autogenerated)
 # state = from dagman.out file (3rd column of jobstate.log file)
 # timestamp = from dagman,out file (1st column of jobstate.log file)
 
-st_jobstate = Table('jobstate', metadata,
+
+class Jobstate(Base):
+    """."""
+
+    __tablename__ = "jobstate"
+    __table_args__ = (table_keywords,)
+
     # All four columns are marked as primary key to produce the desired
     # effect - ie: it is the combo of the four columns that make a row
     # unique.
-    Column('job_instance_id', KeyInteger, ForeignKey('job_instance.job_instance_id', ondelete='CASCADE'), nullable=False, primary_key=True),
-    Column('state', VARCHAR(255), nullable=False, primary_key=True),
-    Column('timestamp', NUMERIC(precision=16,scale=6), nullable=False, primary_key=True, default=time.time()),
-    Column('jobstate_submit_seq', INT, nullable=False, primary_key=True),
-    Column('reason', TEXT, nullable=True),
-    **table_keywords
+    job_instance_id = Column(
+        "job_instance_id",
+        KeyInteger,
+        ForeignKey(JobInstance.job_instance_id, ondelete="CASCADE"),
+        primary_key=True,
+    )
+    state = Column("state", String(255), primary_key=True)
+    timestamp = Column(
+        "timestamp", TimestampType, primary_key=True, default=time.time(),
+    )
+    jobstate_submit_seq = Column(
+        "jobstate_submit_seq", Integer, nullable=False, primary_key=True
+    )
+    reason = Column("reason", Text)
+
+
+Index("jobstate_jobstate_submit_seq_COL", Jobstate.jobstate_submit_seq)
+
+
+class Tag(Base):
+    """."""
+
+    __tablename__ = "tag"
+
+    tag_id = Column("tag_id", KeyInteger, primary_key=True)
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(Workflow.wf_id, ondelete="CASCADE"),
+        nullable=False,
+    )
+    job_instance_id = Column(
+        "job_instance_id",
+        KeyInteger,
+        ForeignKey(JobInstance.job_instance_id, ondelete="CASCADE"),
+        nullable=False,
+    )
+    name = Column("name", String(255), nullable=False)
+    count = Column("count", Integer, nullable=False)
+
+
+Tag.__table_args__ = (
+    UniqueConstraint(Tag.wf_id, Tag.job_instance_id, name="UNIQUE_TAG"),
+    table_keywords,
 )
 
-Index('UNIQUE_JOBSTATE',
-    st_jobstate.c.job_instance_id,
-    st_jobstate.c.state,
-    st_jobstate.c.timestamp,
-    st_jobstate.c.jobstate_submit_seq,
-    unique=True)
 
-orm.mapper(Jobstate, st_jobstate)
+class Task(Base):
+    """."""
+
+    __tablename__ = "task"
+
+    task_id = Column("task_id", KeyInteger, primary_key=True)
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(Workflow.wf_id, ondelete="CASCADE"),
+        nullable=False,
+    )
+    job_id = Column("job_id", KeyInteger, ForeignKey(Job.job_id, ondelete="SET NULL"),)
+    abs_task_id = Column("abs_task_id", String(255), nullable=False)
+    transformation = Column("transformation", Text, nullable=False)
+    argv = Column("argv", Text)
+    type_desc = Column("type_desc", String(255), nullable=False)
+
+    # Relationships
+    parents = relation(
+        lambda: Task,
+        backref="children",
+        cascade="all",
+        secondary=lambda: TaskEdge.__table__,
+        primaryjoin=lambda: and_(
+            Task.wf_id == TaskEdge.wf_id,
+            Task.abs_task_id == foreign(TaskEdge.child_abs_task_id),
+        ),
+        secondaryjoin=lambda: and_(
+            Task.wf_id == TaskEdge.wf_id,
+            Task.abs_task_id == foreign(TaskEdge.parent_abs_task_id),
+        ),
+    )
+    task_files = relation(
+        lambda: WorkflowFiles,
+        backref="task",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    files = relation(
+        lambda: RCLFN,
+        secondary=lambda: WorkflowFiles.__table__,
+        primaryjoin=lambda: Task.task_id == WorkflowFiles.task_id,
+        secondaryjoin=lambda: WorkflowFiles.lfn_id == RCLFN.lfn_id,
+    )
+    meta = relation(
+        lambda: TaskMeta,
+        backref="task",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
 
-st_tag = Table('tag', metadata,
-    Column('tag_id', KeyInteger, primary_key=True, nullable=False),
-    Column('wf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='CASCADE'), nullable=False),
-    Column('job_instance_id', KeyInteger, ForeignKey('job_instance.job_instance_id', ondelete='CASCADE'), nullable=False),
-    Column('name', VARCHAR(255), nullable=False),
-    Column('count', INT, nullable=False),
-    **table_keywords
+Task.__table_args__ = (
+    UniqueConstraint(Task.wf_id, Task.abs_task_id, name="UNIQUE_TASK"),
+    table_keywords,
+)
+Index("task_abs_task_id_COL", Task.abs_task_id)
+Index("task_wf_id_COL", Task.wf_id)
+
+
+class TaskEdge(Base):
+    """."""
+
+    __tablename__ = "task_edge"
+    __table_args__ = (table_keywords,)
+
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(Workflow.wf_id, ondelete="CASCADE"),
+        primary_key=True,
+    )
+    parent_abs_task_id = Column("parent_abs_task_id", String(255), primary_key=True)
+    child_abs_task_id = Column("child_abs_task_id", String(255), primary_key=True)
+
+
+class TaskMeta(Base):
+    """."""
+
+    __tablename__ = "task_meta"
+    __table_args__ = (table_keywords,)
+
+    task_id = Column(
+        "task_id",
+        KeyInteger,
+        ForeignKey(Task.task_id, ondelete="CASCADE"),
+        primary_key=True,
+    )
+    key = Column("key", String(255), primary_key=True)
+    value = Column("value", String(255), nullable=False)
+
+
+class Invocation(Base):
+    """."""
+
+    __tablename__ = "invocation"
+
+    invocation_id = Column("invocation_id", KeyInteger, primary_key=True)
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(Workflow.wf_id, ondelete="CASCADE"),
+        nullable=False,
+    )
+    job_instance_id = Column(
+        "job_instance_id",
+        KeyInteger,
+        ForeignKey(JobInstance.job_instance_id, ondelete="CASCADE"),
+        nullable=False,
+    )
+    task_submit_seq = Column("task_submit_seq", Integer, nullable=False)
+    start_time = Column(
+        "start_time", TimestampType, nullable=False, default=time.time()
+    )
+    remote_duration = Column("remote_duration", DurationType, nullable=False)
+    remote_cpu_time = Column("remote_cpu_time", DurationType)
+    exitcode = Column("exitcode", Integer, nullable=False)
+    transformation = Column("transformation", Text, nullable=False)
+    executable = Column("executable", Text, nullable=False)
+    argv = Column("argv", Text)
+    abs_task_id = Column("abs_task_id", String(255))
+    maxrss = Column("maxrss", Integer)
+    avg_cpu = Column("avg_cpu", Numeric(precision=16, scale=6))
+
+
+Invocation.__table_args__ = (
+    UniqueConstraint(
+        Invocation.job_instance_id, Invocation.task_submit_seq, name="UNIQUE_INVOCATION"
+    ),
+    table_keywords,
+)
+Index("invoc_abs_task_id_COL", Invocation.abs_task_id)
+Index("invoc_wf_id_COL", Invocation.wf_id)
+
+
+class IntegrityMetrics(Base):
+    """."""
+
+    __tablename__ = "integrity"
+
+    integrity_id = Column("integrity_id", KeyInteger, primary_key=True)
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(Workflow.wf_id, ondelete="CASCADE"),
+        nullable=False,
+    )
+    job_instance_id = Column(
+        "job_instance_id",
+        KeyInteger,
+        ForeignKey(JobInstance.job_instance_id, ondelete="CASCADE"),
+        nullable=False,
+    )
+    type = Column(
+        "type", Enum("check", "compute", name="integrity_type_desc"), nullable=False
+    )
+    file_type = Column(
+        "file_type", Enum("input", "output", name="integrity_file_type_desc")
+    )
+    count = Column("count", Integer, nullable=False)
+    duration = Column("duration", DurationType, nullable=False)
+
+
+IntegrityMetrics.__table_args__ = (
+    UniqueConstraint(
+        IntegrityMetrics.job_instance_id,
+        IntegrityMetrics.type,
+        IntegrityMetrics.file_type,
+        name="UNIQUE_INTEGRITY",
+    ),
+    table_keywords,
 )
 
-Index('tag_id_KEY', st_tag.c.tag_id, unique=True)
-Index('UNIQUE_TAG', st_tag.c.job_instance_id, st_tag.c.wf_id, unique=True)
-orm.mapper(Tag, st_tag)
+
+# ---------------------------------------------
+# JDBCRC
+# ---------------------------------------------
 
 
-st_task = Table('task', metadata,
-    Column('task_id', KeyInteger, primary_key=True, nullable=False),
-    Column('job_id', KeyInteger, ForeignKey('job.job_id', ondelete='SET NULL'), nullable=True),
-    Column('wf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='CASCADE'), nullable=False),
-    Column('abs_task_id', VARCHAR(255), nullable=False),
-    Column('transformation', TEXT, nullable=False),
-    Column('argv', TEXT, nullable=True),
-    Column('type_desc', VARCHAR(255), nullable=False),
-    **table_keywords
+class RCLFN(Base):
+    """."""
+
+    __tablename__ = "rc_lfn"
+
+    lfn_id = Column("lfn_id", KeyInteger, primary_key=True)
+    lfn = Column("lfn", String(245), nullable=False)
+
+    # Relationships
+    pfns = relation(
+        lambda: RCPFN,
+        backref="lfn",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    meta = relation(
+        lambda: RCMeta,
+        backref="lfn",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+RCLFN.__table_args__ = (
+    UniqueConstraint(RCLFN.lfn, name="UNIQUE_LFN"),
+    table_keywords,
 )
 
-Index('task_id_KEY', st_task.c.task_id, unique=True)
-Index('task_abs_task_id_COL', st_task.c.abs_task_id)
-Index('task_wf_id_COL', st_task.c.wf_id)
-Index('UNIQUE_TASK', st_task.c.wf_id, st_task.c.abs_task_id, unique=True)
 
-orm.mapper(Task, st_task, properties = {
-    'child_task_meta':relation(TaskMeta, backref='st_task_meta', cascade='all, delete-orphan', passive_deletes=True),
-})
+class RCPFN(Base):
+    """."""
+
+    __tablename__ = "rc_pfn"
+
+    pfn_id = Column("pfn_id", KeyInteger, primary_key=True)
+    lfn_id = Column(
+        "lfn_id",
+        KeyInteger,
+        ForeignKey(RCLFN.lfn_id, ondelete="CASCADE"),
+        nullable=False,
+    )
+    pfn = Column("pfn", String(245), nullable=False)
+    site = Column("site", String(245))
 
 
-st_task_edge = Table('task_edge', metadata,
-    Column('wf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='CASCADE'), primary_key=True, nullable=False),
-    Column('parent_abs_task_id', VARCHAR(255), primary_key=True, nullable=True),
-    Column('child_abs_task_id', VARCHAR(255), primary_key=True, nullable=True),
-    **table_keywords
+RCPFN.__table_args__ = (
+    UniqueConstraint(RCPFN.lfn_id, RCPFN.pfn, RCPFN.site, name="UNIQUE_PFN"),
+    table_keywords,
 )
 
-Index('UNIQUE_TASK_EDGE',
-    st_task_edge.c.wf_id,
-    st_task_edge.c.parent_abs_task_id,
-    st_task_edge.c.child_abs_task_id,
-    unique=True)
 
-orm.mapper(TaskEdge, st_task_edge)
+class RCMeta(Base):
+    """."""
 
+    __tablename__ = "rc_meta"
+    __table_args__ = (table_keywords,)
 
-st_task_meta = Table('task_meta', metadata,
-    Column('task_id', KeyInteger, ForeignKey('task.task_id', ondelete='CASCADE'), primary_key=True, nullable=False),
-    Column('key', VARCHAR(255), primary_key=True, nullable=False),
-    Column('value', VARCHAR(255), nullable=False),
-    **table_keywords
-)
-Index('UNIQUE_TASK_META', st_task_meta.c.task_id, st_task_meta.c.key, st_task_meta.c.value, unique=True)
-
-orm.mapper(TaskMeta, st_task_meta)
+    lfn_id = Column(
+        "lfn_id",
+        KeyInteger,
+        ForeignKey(RCLFN.lfn_id, ondelete="CASCADE"),
+        primary_key=True,
+    )
+    key = Column("key", String(245), primary_key=True)
+    value = Column("value", String(245), nullable=False)
 
 
-st_invocation = Table('invocation', metadata,
-    Column('invocation_id', KeyInteger, primary_key=True, nullable=False),
-    Column('job_instance_id', KeyInteger, ForeignKey('job_instance.job_instance_id', ondelete='CASCADE'), nullable=False),
-    Column('task_submit_seq', INT, nullable=False),
-    Column('start_time', NUMERIC(16,6), nullable=False, default=time.time()),
-    Column('remote_duration', NUMERIC(10,3), nullable=False),
-    Column('remote_cpu_time', NUMERIC(10,3), nullable=True),
-    Column('exitcode', INT, nullable=False),
-    Column('transformation', TEXT, nullable=False),
-    Column('executable', TEXT, nullable=False),
-    Column('argv', TEXT, nullable=True),
-    Column('abs_task_id', VARCHAR(255), nullable=True),
-    Column('wf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='CASCADE'), nullable=False),
-    **table_keywords
-)
+class WorkflowFiles(Base):
+    """."""
 
-Index('invocation_id_KEY', st_invocation.c.invocation_id, unique=True)
-Index('invoc_abs_task_id_COL', st_invocation.c.abs_task_id)
-Index('invoc_wf_id_COL', st_invocation.c.wf_id)
-Index('UNIQUE_INVOCATION', st_invocation.c.job_instance_id, st_invocation.c.task_submit_seq, unique=True)
+    __tablename__ = "workflow_files"
+    __table_args__ = (table_keywords,)
 
-orm.mapper(Invocation, st_invocation)
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(Workflow.wf_id, ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+    task_id = Column(
+        "task_id",
+        KeyInteger,
+        ForeignKey(Task.task_id, ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+    lfn_id = Column(
+        "lfn_id",
+        KeyInteger,
+        ForeignKey(RCLFN.lfn_id, ondelete="CASCADE"),
+        primary_key=True,
+        nullable=False,
+    )
+    file_type = Column("file_type", String(255))
 
-
-st_workflow_files = Table('workflow_files', metadata,
-                          Column('lfn_id', KeyInteger, ForeignKey('rc_lfn.lfn_id', ondelete='CASCADE'), nullable=False, primary_key=True),
-                          Column('wf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='CASCADE'), nullable=False, primary_key=True),
-                          Column('task_id', KeyInteger, ForeignKey('task.task_id', ondelete='CASCADE'), nullable=False, primary_key=True),
-                          Column('file_type', VARCHAR(255), nullable=True),
-                          **table_keywords
-                          )
-
-orm.mapper(WorkflowFiles, st_workflow_files)
-
-
-st_integrity = Table('integrity', metadata,
-                             Column('integrity_id', KeyInteger, primary_key=True, nullable=False),
-                             Column('wf_id', KeyInteger, ForeignKey('workflow.wf_id', ondelete='CASCADE'), nullable=False),
-                             Column('job_instance_id', KeyInteger, ForeignKey('job_instance.job_instance_id', ondelete='CASCADE'), nullable=False),
-                             Column('type', Enum('check', 'compute', name='integrity_type_desc'), nullable=False),
-                             Column('file_type', Enum('input', 'output', name='integrity_file_type_desc')),
-                             Column('count', INT, nullable=False),
-                             Column('duration', NUMERIC(10,3), nullable=False),
-                             **table_keywords
-                             )
-
-Index('integrity_id_KEY', st_integrity.c.integrity_id, unique=True)
-Index('UNIQUE_INTEGRITY', st_integrity.c.job_instance_id, st_integrity.c.type, st_integrity.c.file_type, unique=True)
-orm.mapper(IntegrityMetrics, st_integrity)
+    # Relationships
+    lfn = relation(lambda: RCLFN, cascade="all, delete-orphan", single_parent=True)
 
 
 # ---------------------------------------------
@@ -586,136 +957,166 @@ orm.mapper(IntegrityMetrics, st_integrity)
 # ---------------------------------------------
 
 
-pg_workflow = Table('master_workflow', metadata,
+class MasterWorkflow(Base):
+    """."""
+
+    __tablename__ = "master_workflow"
+
     # ==> Information comes from braindump.txt file
-    Column('wf_id', KeyInteger, primary_key=True, nullable=False),
-    Column('wf_uuid', VARCHAR(255), nullable=False),
-    Column('dax_label', VARCHAR(255), nullable=True),
-    Column('dax_version', VARCHAR(255), nullable=True),
-    Column('dax_file', VARCHAR(255), nullable=True),
-    Column('dag_file_name', VARCHAR(255), nullable=True),
-    Column('timestamp', NUMERIC(precision=16,scale=6), nullable=True),
-    Column('submit_hostname', VARCHAR(255), nullable=True),
-    Column('submit_dir', TEXT, nullable=True),
-    Column('planner_arguments', TEXT, nullable=True),
-    Column('user', VARCHAR(255), nullable=True),
-    Column('grid_dn', VARCHAR(255), nullable=True),
-    Column('planner_version', VARCHAR(255), nullable=True),
-    Column('db_url', TEXT, nullable=True),
-    Column('archived', BOOLEAN, nullable=False, default=0),
-    **table_keywords
+    wf_id = Column("wf_id", KeyInteger, primary_key=True)
+    wf_uuid = Column("wf_uuid", String(255), nullable=False)
+    dax_label = Column("dax_label", String(255))
+    dax_version = Column("dax_version", String(255))
+    dax_file = Column("dax_file", String(255))
+    dag_file_name = Column("dag_file_name", String(255))
+    timestamp = Column("timestamp", TimestampType)
+    submit_hostname = Column("submit_hostname", String(255))
+    submit_dir = Column("submit_dir", Text)
+    planner_arguments = Column("planner_arguments", Text)
+    user = Column("user", String(255))
+    grid_dn = Column("grid_dn", String(255))
+    planner_version = Column("planner_version", String(255))
+    db_url = Column("db_url", Text)
+    archived = Column("archived", Boolean, nullable=False, default=0)
+
+    # Relationships
+    states = relation(
+        lambda: MasterWorkflowstate,
+        backref="workflow",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+MasterWorkflow.__table_args__ = (
+    UniqueConstraint(MasterWorkflow.wf_uuid, name="UNIQUE_MASTER_WF_UUID"),
+    table_keywords,
 )
 
-Index('UNIQUE_MASTER_WF_UUID', pg_workflow.c.wf_uuid, unique=True)
 
-orm.mapper(DashboardWorkflow, pg_workflow )
+class MasterWorkflowstate(Base):
+    """."""
 
+    __tablename__ = "master_workflowstate"
+    __table_args__ = (table_keywords,)
 
-pg_workflowstate = Table('master_workflowstate', metadata,
     # All three columns are marked as primary key to produce the desired
     # effect - ie: it is the combo of the three columns that make a row
     # unique.
-    Column('wf_id', KeyInteger, ForeignKey('master_workflow.wf_id', ondelete='CASCADE'), nullable=False, primary_key=True),
-    Column('state', Enum('WORKFLOW_STARTED', 'WORKFLOW_TERMINATED', name='master_workflow_state'), nullable=False, primary_key=True),
-    Column('timestamp', NUMERIC(precision=16,scale=6), nullable=False, primary_key=True),
-    Column('restart_count', INT, nullable=False),
-    Column('status', INT, nullable=True),
-    Column('reason', TEXT, nullable=True),
-    **table_keywords
-)
-
-Index('UNIQUE_MASTER_WORKFLOWSTATE',
-      pg_workflowstate.c.wf_id,
-      pg_workflowstate.c.state,
-      pg_workflowstate.c.timestamp,
-      unique=True)
-
-orm.mapper(DashboardWorkflowstate, pg_workflowstate)
-
-
-pg_ensemble = Table('ensemble', metadata,
-    Column('id', KeyInteger, primary_key=True),
-    Column('name', String(100), nullable=False),
-    Column('created', DateTime, nullable=False),
-    Column('updated', DateTime, nullable=False),
-    Column('state', Enum(*EnsembleStates, name='ensemble_state'), nullable=False),
-    Column('max_running', Integer, nullable=False),
-    Column('max_planning', Integer, nullable=False),
-    Column('username', String(100), nullable=False),
-    **table_keywords
-)
-
-Index('UNIQUE_ENSEMBLE',
-      pg_ensemble.c.username,
-      pg_ensemble.c.name)
-
-orm.mapper(Ensemble, pg_ensemble)
-
-
-pg_ensemble_workflow = Table('ensemble_workflow', metadata,
-    Column('id', KeyInteger, primary_key=True),
-    Column('name', String(100), nullable=False),
-    Column('basedir', String(512), nullable=False),
-    Column('created', DateTime, nullable=False),
-    Column('updated', DateTime, nullable=False),
-    Column('state', Enum(*EnsembleWorkflowStates, name='ensemble_wf_state'), nullable=False),
-    Column('priority', Integer, nullable=False),
-    Column('wf_uuid', String(36)),
-    Column('submitdir', String(512)),
-    Column('plan_command', String(1024), nullable=False, default="./plan.sh"),
-    Column('ensemble_id', KeyInteger, ForeignKey('ensemble.id'), nullable=False),
-    **table_keywords
-)
-
-Index('UNIQUE_ENSEMBLE_WORKFLOW',
-      pg_ensemble_workflow.c.ensemble_id,
-      pg_ensemble_workflow.c.name,
-      unique=True)
-
-orm.mapper(EnsembleWorkflow, pg_ensemble_workflow, properties = {
-    'ensemble':relation(Ensemble, backref='workflows')
-})
+    wf_id = Column(
+        "wf_id",
+        KeyInteger,
+        ForeignKey(MasterWorkflow.wf_id, ondelete="CASCADE"),
+        primary_key=True,
+    )
+    state = Column(
+        "state",
+        Enum("WORKFLOW_STARTED", "WORKFLOW_TERMINATED", name="master_workflow_state"),
+        primary_key=True,
+    )
+    timestamp = Column("timestamp", TimestampType, primary_key=True)
+    restart_count = Column("restart_count", Integer, nullable=False)
+    status = Column("status", Integer)
+    reason = Column("reason", Text)
 
 
 # ---------------------------------------------
-# JDBCRC
+# ENSEMBLE MANAGER
 # ---------------------------------------------
 
-rc_sequences = Table('sequences', metadata,
-    Column('name', VARCHAR(32), nullable=False, primary_key=True),
-    Column('currval', BIGINT, nullable=False),
-    **table_keywords
-)
-orm.mapper(Sequences, rc_sequences)
+
+class Ensemble(Base):
+    """."""
+
+    __tablename__ = "ensemble"
+
+    id = Column("id", KeyInteger, primary_key=True)
+    name = Column("name", String(100), nullable=False)
+    created = Column("created", DateTime, nullable=False)
+    updated = Column("updated", DateTime, nullable=False)
+    state = Column(
+        "state", Enum(*EnsembleStates, name="ensemble_state"), nullable=False
+    )
+    max_running = Column("max_running", Integer, nullable=False)
+    max_planning = Column("max_planning", Integer, nullable=False)
+    username = Column("username", String(100), nullable=False)
 
 
-rc_lfn = Table('rc_lfn', metadata,
-    Column('lfn_id', KeyInteger, primary_key=True, nullable=False),
-    Column('lfn', VARCHAR(245), nullable=False),
-    **table_keywords
-)
-
-Index('ix_rc_lfn', rc_lfn.c.lfn, unique=True)
-orm.mapper(RCLFN, rc_lfn)
-
-
-rc_pfn = Table('rc_pfn', metadata,
-    Column('pfn_id', KeyInteger, primary_key=True, nullable=False),
-    Column('lfn_id', KeyInteger, ForeignKey('rc_lfn.lfn_id', ondelete='CASCADE'), nullable=False),
-    Column('pfn', VARCHAR(245), nullable=False),
-    Column('site', VARCHAR(245)),
-    **table_keywords
+Ensemble.__table_args__ = (
+    UniqueConstraint(Ensemble.name, Ensemble.username, name="UNIQUE_ENSEMBLE"),
+    table_keywords,
 )
 
-Index('UNIQUE_PFN', rc_pfn.c.lfn_id, rc_pfn.c.pfn, rc_pfn.c.site, unique=True)
-orm.mapper(RCPFN, rc_pfn)
-
-
-rc_meta = Table('rc_meta', metadata,
-    Column('lfn_id', KeyInteger, ForeignKey('rc_lfn.lfn_id', ondelete='CASCADE'), primary_key=True, nullable=False),
-    Column('key', VARCHAR(245), primary_key=True, nullable=False),
-    Column('value', VARCHAR(245), nullable=False),
-    **table_keywords
+# User mapper(..,...) to extend ensembles.Ensemble to the schema.Ensemble table
+mapper(
+    _Ensemble,
+    Ensemble.__table__,
+    properties={"workflows": relation(lambda: _EnsembleWorkflow)},
 )
-Index('rc_meta_unique', rc_meta.c.lfn_id, rc_meta.c.key, unique=True)
-orm.mapper(RCMeta, rc_meta)
+
+
+class EnsembleWorkflow(Base):
+    """."""
+
+    __tablename__ = "ensemble_workflow"
+
+    id = Column("id", KeyInteger, primary_key=True)
+    ensemble_id = Column(
+        "ensemble_id", KeyInteger, ForeignKey(Ensemble.id), nullable=False
+    )
+    name = Column("name", String(100), nullable=False)
+    basedir = Column("basedir", String(512), nullable=False)
+    created = Column("created", DateTime, nullable=False)
+    updated = Column("updated", DateTime, nullable=False)
+    state = Column(
+        "state",
+        Enum(*EnsembleWorkflowStates, name="ensemble_wf_state"),
+        nullable=False,
+    )
+    priority = Column("priority", Integer, nullable=False)
+    wf_uuid = Column("wf_uuid", String(36))
+    submitdir = Column("submitdir", String(512))
+    plan_command = Column(
+        "plan_command", String(1024), nullable=False, default="./plan.sh"
+    )
+
+
+EnsembleWorkflow.__table_args__ = (
+    UniqueConstraint(
+        EnsembleWorkflow.ensemble_id,
+        EnsembleWorkflow.name,
+        name="UNIQUE_ENSEMBLE_WORKFLOW",
+    ),
+    table_keywords,
+)
+
+mapper(
+    _EnsembleWorkflow,
+    EnsembleWorkflow.__table__,
+    properties={"ensemble": relation(_Ensemble)},
+)
+
+
+class Trigger(Base):
+    """."""
+
+    __tablename__ = "trigger"
+    _id = Column("id", KeyInteger, primary_key=True)
+    ensemble_id = Column(
+        "ensemble_id", KeyInteger, ForeignKey(Ensemble.id), nullable=False
+    )
+    name = Column("name", String(100), nullable=False)
+    state = Column("state", Enum(*TriggerStates, name="trigger_state"), nullable=False)
+    workflow = Column("workflow", Text(), nullable=False)
+    args = Column("args", Text())
+    _type = Column(
+        "type",
+        Enum(*[t.value for t in list(TriggerType)], name="trigger_type"),
+        nullable=False,
+    )
+
+
+Trigger.__table_args__ = (
+    UniqueConstraint(Trigger.ensemble_id, Trigger.name, name="UNIQUE_TRIGGER"),
+    table_keywords,
+)

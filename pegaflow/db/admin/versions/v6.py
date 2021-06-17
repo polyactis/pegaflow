@@ -1,9 +1,13 @@
 import logging
 
-from pegaflow.db.admin.admin_loader import *
-from pegaflow.db.admin.versions.base_version import BaseVersion
-from pegaflow.db.schema import *
-from sqlalchemy.exc import *
+from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.schema import Column, ForeignKey, Index, Table
+from sqlalchemy.types import Integer, String
+
+from Pegasus.db.admin.admin_loader import *
+from Pegasus.db.admin.versions.base_version import BaseVersion
+from Pegasus.db.schema import *
+from Pegasus.db.schema import KeyInteger, check_table_exists, metadata, table_keywords
 
 DB_VERSION = 6
 
@@ -12,7 +16,7 @@ log = logging.getLogger(__name__)
 
 class Version(BaseVersion):
     def __init__(self, connection):
-        super(Version, self).__init__(connection)
+        super().__init__(connection)
 
     def update(self, force=False):
         """
@@ -34,7 +38,7 @@ class Version(BaseVersion):
 
         # check if the migration is required
         try:
-            if check_table_exists(self.db, rc_lfn) and not interrupted:
+            if check_table_exists(self.db, RCLFN) and not interrupted:
                 return
         except (OperationalError, ProgrammingError):
             pass
@@ -45,7 +49,7 @@ class Version(BaseVersion):
         try:
             if not interrupted:
                 self.db.execute("SELECT site FROM rc_lfn LIMIT 0,1")
-        except (OperationalError, ProgrammingError) as e:
+        except (OperationalError, ProgrammingError):
             return
         except Exception as e:
             raise DBAdminError(e)
@@ -65,10 +69,10 @@ class Version(BaseVersion):
 
         # Create new rc_lfn table and populate it
         log.info("Updating tables...")
-        self._create_table(rc_lfn)
+        self._create_table(RCLFN.__table__)
         self.db.commit()
-        self._create_table(rc_pfn)
-        self._create_table(rc_meta)
+        self._create_table(RCPFN.__table__)
+        self._create_table(RCMeta.__table__)
         self.db.commit()
 
         try:
@@ -117,53 +121,61 @@ class Version(BaseVersion):
         log.info("Creating tables...")
         self._drop_index("v4_rc_lfn")
         self._drop_index("v4_rc_attr")
-        metadata.remove(rc_lfn)
+        metadata.remove(RCLFN.__table__)
         v4_rc_lfn = Table(
-            'rc_lfn', metadata,
-            Column('id', KeyInteger, primary_key=True, nullable=False),
-            Column('lfn', VARCHAR(245), nullable=False),
-            Column('pfn', VARCHAR(245), nullable=False),
-            Column('site', VARCHAR(245)), **table_keywords
+            "rc_lfn",
+            metadata,
+            Column("id", KeyInteger, primary_key=True, nullable=False),
+            Column("lfn", String(245), nullable=False),
+            Column("pfn", String(245), nullable=False),
+            Column("site", String(245)),
+            **table_keywords,
         )
         Index(
-            'UNIQUE_RC_LFN',
+            "UNIQUE_RC_LFN",
             v4_rc_lfn.c.lfn,
             v4_rc_lfn.c.pfn,
             v4_rc_lfn.c.site,
-            unique=True
+            unique=True,
         )
-        Index('v4_rc_lfn', v4_rc_lfn.c.lfn)
+        Index("v4_rc_lfn", v4_rc_lfn.c.lfn)
         v4_rc_lfn.create(self.db.get_bind(), checkfirst=True)
 
         v4_rc_attr = Table(
-            'rc_attr', metadata,
+            "rc_attr",
+            metadata,
             Column(
-                'id',
+                "id",
                 KeyInteger,
-                ForeignKey('rc_lfn.id', ondelete='CASCADE'),
+                ForeignKey("rc_lfn.id", ondelete="CASCADE"),
                 primary_key=True,
-                nullable=False
-            ), Column('name', VARCHAR(245), primary_key=True, nullable=False),
-            Column('value', VARCHAR(245), nullable=False), **table_keywords
+                nullable=False,
+            ),
+            Column("name", String(245), primary_key=True, nullable=False),
+            Column("value", String(245), nullable=False),
+            **table_keywords,
         )
-        Index('v4_rc_attr', v4_rc_attr.c.name)
+        Index("v4_rc_attr", v4_rc_attr.c.name)
         v4_rc_attr.create(self.db.get_bind(), checkfirst=True)
         v4_st_file = Table(
-            'file', metadata,
-            Column('file_id', KeyInteger, primary_key=True, nullable=False),
+            "file",
+            metadata,
+            Column("file_id", KeyInteger, primary_key=True, nullable=False),
             Column(
-                'task_id',
+                "task_id",
                 KeyInteger,
-                ForeignKey('task.task_id', ondelete='CASCADE'),
-                nullable=True
-            ), Column('lfn', VARCHAR(255), nullable=True),
-            Column('estimated_size', INT, nullable=True),
-            Column('md_checksum', VARCHAR(255), nullable=True),
-            Column('type', VARCHAR(255), nullable=True), **table_keywords
+                ForeignKey("task.task_id", ondelete="CASCADE"),
+                nullable=True,
+            ),
+            Column("lfn", String(255), nullable=True),
+            Column("estimated_size", Integer, nullable=True),
+            Column("md_checksum", String(255), nullable=True),
+            Column("type", String(255), nullable=True),
+            **table_keywords,
         )
 
-        Index('file_id_UNIQUE', v4_st_file.c.file_id, unique=True)
-        Index('FK_FILE_TASK_ID', st_task.c.task_id, unique=False)
+        Index("file_id_UNIQUE", v4_st_file.c.file_id, unique=True)
+        Index("FK_FILE_TASK_ID", Task.task_id, unique=False)
         v4_st_file.create(self.db.get_bind(), checkfirst=True)
 
         # Migrate entries
@@ -199,7 +211,7 @@ class Version(BaseVersion):
         """
         try:
             table_obj.create(self.db.get_bind(), checkfirst=True)
-        except (OperationalError, ProgrammingError) as e:
+        except (OperationalError, ProgrammingError):
             pass
         except Exception as e:
             self.db.rollback()
@@ -213,7 +225,7 @@ class Version(BaseVersion):
         """
         try:
             self.db.execute("DROP TABLE %s" % table_name)
-        except Exception as e:
+        except Exception:
             pass
 
     def _drop_index(self, index_name):
@@ -224,5 +236,5 @@ class Version(BaseVersion):
         """
         try:
             self.db.execute("DROP INDEX %s" % index_name)
-        except Exception as e:
+        except Exception:
             pass

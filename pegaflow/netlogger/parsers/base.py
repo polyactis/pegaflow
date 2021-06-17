@@ -1,37 +1,41 @@
 """
 Common code for NetLogger parsers
 """
-__author__ = 'Dan Gunter <dkgunter@lbl.gov>'
-__rcsid__ = '$Id: base.py 28287 2011-08-18 03:42:53Z dang $'
-
-import calendar 
-from pegaflow.netlogger.configobj import ConfigObj, Section
-import glob
-import imp
-from itertools import starmap
-import os
-from Queue import Queue, Empty
+__author__ = "Dan Gunter <dkgunter@lbl.gov>"
+__rcsid__ = "$Id: base.py 28287 2011-08-18 03:42:53Z dang $"
+import calendar
 import re
-from select import select
-import sys
 import time
+from select import select
+
+#
+from Pegasus.netlogger import nlapi, nldate
+from Pegasus.netlogger.nlapi import EVENT_FIELD, HASH_FIELD, TS_FIELD, Level
+from Pegasus.netlogger.nllog import DoesLogging
+from Pegasus.netlogger.parsers import nlreadline
+from Pegasus.netlogger.util import hash_event
+
 #
 try:
-    from pyparsing import Word, alphanums, CharsNotIn, ZeroOrMore
-    from pyparsing import Group, Literal
-    from pyparsing import StringEnd, White, QuotedString, ParseException
-    from pyparsing import Each, OneOrMore, Optional, oneOf
+    from pyparsing import (
+        CharsNotIn,
+        Each,
+        Group,
+        Literal,
+        OneOrMore,
+        ParseException,
+        QuotedString,
+        StringEnd,
+        White,
+        Word,
+        ZeroOrMore,
+        alphanums,
+        oneOf,
+    )
+
     HAVE_PYPARSING = True
 except ImportError:
     HAVE_PYPARSING = False
-#
-from pegaflow.netlogger import nldate
-from pegaflow.netlogger.nllog import DoesLogging
-from pegaflow.netlogger import nlapi
-from pegaflow.netlogger.nlapi import Log, Level
-from pegaflow.netlogger.nlapi import TS_FIELD, EVENT_FIELD, HASH_FIELD
-from pegaflow.netlogger.parsers import nlreadline
-from pegaflow.netlogger.util import hash_event
 
 # Special result code for parsers to return
 # when they 'on purpose' skip a line
@@ -39,19 +43,22 @@ LINE_SKIPPED = 999
 
 try:
     from hashlib import md5
+
     md5_new = md5
 except ImportError:
     import md5
+
     md5_new = md5.new
+
 
 def getGuid(*strings):
     m5 = md5_new()
     for s in strings:
         m5.update(s)
     t = m5.hexdigest()
-    guid = "%s-%s-%s-%s-%s" % (
-        t[:8], t[8:12], t[12:16], t[16:20], t[20:])
+    guid = "{}-{}-{}-{}-{}".format(t[:8], t[8:12], t[12:16], t[16:20], t[20:])
     return guid
+
 
 def autoParseValue(vstr):
     try:
@@ -63,16 +70,19 @@ def autoParseValue(vstr):
             value = vstr
     return value
 
+
 def parse_ts(ts):
     "Parse a netlogger timestamp"
     # until 2033, a '1' in the first place means a float
-    if ts[0] == '1':
+    if ts[0] == "1":
         return float(ts)
-    ts, subs = ts.split('.')
-    subs = float('.' + subs[:-1])
-    return calendar.timegm(time.strptime(ts, r'%Y-%m-%dT%H:%M:%S')) + subs 
+    ts, subs = ts.split(".")
+    subs = float("." + subs[:-1])
+    return calendar.timegm(time.strptime(ts, r"%Y-%m-%dT%H:%M:%S")) + subs
+
 
 parseDate = parse_ts
+
 
 def tolerateBlanksAndComments(line=None, error=None, linenum=0):
     """Callback function fitting the signature of the callback
@@ -80,20 +90,21 @@ def tolerateBlanksAndComments(line=None, error=None, linenum=0):
     the line is empty or starts with a hash character, in which
     case it does nothing.
     """
-    if len(line) <= 1 or line[0] == '#':
+    if len(line) <= 1 or line[0] == "#":
         pass
     else:
-        raise(error)
-
+        raise (error)
 
 
 # Parse BP log lines with Regular Expressions
+
 
 class BPError(ValueError):
     """
     Exception class to indicate violations from the logging best practices
     standard.
     """
+
     def __init__(self, lineno, msg):
         """Create error object.
 
@@ -107,22 +118,28 @@ class BPError(ValueError):
     def __str__(self):
         return "Parser error on line %i: %s" % (self.lineno, self.msg)
 
+
 class BPValidationError(BPError):
     def __init__(self, msg):
         self.msg = msg
+
     def __str__(self):
         return "Validation error: " + str(self.msg)
+
 
 class BPParseError(BPError):
     def __init__(self, msg):
         self.msg = msg
+
     def __str__(self):
         return "Parse error: " + str(self.msg)
+
 
 """
 Regular expression that captures names and data
 """
-BP_EXPR = re.compile(r"""
+BP_EXPR = re.compile(
+    r"""
 (?:
     \s*                        # leading whitespace
     ([0-9a-zA-Z_.\-]+)         # Name
@@ -133,14 +150,17 @@ BP_EXPR = re.compile(r"""
     )
     \s*
 )
-""", flags = re.X)
+""",
+    flags=re.X,
+)
 
 """
 For validation, regular expression that captures all valid characters,
 so by simply comparing with string length we can tell if there are invalid
 characters in the string.
 """
-BP_EXPR_WS = re.compile(r"""
+BP_EXPR_WS = re.compile(
+    r"""
 (?:
     (\s*)                      # leading whitespace
     ([0-9a-zA-Z_.\-]+)         # Name
@@ -150,8 +170,11 @@ BP_EXPR_WS = re.compile(r"""
       (")((?:[^"] | (?<=\\)")*)(") # b) quoted string
     )
     (\s*)
-)""", flags=re.X)
-         
+)""",
+    flags=re.X,
+)
+
+
 def _bp_extract(s, as_dict=True, validate=False):
     """Parse BP log line and extract key=value pairs.
 
@@ -173,46 +196,48 @@ def _bp_extract(s, as_dict=True, validate=False):
       Dictionary or list of tuples (see `as_dict` arg)
     """
     if as_dict:
-        result = { }
+        result = {}
     else:
-        result = [ ]
+        result = []
     if not validate:
         for n, v, vq in BP_EXPR.findall(s):
             # check input
             if not n:
-                raise BPParseError("Bad key: '{0}'".format(n))
+                raise BPParseError("Bad key: '{}'".format(n))
             # add to result
             if vq:
                 v = vq.replace('\\"', '"')
             if as_dict:
                 result[n] = v
             else:
-                result.append((n,v))
+                result.append((n, v))
     else:
         valid_data_len = 0
         for ws1, n, v, q1, vq, q2, ws2 in BP_EXPR_WS.findall(s):
-            #print(",".join(["<"+x+">" for x in (ws1, n, v, q1, vq, q2, ws2)]))
+            # print(",".join(["<"+x+">" for x in (ws1, n, v, q1, vq, q2, ws2)]))
             # check input
             if not n:
-                raise BPParseError("Bad key: '{0}'".format(n))
-            valid_data_len += sum(map(len, (ws1, n, v, q1, vq, q2, ws2))) + 1 # 1 for '='
+                raise BPParseError("Bad key: '{}'".format(n))
+            valid_data_len += (
+                sum(map(len, (ws1, n, v, q1, vq, q2, ws2))) + 1
+            )  # 1 for '='
             # add to result
             if vq:
                 v = vq.replace('\\"', '"')
             if as_dict:
                 result[n] = v
             else:
-                result.append((n,v))
+                result.append((n, v))
         # check overall input
         junk_chars = len(s) - valid_data_len
         if junk_chars != 0:
-            raise BPValidationError("{0:d} junk chars in '{1}'".format(junk_chars, s))
+            raise BPValidationError("{:d} junk chars in '{}'".format(junk_chars, s))
     return result
 
 
 class ProcessInterface:
-    """Process interface for a parser
-    """
+    """Process interface for a parser"""
+
     def process(self, line):
         """Subclasses must override this method to return a list
         of dictionaries or formatted log strings (with newlines).
@@ -223,7 +248,6 @@ class ProcessInterface:
         To cause the caller to stop parsing this log, i.e. nothing will
         ever be ready, return None.
         """
-        pass
 
 
 class BaseParser(ProcessInterface, DoesLogging):
@@ -235,7 +259,7 @@ class BaseParser(ProcessInterface, DoesLogging):
     Each read() can return multiple events,
     or multiple read()s can return one event, transparently
     to the caller who only sees one log line per iteration.
-    If 'unparsed_file' is not None, write all lines that returned an 
+    If 'unparsed_file' is not None, write all lines that returned an
     error, or the constant LINE_SKIPPED, to this file.
 
     Parameters:
@@ -243,10 +267,16 @@ class BaseParser(ProcessInterface, DoesLogging):
            '_hash', which is a probabilistically unique (MD5) hash of all
            the other fields in the event.
     """
-    def __init__(self, input_file, fullname='unknown', 
-                 unparsed_file=None, parse_date=True,
-                 add_hash='no',
-                 **kw):
+
+    def __init__(
+        self,
+        input_file,
+        fullname="unknown",
+        unparsed_file=None,
+        parse_date=True,
+        add_hash="no",
+        **kw
+    ):
         """Initialize base parser.
 
         Parameters:
@@ -278,34 +308,35 @@ class BaseParser(ProcessInterface, DoesLogging):
         self._add_hash = self.boolParam(add_hash)
         # rest of parameters
         self._infile = nlreadline.BufferedReadline(input_file)
-        if hasattr(input_file, 'fileno'):
+        if hasattr(input_file, "fileno"):
             self._fake_file = False
-            self._infile_rlist = (input_file.fileno(),) # used in read_line
+            self._infile_rlist = (input_file.fileno(),)  # used in read_line
         else:
             # not a real file
             self._fake_file = True
             self._infile_rlist = ()
         try:
             self._offs = self._infile.tell()
-        except IOError:
+        except OSError:
             self._offs = 0
         self._prev_len, self._saved_len = 0, 0
-        self._saved = [ ]
+        self._saved = []
         self._name = fullname
         self._ufile = unparsed_file
-        self._header_values = { }
+        self._header_values = {}
         self._parser = NLSimpleParser(parse_date=parse_date)
         # Constant to add to each record
-        self._const_nvp = { }
+        self._const_nvp = {}
         # add GUID in env, if present
         guid = nlapi.getGuid(create=False)
         if guid:
-            self._const_nvp['guid'] = guid
+            self._const_nvp["guid"] = guid
         # add user-provided values (can override guid)
         self._const_nvp.update(kw)
         # cache string-valued version, will be empty string if kw == {}
-        self._const_nvp_str = ' '.join(["%s=%s" % (k,v) 
-                                        for k,v in self._const_nvp.items()])
+        self._const_nvp_str = " ".join(
+            ["{}={}".format(k, v) for k, v in self._const_nvp.items()]
+        )
         self.parse_date = parse_date
 
     def close(self):
@@ -346,22 +377,19 @@ class BaseParser(ProcessInterface, DoesLogging):
         a dictionary, with all basic types, representing any additional
         state that needs to be saved and restored.
         """
-        return { }
+        return {}
 
     def setParameters(self, param):
         """Subclasses should override this method to update their
         state with the contents of the arg 'param', a dictionary.
         """
-        pass
 
     def setHeaderValues(self, value_dict):
-        """Set a dictionary of header keyword, value pairs.
-        """
+        """Set a dictionary of header keyword, value pairs."""
         self._header_values = value_dict
 
     def getHeaderValue(self, key):
-        """Get value from group named 'key', or None.
-        """
+        """Get value from group named 'key', or None."""
         return self._header_values.get(key, None)
 
     def __iter__(self):
@@ -385,11 +413,11 @@ class BaseParser(ProcessInterface, DoesLogging):
             # all the items from the last readline, so
             # advance offset by its (saved) length
             if not self._saved:
-                self._prev_len = self._saved_len 
+                self._prev_len = self._saved_len
         else:
             line = self._read_line()
             # stop if line is empty
-            if line == '':
+            if line == "":
                 raise StopIteration
             item = line.strip()
             # main processing for the module
@@ -399,8 +427,7 @@ class BaseParser(ProcessInterface, DoesLogging):
                 if self._ufile:
                     self._ufile.write(line)
                 else:
-                    self.log.warn("unparsed.event", 
-                                  value=line.strip(), msg=E)
+                    self.log.warn("unparsed.event", value=line.strip(), msg=E)
                 result = False
             # A skipped line means that it will never
             # be parsed, but there was no error.
@@ -414,7 +441,7 @@ class BaseParser(ProcessInterface, DoesLogging):
                 self._offs += len(line)
                 if result is None:
                     raise StopIteration("EOF")
-                item = None # return this to caller
+                item = None  # return this to caller
             else:
                 item = result[0]
                 if len(result) == 1:
@@ -423,7 +450,7 @@ class BaseParser(ProcessInterface, DoesLogging):
                 else:
                     # don't advance offset until all results are returned
                     self._saved = list(result[1:])
-                    self._saved.reverse() # so we can pop()
+                    self._saved.reverse()  # so we can pop()
                     self._saved_len = len(line)
         # return the item
         if item is None:
@@ -432,23 +459,21 @@ class BaseParser(ProcessInterface, DoesLogging):
             return self._result(item)
 
     def _read_line(self):
-        """Read one line.
-        """
+        """Read one line."""
         if self._trace:
             self.log.trace("readline.start")
         if self._fake_file or select(self._infile_rlist, (), (), 0.1)[0]:
             line = self._infile.readline()
         else:
-            line = ''
+            line = ""
         if self._trace:
             self.log.trace("readline.end", n=len(line))
         return line
 
     def updateOffset(self):
-        """Advance offset by length previously parsed input.
-        """
+        """Advance offset by length previously parsed input."""
         self._offs += self._prev_len
-        self._prev_len = 0 # do not add this to offset again
+        self._prev_len = 0  # do not add this to offset again
 
     def _result(self, item):
         """Make item into a returnable result.
@@ -459,12 +484,12 @@ class BaseParser(ProcessInterface, DoesLogging):
         if isinstance(item, str):
             item = self._parser.parseLine(item)
         # Normalize the 'level' value
-        if 'level' in item:
-            level = item['level']
-            if hasattr(level, 'upper'):
-                lvlname = item['level'].upper()
-                item['level'] = Level.getLevel(lvlname)
-        # Add constant key, value pairs: do a copy and 
+        if "level" in item:
+            level = item["level"]
+            if hasattr(level, "upper"):
+                lvlname = item["level"].upper()
+                item["level"] = Level.getLevel(lvlname)
+        # Add constant key, value pairs: do a copy and
         # reverse update so new values override old ones.
         if self._const_nvp:
             _tmp = self._const_nvp.copy()
@@ -477,14 +502,14 @@ class BaseParser(ProcessInterface, DoesLogging):
         return item
 
     def flush(self):
-        """Return a list of all saved items, i.e., of all items 
+        """Return a list of all saved items, i.e., of all items
         that were parsed but not returned yet, and clear this list.
         """
-        result = [ ]
+        result = []
         # pending items, returned by parser
         for item in self._saved:
             result.append(self._result(item))
-        self._saved = [ ]
+        self._saved = []
         self._offs += self._saved_len
         self._saved_len, self._prev_len = 0, 0
         return result
@@ -511,16 +536,16 @@ class BaseParser(ProcessInterface, DoesLogging):
             return s
         if isinstance(s, str):
             sl = s.lower()
-            if sl in ('yes', 'on', 'true', '1'):
+            if sl in ("yes", "on", "true", "1"):
                 return True
             else:
                 return False
         return bool(s)
 
     def __str__(self):
-        return "%s(%s)" % (self._name, self._infile)
+        return "{}({})".format(self._name, self._infile)
 
-        
+
 class NLBaseParser(BaseParser):
     def __init__(self, input_file=None, err_cb=None, **kw):
         """Create a NetLogger parser, that implements the BaseParser
@@ -539,17 +564,16 @@ class NLBaseParser(BaseParser):
                            These errors are of type BPError.
         """
         self.err_cb = err_cb
-        self.err_list = [ ]
+        self.err_list = []
         if input_file is None:
             input_file = NullFile()
-        BaseParser.__init__(self, input_file, fullname='NLParser',  **kw)
+        BaseParser.__init__(self, input_file, fullname="NLParser", **kw)
 
     def parseLine(self, line):
         """Return a dictionary corresponding to the name,value pairs
         in the input 'line'.
         Raises ValueError if the format is incorrect.
         """
-        pass
 
     def parseStream(self):
         """Parse input stream, calling parseLine() for each line.
@@ -574,13 +598,15 @@ class NLBaseParser(BaseParser):
                     else:
                         self.err_cb(line=line, error=bpe, linenum=line_num)
 
+
 class NLSimpleParser(DoesLogging):
     """Simple, fast, not-too-flexible NL parser.
 
     Does *not* inherit from NLBaseParser.
-    This is important to allow the BaseParser to itself parse 
+    This is important to allow the BaseParser to itself parse
     netlogger input.
     """
+
     def __init__(self, verify=False, parse_date=True, **kw):
         DoesLogging.__init__(self)
         self.verify, self.parse_date = verify, parse_date
@@ -596,12 +622,13 @@ class NLSimpleParser(DoesLogging):
         # higher-level verification
         for key in TS_FIELD, EVENT_FIELD:
             if key not in fields:
-                raise BPParseError("missing required key '{0}'".format(key))
+                raise BPParseError("missing required key '{}'".format(key))
         # Pre-process date, if requested
         if self.parse_date:
             fields[TS_FIELD] = parse_ts(fields[TS_FIELD])
         # Done.
         return fields
+
 
 class NLFastParser(NLSimpleParser, NLBaseParser):
     """NetLogger parser that does inherit from NLBaseParser
@@ -612,14 +639,15 @@ class NLFastParser(NLSimpleParser, NLBaseParser):
     * Uses regular expressions instead of pyparsing.
     * Observed speedups on order of 50x (YMMV).
     """
+
     def __init__(self, *args, **kw):
         # strip out kw for simple parser
-        simple_parser_kw = { }
+        simple_parser_kw = {}
         for key, value in kw.items():
-            if key in ('verify', 'parse_date', 'strip_quotes'):
+            if key in ("verify", "parse_date", "strip_quotes"):
                 simple_parser_kw[key] = value
         for key in simple_parser_kw.keys():
-            if key != "parse_date": #shared
+            if key != "parse_date":  # shared
                 del kw[key]
         NLSimpleParser.__init__(self, **simple_parser_kw)
         NLBaseParser.__init__(self, *args, **kw)
@@ -628,19 +656,22 @@ class NLFastParser(NLSimpleParser, NLBaseParser):
     def process(self, line):
         return (self.parseLine(line),)
 
+
 if HAVE_PYPARSING:
+
     class NLPyParser(NLBaseParser):
-        """pyparsing--based implementation of the NLBaseParser
-        """
+        """pyparsing--based implementation of the NLBaseParser"""
+
         notSpace = CharsNotIn(" \n")
-        eq = Literal('=').suppress()
-        value = (QuotedString('"', escChar=chr(92), unquoteResults=False) \
-                     ^ OneOrMore(notSpace))
-        ts = Group(Literal('ts') + eq + value)
-        event = Group(Literal('event') + eq + value)
-        name = ~oneOf("ts event") + Word(alphanums +'-_.')
+        eq = Literal("=").suppress()
+        value = QuotedString('"', escChar=chr(92), unquoteResults=False) ^ OneOrMore(
+            notSpace
+        )
+        ts = Group(Literal("ts") + eq + value)
+        event = Group(Literal("event") + eq + value)
+        name = ~oneOf("ts event") + Word(alphanums + "-_.")
         nv = ZeroOrMore(Group(name + eq + value))
-        nvp = Each([ts, event, nv]) + White('\n').suppress() + StringEnd()
+        nvp = Each([ts, event, nv]) + White("\n").suppress() + StringEnd()
 
         def parseLine(self, line):
             try:
@@ -649,7 +680,7 @@ if HAVE_PYPARSING:
                 raise ValueError(E)
             result = {}
             for a in rlist:
-                if self.parse_date and a[0] == 'ts':
+                if self.parse_date and a[0] == "ts":
                     result[a[0]] = parse_ts(a[1])
                 else:
                     result[a[0]] = a[1]
@@ -659,27 +690,40 @@ if HAVE_PYPARSING:
     def process(self, line):
         return (self.parseLine(line),)
 
+
 else:
+
     class NLPyParser:
         BADNESS = """
-Can't use the NLPyParser class because pyparsing is not installed. 
-You can use NLFastParser instead, run 'easy_install pyparsing', or 
+Can't use the NLPyParser class because pyparsing is not installed.
+You can use NLFastParser instead, run 'easy_install pyparsing', or
 install from http://pyparsing.wikispaces.com/ .
 """
+
         def __init__(self, *args, **kw):
             raise NotImplementedError(self.BADNESS)
+
 
 class NullFile:
     def __init__(self, *args):
         return
-    def read(self, n): return ''
-    def readline(self): return ''
-    def seek(self, n, mode): pass
-    def tell(self): return 0
+
+    def read(self, n):
+        return ""
+
+    def readline(self):
+        return ""
+
+    def seek(self, n, mode):
+        pass
+
+    def tell(self):
+        return 0
+
 
 def getTimezone(t=None):
     """Return current timezone as UTC offset,
     formatted as [+/-]HH:MM
     """
     hr, min, sign = nldate.getLocaltimeOffsetParts(t)
-    return "%s%02d:%02d" % (sign, hr, min) 
+    return "%s%02d:%02d" % (sign, hr, min)

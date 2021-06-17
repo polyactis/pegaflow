@@ -13,7 +13,7 @@ from .site_catalog import SiteCatalog
 from .transformation_catalog import Transformation, TransformationCatalog
 from .writable import Writable, _CustomEncoder, _filter_out_nones
 
-from Pegasus.client._client import from_env
+from pegaflow.client._client import from_env, Client
 
 PEGASUS_VERSION = "5.0"
 
@@ -719,7 +719,7 @@ class Workflow(Writable, HookMixin, ProfileMixin, MetadataMixin):
         # set/overridden by call to Workflow.run
         self._run_output = None
 
-        self._client = None
+        self._client:Client = None
 
         self._path = None
 

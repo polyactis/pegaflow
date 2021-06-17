@@ -6,7 +6,7 @@ class NoSuchUser(Exception):
     pass
 
 
-class User(object):
+class User:
     def __init__(self, uid, gid, username, homedir):
         self.uid = uid
         self.gid = gid
@@ -34,7 +34,7 @@ def get_user_by_uid(uid):
     try:
         pw = pwd.getpwuid(uid)
         return __user_from_pwd(pw)
-    except KeyError as e:
+    except KeyError:
         raise NoSuchUser(uid)
 
 

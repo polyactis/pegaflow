@@ -1,7 +1,8 @@
 import logging
 
-from pegaflow.db.admin.versions.base_version import BaseVersion
 from sqlalchemy.exc import *
+
+from Pegasus.db.admin.versions.base_version import BaseVersion
 
 DB_VERSION = 4
 
@@ -10,7 +11,7 @@ log = logging.getLogger(__name__)
 
 class Version(BaseVersion):
     def __init__(self, connection):
-        super(Version, self).__init__(connection)
+        super().__init__(connection)
 
     def update(self, force=False):
         "Add archived field to master_workflow table"
@@ -29,4 +30,3 @@ class Version(BaseVersion):
 
     def downgrade(self, force=False):
         "Downgrade is not necessary as archived is added with a default that works for old versions"
-        pass

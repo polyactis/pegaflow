@@ -1,9 +1,10 @@
 import logging
 
-from pegaflow.db.admin.admin_loader import *
-from pegaflow.db.admin.versions.base_version import BaseVersion
-from pegaflow.db.schema import *
 from sqlalchemy.exc import *
+
+from Pegasus.db.admin.admin_loader import *
+from Pegasus.db.admin.versions.base_version import BaseVersion
+from Pegasus.db.schema import *
 
 DB_VERSION = 7
 
@@ -12,7 +13,7 @@ log = logging.getLogger(__name__)
 
 class Version(BaseVersion):
     def __init__(self, connection):
-        super(Version, self).__init__(connection)
+        super().__init__(connection)
 
     def update(self, force=False):
         """
@@ -45,4 +46,3 @@ class Version(BaseVersion):
 
     def downgrade(self, force=False):
         "Downgrade is not necessary as reason accepts NULL values"
-        pass

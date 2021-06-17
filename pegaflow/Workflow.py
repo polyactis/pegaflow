@@ -1431,16 +1431,20 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
                 session.rollback()
         if self.direct_run:
             # plan and submit the workflow for execution
+            print(f"Submitting the workflow ...", flush=True)
             self.plan(submit=True)
 
             # braindump becomes accessible following a call to wf.plan()
-            print(self.braindump.submit_dir)
+            print(f"submit_dir is {self.braindump.submit_dir}")
 
             # wait for workflow execution to complete
+            print(f"Waiting for the workflow to finish ...", flush=True)
             self.wait()
 
             # workflow debugging and statistics
+            print(f"Analyzing the workflow ...", flush=True)
             self.analyze()
+            print(f"Calculating statistics on the workflow ...", flush=True)
             self.statistics()
 
 if __name__ == '__main__':

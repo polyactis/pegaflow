@@ -1,10 +1,9 @@
 __author__ = "Rafael Ferreira da Silva"
 
 import abc
-from future.utils import with_metaclass
 
 
-class BaseVersion(with_metaclass(abc.ABCMeta, object)):
+class BaseVersion(metaclass=abc.ABCMeta):
     def __init__(self, db):
         self.db = db
 
