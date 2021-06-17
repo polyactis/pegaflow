@@ -39,7 +39,7 @@ import subprocess
 import sys
 import time
 
-from Pegasus.tools import utils
+from pegaflow.tools import utils
 
 
 def find_prog(prog, dir=[]):

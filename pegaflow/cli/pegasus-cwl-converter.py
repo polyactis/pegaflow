@@ -8,8 +8,8 @@ from cwl_utils import parser_v1_1 as cwl
 from jsonschema import validate
 from jsonschema.exceptions import ValidationError
 
-from Pegasus import yaml
-from Pegasus.api import (
+from pegaflow import yaml
+from pegaflow.api import (
     Container,
     File,
     Job,
@@ -18,7 +18,7 @@ from Pegasus.api import (
     TransformationCatalog,
     Workflow,
 )
-from Pegasus.api.errors import DuplicateError
+from pegaflow.api.errors import DuplicateError
 
 log = logging.getLogger("logger")
 

@@ -10,10 +10,10 @@ from glob import glob
 from pathlib import Path
 from typing import List, Optional
 
-from Pegasus import user
-from Pegasus.db import connection
-from Pegasus.db.ensembles import Ensembles, Triggers, TriggerType
-from Pegasus.db.schema import Trigger
+from pegaflow import user
+from pegaflow.db import connection
+from pegaflow.db.ensembles import Ensembles, Triggers, TriggerType
+from pegaflow.db.schema import Trigger
 
 
 # --- manager ------------------------------------------------------------------

@@ -26,8 +26,8 @@ import sys
 import time
 import traceback
 
-from Pegasus.monitoring.job import IntegrityMetric, Job
-from Pegasus.tools import kickstart_parser, utils
+from pegaflow.monitoring.job import IntegrityMetric, Job
+from pegaflow.tools import kickstart_parser, utils
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ NLSimpleParser = None
 
 
 try:
-    from Pegasus.netlogger.parsers.base import NLSimpleParser
+    from pegaflow.netlogger.parsers.base import NLSimpleParser
 except Exception:
     logger.info("cannot import NL parser")
     print(traceback.format_exc())

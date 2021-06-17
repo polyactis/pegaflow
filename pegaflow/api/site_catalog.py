@@ -3,10 +3,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional, Union
 
-from Pegasus.api._utils import _chained, _get_class_enum_member_str, _get_enum_str
-from Pegasus.api.errors import DuplicateError
-from Pegasus.api.mixins import ProfileMixin
-from Pegasus.api.writable import Writable, _filter_out_nones
+from pegaflow.api._utils import _chained, _get_class_enum_member_str, _get_enum_str
+from pegaflow.api.errors import DuplicateError
+from pegaflow.api.mixins import ProfileMixin
+from pegaflow.api.writable import Writable, _filter_out_nones
 
 PEGASUS_VERSION = "5.0"
 

@@ -9,10 +9,10 @@ from urllib import parse as urlparse
 
 import requests
 
-from Pegasus.command import Command, CompoundCommand, LoggingCommand
-from Pegasus.db.ensembles import EnsembleStates, EnsembleWorkflowStates, TriggerType
-from Pegasus.service.ensembles import emapp, manager
-from Pegasus.service.ensembles.trigger import TriggerManager
+from pegaflow.command import Command, CompoundCommand, LoggingCommand
+from pegaflow.db.ensembles import EnsembleStates, EnsembleWorkflowStates, TriggerType
+from pegaflow.service.ensembles import emapp, manager
+from pegaflow.service.ensembles.trigger import TriggerManager
 
 log = logging.getLogger(__name__)
 

@@ -41,7 +41,7 @@ import threading
 import time
 import traceback
 
-from Pegasus.tools import worker_utils as utils
+from pegaflow.tools import worker_utils as utils
 
 try:
     import configparser

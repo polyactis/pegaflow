@@ -4,7 +4,7 @@ import os
 import pamela
 from flask import g
 
-from Pegasus import user
+from pegaflow import user
 
 log = logging.getLogger(__name__)
 

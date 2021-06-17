@@ -8,7 +8,7 @@ from enum import Enum
 from flask.json import JSONEncoder
 from sqlalchemy import inspect
 
-from Pegasus.service.base import ErrorResponse, OrderedDict, PagedResponse
+from pegaflow.service.base import ErrorResponse, OrderedDict, PagedResponse
 
 log = logging.getLogger(__name__)
 

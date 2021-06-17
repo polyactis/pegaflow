@@ -37,11 +37,11 @@ import sys
 import time
 import traceback
 
-from Pegasus.db import connection
-from Pegasus.monitoring import event_output as eo
-from Pegasus.monitoring import notifications
-from Pegasus.monitoring.workflow import MONITORD_RECOVER_FILE, Workflow
-from Pegasus.tools import properties, utils
+from pegaflow.db import connection
+from pegaflow.monitoring import event_output as eo
+from pegaflow.monitoring import notifications
+from pegaflow.monitoring.workflow import MONITORD_RECOVER_FILE, Workflow
+from pegaflow.tools import properties, utils
 
 # Save our own basename
 prog_base = os.path.split(sys.argv[0])[1]

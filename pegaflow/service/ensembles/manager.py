@@ -8,16 +8,16 @@ import time
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql import text
 
-from Pegasus import braindump, user
-from Pegasus.db import connection
-from Pegasus.db.ensembles import (
+from pegaflow import braindump, user
+from pegaflow.db import connection
+from pegaflow.db.ensembles import (
     EMError,
     Ensembles,
     EnsembleStates,
     EnsembleWorkflowStates,
 )
-from Pegasus.db.schema import MasterWorkflow, MasterWorkflowstate
-from Pegasus.service.ensembles import emapp
+from pegaflow.db.schema import MasterWorkflow, MasterWorkflowstate
+from pegaflow.service.ensembles import emapp
 
 log = logging.getLogger(__name__)
 

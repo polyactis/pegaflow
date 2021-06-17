@@ -3,7 +3,7 @@
 
 Basic Usage::
 
-    >>> from Pegasus import braindump
+    >>> from pegaflow import braindump
     >>> braindump.loads("user: mayani\ngrid_dn: null\n")
     {'grid_dn': None, 'user': 'mayani'}
 
@@ -16,8 +16,8 @@ Basic Usage::
 from pathlib import Path
 from typing import Optional, TextIO
 
-from Pegasus import yaml
-from Pegasus.vendor import attr
+from pegaflow import yaml
+from pegaflow.vendor import attr
 
 __all__ = (
     "load",

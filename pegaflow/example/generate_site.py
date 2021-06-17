@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from Pegasus.api import Arch, Directory, FileServer, Grid, Operation, OS, Scheduler, Site, SiteCatalog, SupportedJobs
+from pegaflow.api import Arch, Directory, FileServer, Grid, Operation, OS, Scheduler, Site, SiteCatalog, SupportedJobs
 import os, sys
 import time
 

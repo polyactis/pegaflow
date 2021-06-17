@@ -5,8 +5,8 @@ import time
 
 from sqlalchemy import orm
 
-from Pegasus.db import connection
-from Pegasus.db.schema import *
+from pegaflow.db import connection
+from pegaflow.db.schema import *
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +23,7 @@ Any parent or sibling workflows will be left untouched.
 
 Usage::
 
- from Pegasus.db import expunge
+ from pegaflow.db import expunge
 
  connString = 'sqlite:///pegasusMontage.db'
  wf_uuid = '1249335e-7692-4751-8da2-efcbb5024429'

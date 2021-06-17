@@ -3,7 +3,7 @@
 
 Basic Usage::
 
-    >>> from Pegasus import properties
+    >>> from pegaflow import properties
     >>> properties.loads("... ")
     ...
 
@@ -18,7 +18,7 @@ import io
 from configparser import DEFAULTSECT, ConfigParser
 from typing import TextIO
 
-from Pegasus.api.properties import Properties
+from pegaflow.api.properties import Properties
 
 __all__ = (
     "load",

@@ -2,9 +2,9 @@ from collections import defaultdict
 from io import StringIO
 from typing import TextIO
 
-from Pegasus import yaml
-from Pegasus.api.errors import PegasusError
-from Pegasus.api.site_catalog import (
+from pegaflow import yaml
+from pegaflow.api.errors import PegasusError
+from pegaflow.api.site_catalog import (
     OS,
     Arch,
     Directory,
@@ -23,7 +23,7 @@ from Pegasus.api.site_catalog import (
 
 Basic Usage::
 
-    >>> from Pegasus import site_catalog
+    >>> from pegaflow import site_catalog
     >>> site_catalog.loads("... ")
     ...
 

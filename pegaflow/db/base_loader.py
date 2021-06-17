@@ -3,7 +3,7 @@ import time
 
 from sqlalchemy import exc
 
-from Pegasus.db import connection
+from pegaflow.db import connection
 
 
 class BaseLoader:

@@ -7,9 +7,9 @@ import sys
 import uuid
 from optparse import OptionParser
 
-from Pegasus.cluster import RecordParser
-from Pegasus.monitoring.metadata import Metadata
-from Pegasus.tools import kickstart_parser
+from pegaflow.cluster import RecordParser
+from pegaflow.monitoring.metadata import Metadata
+from pegaflow.tools import kickstart_parser
 
 # logging
 log = {

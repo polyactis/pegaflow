@@ -10,7 +10,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 # TODO: circular import here...
 import Pegasus.db as db
-from Pegasus import user
+from pegaflow import user
 
 
 def timestamp(dt):

@@ -25,7 +25,7 @@ import os
 import re
 from io import StringIO
 
-from Pegasus.tools import utils
+from pegaflow.tools import utils
 
 logger = logging.getLogger(__name__)
 

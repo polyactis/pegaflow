@@ -28,12 +28,12 @@ import traceback
 import urllib.parse
 from threading import Thread
 
-from Pegasus import json
-from Pegasus.db import connection, expunge
-from Pegasus.db.dashboard_loader import DashboardLoader
-from Pegasus.db.workflow_loader import WorkflowLoader
-from Pegasus.netlogger import nlapi
-from Pegasus.tools import properties, utils
+from pegaflow import json
+from pegaflow.db import connection, expunge
+from pegaflow.db.dashboard_loader import DashboardLoader
+from pegaflow.db.workflow_loader import WorkflowLoader
+from pegaflow.netlogger import nlapi
+from pegaflow.tools import properties, utils
 
 log = logging.getLogger(__name__)
 

@@ -28,9 +28,9 @@ from sqlalchemy import func
 from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm.exc import NoResultFound
 
-from Pegasus.db import connection
-from Pegasus.db.schema import *
-from Pegasus.db.schema import check_table_exists, get_missing_tables, metadata
+from pegaflow.db import connection
+from pegaflow.db.schema import *
+from pegaflow.db.schema import check_table_exists, get_missing_tables, metadata
 
 __author__ = "Rafael Ferreira da Silva"
 

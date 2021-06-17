@@ -3,7 +3,7 @@
 
 Basic Usage::
 
-    >>> from Pegasus import replica_catalog
+    >>> from pegaflow import replica_catalog
     >>> replica_catalog.loads("... ")
     ...
 
@@ -17,9 +17,9 @@ Basic Usage::
 from io import StringIO
 from typing import TextIO
 
-from Pegasus import yaml
-from Pegasus.api.errors import PegasusError
-from Pegasus.api.replica_catalog import _PFN, ReplicaCatalog
+from pegaflow import yaml
+from pegaflow.api.errors import PegasusError
+from pegaflow.api.replica_catalog import _PFN, ReplicaCatalog
 
 __all__ = (
     "load",

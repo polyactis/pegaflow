@@ -31,10 +31,10 @@ from sqlalchemy.sql.expression import (
 )
 from sqlalchemy.util._collections import KeyedTuple
 
-from Pegasus.db import connection
-from Pegasus.db.admin.admin_loader import DBAdminError
-from Pegasus.db.errors import StampedeDBNotFoundError
-from Pegasus.db.schema import *
+from pegaflow.db import connection
+from pegaflow.db.admin.admin_loader import DBAdminError
+from pegaflow.db.errors import StampedeDBNotFoundError
+from pegaflow.db.schema import *
 
 log = logging.getLogger(__name__)
 

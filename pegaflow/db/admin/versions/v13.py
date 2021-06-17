@@ -1,7 +1,7 @@
 import logging
 
-from Pegasus.db.admin.admin_loader import DBAdminError
-from Pegasus.db.admin.versions.base_version import BaseVersion
+from pegaflow.db.admin.admin_loader import DBAdminError
+from pegaflow.db.admin.versions.base_version import BaseVersion
 
 DB_VERSION = 13
 

@@ -4,15 +4,15 @@ import os
 from flask import g, redirect, render_template, request, send_from_directory, url_for
 from sqlalchemy.orm.exc import NoResultFound
 
-from Pegasus.db.admin.admin_loader import DBAdminError
-from Pegasus.db.errors import StampedeDBNotFoundError
-from Pegasus.service import filters
-from Pegasus.service._serialize import serialize
-from Pegasus.service.base import ErrorResponse, ServiceError
-from Pegasus.service.dashboard import blueprint
-from Pegasus.service.dashboard.dashboard import Dashboard, NoWorkflowsFoundError
-from Pegasus.service.dashboard.queries import MasterDBNotFoundError
-from Pegasus.tools import utils
+from pegaflow.db.admin.admin_loader import DBAdminError
+from pegaflow.db.errors import StampedeDBNotFoundError
+from pegaflow.service import filters
+from pegaflow.service._serialize import serialize
+from pegaflow.service.base import ErrorResponse, ServiceError
+from pegaflow.service.dashboard import blueprint
+from pegaflow.service.dashboard.dashboard import Dashboard, NoWorkflowsFoundError
+from pegaflow.service.dashboard.queries import MasterDBNotFoundError
+from pegaflow.tools import utils
 
 log = logging.getLogger(__name__)
 

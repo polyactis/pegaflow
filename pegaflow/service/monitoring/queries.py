@@ -21,10 +21,10 @@ from sqlalchemy.orm import aliased, defer, joinedload
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.sql.expression import and_, desc, distinct, func
 
-from Pegasus.db import connection
-from Pegasus.db.admin.admin_loader import DBAdminError
-from Pegasus.db.errors import StampedeDBNotFoundError
-from Pegasus.db.schema import (
+from pegaflow.db import connection
+from pegaflow.db.admin.admin_loader import DBAdminError
+from pegaflow.db.errors import StampedeDBNotFoundError
+from pegaflow.db.schema import (
     RCLFN,
     RCPFN,
     Host,
@@ -42,10 +42,10 @@ from Pegasus.db.schema import (
     WorkflowMeta,
     Workflowstate,
 )
-from Pegasus.service import cache
-from Pegasus.service._query import InvalidQueryError, query_parse
-from Pegasus.service._sort import InvalidSortError, sort_parse
-from Pegasus.service.base import PagedResponse
+from pegaflow.service import cache
+from pegaflow.service._query import InvalidQueryError, query_parse
+from pegaflow.service._sort import InvalidSortError, sort_parse
+from pegaflow.service.base import PagedResponse
 
 log = logging.getLogger(__name__)
 

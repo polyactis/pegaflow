@@ -9,11 +9,11 @@ import time
 from select import select
 
 #
-from Pegasus.netlogger import nlapi, nldate
-from Pegasus.netlogger.nlapi import EVENT_FIELD, HASH_FIELD, TS_FIELD, Level
-from Pegasus.netlogger.nllog import DoesLogging
-from Pegasus.netlogger.parsers import nlreadline
-from Pegasus.netlogger.util import hash_event
+from pegaflow.netlogger import nlapi, nldate
+from pegaflow.netlogger.nlapi import EVENT_FIELD, HASH_FIELD, TS_FIELD, Level
+from pegaflow.netlogger.nllog import DoesLogging
+from pegaflow.netlogger.parsers import nlreadline
+from pegaflow.netlogger.util import hash_event
 
 #
 try:

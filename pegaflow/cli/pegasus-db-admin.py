@@ -18,6 +18,6 @@
 __author__ = "Rafael Ferreira da Silva"
 
 
-from Pegasus.db.admin import main
+from pegaflow.db.admin import main
 
 main()

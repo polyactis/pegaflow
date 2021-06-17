@@ -5,16 +5,16 @@ import subprocess
 
 from flask import g, make_response, request, url_for
 
-from Pegasus.db import connection
-from Pegasus.db.ensembles import (
+from pegaflow.db import connection
+from pegaflow.db.ensembles import (
     EMError,
     Ensembles,
     EnsembleWorkflowStates,
     Triggers,
     TriggerType,
 )
-from Pegasus.service.ensembles import api, emapp
-from Pegasus.service.lifecycle import authenticate
+from pegaflow.service.ensembles import api, emapp
+from pegaflow.service.lifecycle import authenticate
 
 log = logging.getLogger(__name__)
 

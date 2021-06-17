@@ -28,13 +28,13 @@ import logging
 import sys
 from pathlib import Path
 
-from Pegasus.db import connection
-from Pegasus.db.connection import ConnectionError, DBType
-from Pegasus.service.monitoring.queries import (
+from pegaflow.db import connection
+from pegaflow.db.connection import ConnectionError, DBType
+from pegaflow.service.monitoring.queries import (
     StampedeDBNotFoundError,
     StampedeWorkflowQueries,
 )
-from Pegasus.tools import utils
+from pegaflow.tools import utils
 
 
 def configure_logging(verbosity=0):

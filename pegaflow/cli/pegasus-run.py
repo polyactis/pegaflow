@@ -9,7 +9,7 @@ from pathlib import Path
 
 import click
 
-from Pegasus.tools.utils import slurp_braindb
+from pegaflow.tools.utils import slurp_braindb
 
 log = logging.getLogger("pegasus-run")
 

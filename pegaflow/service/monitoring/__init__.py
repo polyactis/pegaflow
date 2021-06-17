@@ -18,4 +18,4 @@ from flask import Blueprint
 
 monitoring = Blueprint("monitoring", __name__)
 
-from Pegasus.service.monitoring import views, errors  # noqa: E402,F401 isort:skip
+from pegaflow.service.monitoring import views, errors  # noqa: E402,F401 isort:skip

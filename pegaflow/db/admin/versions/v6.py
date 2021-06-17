@@ -4,10 +4,10 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.schema import Column, ForeignKey, Index, Table
 from sqlalchemy.types import Integer, String
 
-from Pegasus.db.admin.admin_loader import *
-from Pegasus.db.admin.versions.base_version import BaseVersion
-from Pegasus.db.schema import *
-from Pegasus.db.schema import KeyInteger, check_table_exists, metadata, table_keywords
+from pegaflow.db.admin.admin_loader import *
+from pegaflow.db.admin.versions.base_version import BaseVersion
+from pegaflow.db.schema import *
+from pegaflow.db.schema import KeyInteger, check_table_exists, metadata, table_keywords
 
 DB_VERSION = 6
 

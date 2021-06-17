@@ -10,7 +10,7 @@ from os import path
 from pathlib import Path
 from typing import BinaryIO, Dict, List, Union
 
-from Pegasus import braindump, yaml
+from pegaflow import braindump, yaml
 
 # Set log formatting s.t. only messages are shown. Output from pegasus
 # commands will already contain log level categories so it isn't necessary

@@ -599,7 +599,7 @@ class Workflow(Writable, HookMixin, ProfileMixin, MetadataMixin):
 
         from pathlib import Path
 
-        from Pegasus.api import *
+        from pegaflow.api import *
 
         logging.basicConfig(level=logging.DEBUG)
 

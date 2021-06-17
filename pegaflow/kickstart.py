@@ -3,7 +3,7 @@
 
 Basic Usage::
 
-    >>> from Pegasus import kickstart
+    >>> from pegaflow import kickstart
     >>> kickstart.loads("... ")
     ...
 

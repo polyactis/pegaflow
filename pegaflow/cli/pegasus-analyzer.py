@@ -35,10 +35,10 @@ import sys
 import tempfile
 import traceback
 
-from Pegasus.db import connection
-from Pegasus.db.admin.admin_loader import DBAdminError
-from Pegasus.db.workflow import stampede_statistics
-from Pegasus.tools import kickstart_parser, utils
+from pegaflow.db import connection
+from pegaflow.db.admin.admin_loader import DBAdminError
+from pegaflow.db.workflow import stampede_statistics
+from pegaflow.tools import kickstart_parser, utils
 
 root_logger = logging.getLogger()
 logger = logging.getLogger("pegasus-analyzer")

@@ -3,7 +3,7 @@
 
 Basic Usage::
 
-    >>> from Pegasus import transformation_catalog
+    >>> from pegaflow import transformation_catalog
     >>> transformation_catalog.loads("... ")
     ...
 
@@ -18,10 +18,10 @@ from collections import defaultdict
 from io import StringIO
 from typing import TextIO
 
-from Pegasus import yaml
-from Pegasus.api.errors import PegasusError
-from Pegasus.api.site_catalog import OS, Arch
-from Pegasus.api.transformation_catalog import (
+from pegaflow import yaml
+from pegaflow.api.errors import PegasusError
+from pegaflow.api.site_catalog import OS, Arch
+from pegaflow.api.transformation_catalog import (
     Container,
     Transformation,
     TransformationCatalog,

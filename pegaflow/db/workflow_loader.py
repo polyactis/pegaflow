@@ -5,9 +5,9 @@ import time
 
 from sqlalchemy import exc, orm
 
-from Pegasus.db.base_loader import BaseLoader
-from Pegasus.db.schema import *
-from Pegasus.netlogger import util
+from pegaflow.db.base_loader import BaseLoader
+from pegaflow.db.schema import *
+from pegaflow.netlogger import util
 
 
 class WorkflowLoader(BaseLoader):

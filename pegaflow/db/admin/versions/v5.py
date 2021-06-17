@@ -4,8 +4,8 @@ import warnings
 from sqlalchemy import *
 from sqlalchemy.exc import *
 
-from Pegasus.db.admin.versions.base_version import BaseVersion
-from Pegasus.db.schema import *
+from pegaflow.db.admin.versions.base_version import BaseVersion
+from pegaflow.db.schema import *
 
 DB_VERSION = 5
 

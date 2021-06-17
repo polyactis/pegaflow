@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-from Pegasus.init import main
+from pegaflow.init import main
 
 # pegasus_share_dir = (Path(os.environ["PEGASUS_HOME"]) / "share" / "pegasus").resolve()
 

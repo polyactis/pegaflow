@@ -2,7 +2,7 @@ import logging
 import sys
 from optparse import OptionParser
 
-from Pegasus.tools import utils
+from pegaflow.tools import utils
 
 log = logging.getLogger(__name__)
 

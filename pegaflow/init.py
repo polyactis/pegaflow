@@ -8,8 +8,8 @@ import click
 from git import Repo
 from git.exc import GitCommandError
 
-from Pegasus import yaml
-from Pegasus.api import *
+from pegaflow import yaml
+from pegaflow.api import *
 
 #### Default time to update dynamic config files in seconds ####
 update_config_timeout = 24 * 60 * 60

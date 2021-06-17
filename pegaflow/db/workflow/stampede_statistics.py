@@ -161,9 +161,9 @@ from sqlalchemy import orm
 from sqlalchemy.sql.expression import and_, case, cast, distinct, func, not_, or_
 from sqlalchemy.types import Float, Integer
 
-from Pegasus.db import connection
-from Pegasus.db.errors import StampedeDBNotFoundError
-from Pegasus.db.schema import *
+from pegaflow.db import connection
+from pegaflow.db.errors import StampedeDBNotFoundError
+from pegaflow.db.schema import *
 
 # Main stats class.
 

@@ -17,7 +17,7 @@ import sys
 import time
 from datetime import datetime
 
-from Pegasus.tools import worker_utils as utils
+from pegaflow.tools import worker_utils as utils
 
 ##
 #  Copyright 2007-2017 University Of Southern California

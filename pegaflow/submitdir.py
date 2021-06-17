@@ -7,16 +7,16 @@ import shutil
 import tarfile
 from os.path import expanduser
 
-from Pegasus.command import CompoundCommand, LoggingCommand
-from Pegasus.db import connection
-from Pegasus.db.schema import (
+from pegaflow.command import CompoundCommand, LoggingCommand
+from pegaflow.db import connection
+from pegaflow.db.schema import (
     EnsembleWorkflow,
     MasterWorkflow,
     MasterWorkflowstate,
     Workflow,
     Workflowstate,
 )
-from Pegasus.tools import utils
+from pegaflow.tools import utils
 
 log = logging.getLogger(__name__)
 

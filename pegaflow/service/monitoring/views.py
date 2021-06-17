@@ -3,11 +3,11 @@ import logging
 
 from flask import g, make_response, request
 
-from Pegasus.service import cache
-from Pegasus.service._serialize import jsonify
-from Pegasus.service.base import OrderedDict
-from Pegasus.service.monitoring import monitoring as blueprint
-from Pegasus.service.monitoring.queries import (
+from pegaflow.service import cache
+from pegaflow.service._serialize import jsonify
+from pegaflow.service.base import OrderedDict
+from pegaflow.service.monitoring import monitoring as blueprint
+from pegaflow.service.monitoring.queries import (
     MasterWorkflowQueries,
     StampedeWorkflowQueries,
 )

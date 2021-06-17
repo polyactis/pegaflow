@@ -7,11 +7,11 @@ import re
 import sys
 import traceback
 
-from Pegasus.db import connection
-from Pegasus.db.workflow.stampede_statistics import StampedeStatistics
-from Pegasus.db.workflow.stampede_wf_statistics import StampedeWorkflowStatistics
-from Pegasus.plots_stats import utils as stats_utils
-from Pegasus.tools import utils
+from pegaflow.db import connection
+from pegaflow.db.workflow.stampede_statistics import StampedeStatistics
+from pegaflow.db.workflow.stampede_wf_statistics import StampedeWorkflowStatistics
+from pegaflow.plots_stats import utils as stats_utils
+from pegaflow.tools import utils
 
 root_logger = logging.getLogger()
 logger = logging.getLogger("pegasus-statistics")

@@ -29,6 +29,6 @@ the program is run with the same filename.out argument.
 
 import sys
 
-from Pegasus import exitcode
+from pegaflow import exitcode
 
 exitcode.main(sys.argv[1:])

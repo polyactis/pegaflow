@@ -15,7 +15,7 @@ from xml.parsers import expat
 import yaml
 import yaml.constructor
 
-from Pegasus.monitoring.metadata import FileMetadata
+from pegaflow.monitoring.metadata import FileMetadata
 
 ##
 #  Copyright 2007-2010 University Of Southern California

@@ -2,10 +2,10 @@ from collections import defaultdict
 from io import StringIO
 from typing import TextIO
 
-from Pegasus import yaml
-from Pegasus.api.errors import PegasusError
-from Pegasus.api.replica_catalog import File
-from Pegasus.api.workflow import (
+from pegaflow import yaml
+from pegaflow.api.errors import PegasusError
+from pegaflow.api.replica_catalog import File
+from pegaflow.api.workflow import (
     Job,
     SubWorkflow,
     Workflow,
@@ -13,16 +13,16 @@ from Pegasus.api.workflow import (
     _LinkType,
     _Use,
 )
-from Pegasus.replica_catalog import _to_rc
-from Pegasus.site_catalog import _to_sc
-from Pegasus.transformation_catalog import _to_tc
+from pegaflow.replica_catalog import _to_rc
+from pegaflow.site_catalog import _to_sc
+from pegaflow.transformation_catalog import _to_tc
 
 """
 :mod:`workflow` exposes an API to serialize and deserialize Pegasus's workflow file.
 
 Basic Usage::
 
-    >>> from Pegasus import workflow
+    >>> from pegaflow import workflow
     >>> workflow.loads("... ")
     ...
 

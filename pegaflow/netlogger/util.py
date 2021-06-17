@@ -17,7 +17,7 @@ from optparse import Option, OptionParser, OptionValueError, make_option
 
 #
 import Pegasus.netlogger
-from Pegasus.netlogger import configobj
+from pegaflow.netlogger import configobj
 
 try:
     from hashlib import md5
@@ -194,7 +194,7 @@ def parseDatetime(d, utc=False):
     """Parse a datetime object, or anything that formats itself
     with isoformat(), to number of seconds since epoch.
     """
-    from Pegasus.netlogger.parsers.base import parseDate
+    from pegaflow.netlogger.parsers.base import parseDate
 
     if d is None:
         raise ValueError("date is None")

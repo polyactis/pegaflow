@@ -2,7 +2,7 @@ import logging
 
 from sqlalchemy.exc import *
 
-from Pegasus.db.admin.versions.base_version import BaseVersion
+from pegaflow.db.admin.versions.base_version import BaseVersion
 
 DB_VERSION = 4
 

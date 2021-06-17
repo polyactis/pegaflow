@@ -27,8 +27,8 @@ from urllib.parse import urlparse
 from sqlalchemy import create_engine, event, exc, orm
 from sqlalchemy.engine import Engine
 
-from Pegasus import user as users
-from Pegasus.tools import properties, utils
+from pegaflow import user as users
+from pegaflow.tools import properties, utils
 
 __all__ = ["connect"]
 
@@ -162,7 +162,7 @@ def connect(
     # Database creation
     if create:
         try:
-            from Pegasus.db.admin.admin_loader import db_create
+            from pegaflow.db.admin.admin_loader import db_create
 
             db_create(
                 dburi,
@@ -217,7 +217,7 @@ def connect(
 
     if not create and schema_check:
         try:
-            from Pegasus.db.admin.admin_loader import DBAdminError, db_verify
+            from pegaflow.db.admin.admin_loader import DBAdminError, db_verify
 
             db = orm.scoped_session(Session)
             db_verify(

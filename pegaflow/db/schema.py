@@ -41,10 +41,10 @@ from sqlalchemy.types import (
     Text,
 )
 
-from Pegasus.db.ensembles import Ensemble as _Ensemble
-from Pegasus.db.ensembles import EnsembleStates
-from Pegasus.db.ensembles import EnsembleWorkflow as _EnsembleWorkflow
-from Pegasus.db.ensembles import EnsembleWorkflowStates, TriggerStates, TriggerType
+from pegaflow.db.ensembles import Ensemble as _Ensemble
+from pegaflow.db.ensembles import EnsembleStates
+from pegaflow.db.ensembles import EnsembleWorkflow as _EnsembleWorkflow
+from pegaflow.db.ensembles import EnsembleWorkflowStates, TriggerStates, TriggerType
 
 __all__ = (
     "DBVersion",

@@ -5,8 +5,8 @@ import time
 
 from sqlalchemy import exc
 
-from Pegasus.db.base_loader import BaseLoader
-from Pegasus.db.schema import *
+from pegaflow.db.base_loader import BaseLoader
+from pegaflow.db.schema import *
 
 
 class DashboardLoader(BaseLoader):

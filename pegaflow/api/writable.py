@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, TextIO, Union
 
-from Pegasus import yaml
+from pegaflow import yaml
 
 __all__ = ["Writable"]
 

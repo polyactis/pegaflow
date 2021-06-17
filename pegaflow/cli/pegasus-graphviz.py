@@ -9,7 +9,7 @@ from collections import OrderedDict
 from functools import cmp_to_key
 from optparse import OptionParser
 
-from Pegasus import yaml
+from pegaflow import yaml
 
 COLORS = [
     "#1b9e77",

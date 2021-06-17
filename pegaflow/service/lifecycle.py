@@ -5,8 +5,8 @@ from datetime import datetime
 
 from flask import Response, abort, current_app, g, make_response, request, url_for
 
-from Pegasus import user
-from Pegasus.service.auth import (  # noqa: F401
+from pegaflow import user
+from pegaflow.service.auth import (  # noqa: F401
     BaseAuthentication,
     NoAuthentication,
     PAMAuthentication,

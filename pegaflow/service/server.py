@@ -6,11 +6,11 @@ import click
 import flask
 from OpenSSL import crypto
 
-from Pegasus.service import cache
-from Pegasus.service._encoder import PegasusJsonEncoder
-from Pegasus.service.base import BooleanConverter
-from Pegasus.service.filters import register_jinja2_filters
-from Pegasus.service.lifecycle import register_lifecycle_handlers
+from pegaflow.service import cache
+from pegaflow.service._encoder import PegasusJsonEncoder
+from pegaflow.service.base import BooleanConverter
+from pegaflow.service.filters import register_jinja2_filters
+from pegaflow.service.lifecycle import register_lifecycle_handlers
 
 log = logging.getLogger(__name__)
 
@@ -153,13 +153,13 @@ def configure_app(app):
 
 
 def configure_dashboard(app):
-    from Pegasus.service.dashboard import blueprint
+    from pegaflow.service.dashboard import blueprint
 
     app.register_blueprint(blueprint)
 
 
 def configure_monitoring(app):
-    from Pegasus.service.monitoring import monitoring
+    from pegaflow.service.monitoring import monitoring
 
     app.register_blueprint(monitoring, url_prefix="/api/v1/user/<string:username>")
 

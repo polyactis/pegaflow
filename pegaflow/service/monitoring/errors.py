@@ -3,11 +3,11 @@ import logging
 from flask import make_response
 from sqlalchemy.orm.exc import NoResultFound
 
-from Pegasus.service._query import InvalidQueryError
-from Pegasus.service._serialize import jsonify
-from Pegasus.service._sort import InvalidSortError
-from Pegasus.service.base import ErrorResponse, InvalidJSONError
-from Pegasus.service.monitoring import monitoring
+from pegaflow.service._query import InvalidQueryError
+from pegaflow.service._serialize import jsonify
+from pegaflow.service._sort import InvalidSortError
+from pegaflow.service.base import ErrorResponse, InvalidJSONError
+from pegaflow.service.monitoring import monitoring
 
 log = logging.getLogger(__name__)
 

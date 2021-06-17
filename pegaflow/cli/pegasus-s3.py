@@ -21,6 +21,6 @@ if "PEGASUS_PYTHONPATH_SET" not in os.environ:
     sys.path.insert(0, lib_dir)
 
 
-from Pegasus import s3  # isort:skip
+from pegaflow import s3  # isort:skip
 
 s3.main()

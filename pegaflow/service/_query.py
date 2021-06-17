@@ -238,7 +238,7 @@ def _main():
 
     logging.basicConfig(level=logging.DEBUG)
     logging.debug("Expression <%s>", sys.argv[1])
-    from Pegasus.db.schema import Workflow
+    from pegaflow.db.schema import Workflow
 
     result = query_parse(sys.argv[1], Workflow)
     logging.debug("Evaluation Result <%s>", result[0])
