@@ -44,4 +44,4 @@ pip3 install --upgrade pegaflow
 Check [pegaflow/example/](pegaflow/example/) for examples.
 
 - [pegaflow/example/WordCountFiles.py](pegaflow/example/WordCountFiles.py) is an example that inherits [Workflow.py](pegaflow/Workflow.py). Users should be familiar with Object-Oriented programming.
-- [pegaflow/example/WCFiles_Function.py](pegaflow/example/WCFiles_Function.py) is a procedural-programming example that invokes functions in [Workflow.py](pegaflow/Workflow.py).
+- [pegaflow/example/WCFiles_Function.py](pegaflow/example/WCFiles_Function.py) is a procedural-programming example.
