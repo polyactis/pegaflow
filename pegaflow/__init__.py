@@ -6,7 +6,7 @@ from .api import File, Job, Transformation
 from .api import Arch, OS
 from .api import Workflow as PegaWorkflow
 
-version = '1.0.0'
+version = '2.0.0'
 namespace = "pegasus"
 pegasus_version = "1.0"
 

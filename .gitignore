@@ -1,5 +1,6 @@
 *.egg-info
 **/*.pyc
+**/*.yml
 **/__pycache__
 **/.*.swp
 pegaflow/example/scratch/**
