@@ -179,11 +179,14 @@ class Workflow(PegaWorkflow):
         """
         TODO: write properties, site_catalog, replica_catalog to files in the workflow folder.
         """
-        self.pegasus_props.write()
-        if not self.site_catalog is None:
-            self.site_catalog.write()
-        self.replica_catalog.write()
-        self.transformation_catalog.write()
+        ## Pegasus properties will be in the static file.
+        #self.pegasus_props.write()
+        ## site_catalog, replica_catalog, transformation_catalog will be embedded in the final dag file.
+        ## No need to output them separately. 
+        #if not self.site_catalog is None:
+            #self.site_catalog.write()
+        #self.replica_catalog.write()
+        #self.transformation_catalog.write()
         print(f'{self.no_of_jobs} jobs in the DAG.', flush=True)
         print(f"Writing the DAG to {self.output_path} ... ", flush=True, end='')
         out = open(self.output_path, 'w')

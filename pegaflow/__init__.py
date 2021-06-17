@@ -8,7 +8,7 @@ from .api import Directory, File, FileServer, Job, Operation, \
 from .api import Arch, OS
 from .api import Workflow as PegaWorkflow
 
-version = '2.0.0'
+version = '5.0.0'
 namespace = "pegasus"
 pegasus_version = "1.0"
 
@@ -79,14 +79,23 @@ def create_site_catalog(wf_dir:str, sc_out_file:str=None, exec_site_name="condor
             )
         exec_site.add_pegasus_profile(style="condor")
         exec_site.add_condor_profile(universe="vanilla")
-        #.add_profiles(Namespace.PEGASUS, key="data.configuration", value="sharedfs")
-        #.add_env(key="PATH", value="/y/program/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
         sc.add_sites(exec_site)
     else:
-        exec_site = local_site
+        # use condor local universe
+        # The local universe allows a Condor job to be submitted and executed with
+        #   different assumptions for the execution conditions of the job.
+        #   The job does not wait to be matched with a machine.
+        #   It instead executes right away, on the machine where the job is submitted.
+        #   The job will never be preempted.
+        #   The job's requirements expression is evaluated against the condor_schedd's ClassAd. 
+        exec_site:Site = local_site
+        exec_site.add_pegasus_profile(style="condor")
+        exec_site.add_condor_profile(universe="local")
     #if data_configuration=nonsharedfs/condorio (default), all executables will be staged by pegasus or condor.
     exec_site.add_pegasus_profile(data_configuration="sharedfs")   
     exec_site.add_env(key="PEGASUS_HOME", value="/usr")
+    #.add_profiles(Namespace.PEGASUS, key="data.configuration", value="sharedfs")
+    #.add_env(key="PATH", value="/y/program/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
     if write_out:
         #If sc_out_file is None, its default name is sites.yml.
         sc.write(sc_out_file)
@@ -217,6 +226,10 @@ def create_site_catalog(wf_dir:str, sc_out_file:str=None, exec_site_name="condor
 
 # --- Configuration (Pegasus Properties) ---------------------------------------
 def create_pegasus_properties():
+    """
+    pegasus_props:Properties = pegaflow.create_pegasus_properties()
+    pegasus_props.write()
+    """
     pegasus_props = Properties()
 
     #pegasus_props["pegasus.monitord.encoding"] = "json"

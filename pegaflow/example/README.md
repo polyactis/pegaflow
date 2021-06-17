@@ -8,12 +8,11 @@
 - [WordCountFiles.py](WordCountFiles.py) is an Object-Oriented example that runs `wc` (word-count) on all files with a given suffix in an input folder.
 - [WCFiles_Function.py](WCFiles_Function.py) provides the same function as [WordCountFiles.py](WordCountFiles.py), but is written in a procedural-programming way. No classes.
 
-The two programs above also generate `pegasus.properties` and `sites.yml`, a configuration file specific to your workflow (where to store job files, where to run jobs, where to transfer final output). `sites.yml` will be copied into the workflow submit folder (submit/...), during the planning phase. Overwriting it is OK.
+The two programs above also generate `pegasus.properties` and `sites.yml`, a configuration file specific to your workflow (where to store job files, where to run jobs, where to transfer final output). `sites.yml` will be copied into the workflow submit folder (submit/...), during the planning/submission phase. Overwriting it is OK.
 
 - [submit.sh](submit.sh) is a workflow submit script that invokes pegasus-plan.
-- pegasus.properties, formerly [pegasusrc](pegasusrc), contains a few pre-set Pegasus settings that [submit.sh](submit.sh) will read from.
-- pegasusrc is no longer needed.
-- A user should copy both [submit.sh](submit.sh) to his/her running environment.
+- [pegasus.properties](pegasus.properties), contains a few pre-set Pegasus settings that [submit.sh](submit.sh) will read from.
+- A user should copy both [submit.sh](submit.sh) and [pegasus.properties](pegasus.properties) to his/her running environment.
 
 To get help on the arguments of [WordCountFiles.py](WordCountFiles.py) or [WCFiles_Function.py](WCFiles_Function.py):
 
@@ -66,4 +65,6 @@ $ pegasus-analyzer submit/wc.python...
 # Re-submit it after fixing program bugs. It will start only the failed jobs.
 $ pegasus-run submit/...
 
+# Obtain pegasus workflow running statistics
+$ pegasus-statistics -s all submit/wc.python.code.*
 ```

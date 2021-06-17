@@ -10,7 +10,7 @@ Pegaflow, https://github.com/polyactis/pegaflow, is an easy-to-use package of th
 
 Pegasus jobs do NOT support UNIX pipes while many UNIX programs can only output to stdout. A shell wrapper, [pegaflow/tools/pipe2File.sh](pegaflow/tools/pipe2File.sh), is offered to redirect the output (stdout) of a program to a file. [pegaflow/tools/](pegaflow/tools/) contains a few other useful shell scripts.
 
-- The DAX API (v3) and the helper class Workflow.py
+- **Workflow.py**
 - The monitoring API
 - The Stampede database API
 - The Pegasus statistics API

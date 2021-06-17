@@ -41,6 +41,7 @@ check_version:
 #     - pegasus-status submit/wc.python.code.*
 #     - cat submit/wc.python.code.*/statistics/breakdown.txt
 #     - mv wc.python.code.*/merged.txt ./
+#     - ls
 #   artifacts:
 #     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
 #     expire_in: 3 mos
@@ -61,6 +62,7 @@ test_OO:
     - pegasus-statistics -s all submit/wc.python.code.*
     - cat submit/wc.python.code.*/statistics/breakdown.txt
     - mv wc.python.code.*/merged.txt ./
+    - ls
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos
@@ -81,6 +83,7 @@ test_function:
     - pegasus-statistics -s all submit/wc.python.code.*
     - cat submit/wc.python.code.*/statistics/breakdown.txt
     - mv wc.python.code.*/merged.txt ./
+    - ls
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos
@@ -90,16 +93,20 @@ test_function:
 test_local:
   stage: test
   script:
-    - echo "Generate and run the workflow locally ... "
+    - echo "Generate and run the workflow in the condor local universe ... "
     - cd pegaflow/example/
     - echo "Force shell execution. No condor required."
     - echo "pegasus.code.generator = Shell" >> pegasusrc
     - ./WordCountFiles.py -i /y/home/huangyu/script/test/python/
-      --inputSuffixList .py -l local -o wc.python.code.yml -C 1
+      --inputSuffixList .py -l local -o wc.python.code.yml -C 10
     - ./submit.sh ./wc.python.code.yml local
-    # pegasus-statistics can not work with locally run workflows.
-    - pegasus-status submit/wc.python.code.*
+    - sleep 10 && pegasus-status submit/wc.python.code.*
+    - ../test/pegaflow_monitor -j submit/wc.python.code.*/jobstate.log
+    # pegasus-statistics can not work with locally run workflows??
+    - pegasus-statistics -s all submit/wc.python.code.*
+    - cat submit/wc.python.code.*/statistics/breakdown.txt
     - mv wc.python.code.*/merged.txt ./
+    - ls
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos
