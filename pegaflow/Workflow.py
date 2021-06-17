@@ -254,7 +254,7 @@ class Workflow(PegaWorkflow):
         shared_scratch_dir = os.path.join(self.wf_dir, scratch_folder_name)
         local_storage_dir = os.path.join(self.wf_dir, local_storage_folder_name)
 
-        local = Site("local")\
+        local_site = Site("local")\
             .add_directories(
                 Directory(Directory.SHARED_SCRATCH, shared_scratch_dir)
                     .add_file_servers(FileServer("file://" + shared_scratch_dir, Operation.ALL)),
@@ -262,18 +262,24 @@ class Workflow(PegaWorkflow):
                 Directory(Directory.LOCAL_STORAGE, local_storage_dir)
                     .add_file_servers(FileServer("file://" + local_storage_dir, Operation.ALL))
                 )
+        sc.add_sites(local_site)
 
-        exec_site = Site(exec_site_name)
-        exec_site.add_directories(
-            Directory(Directory.SHARED_SCRATCH, shared_scratch_dir)
-                .add_file_servers(FileServer("file://" + shared_scratch_dir, Operation.ALL)),
-            )
-        exec_site.add_env(key="PEGASUS_HOME", value="/usr")
-        exec_site.add_pegasus_profile(style="condor")
-        exec_site.add_pegasus_profile(data_configuration="sharedfs")
-        exec_site.add_condor_profile(universe="vanilla")
+        if exec_site_name!="local":
+            exec_site = Site(exec_site_name)
+            exec_site.add_directories(
+                Directory(Directory.SHARED_SCRATCH, shared_scratch_dir)
+                    .add_file_servers(FileServer("file://" + shared_scratch_dir, Operation.ALL)),
+                )
+            exec_site.add_pegasus_profile(style="condor")
+            exec_site.add_pegasus_profile(data_configuration="sharedfs")
+            exec_site.add_condor_profile(universe="vanilla")
             #.add_profiles(Namespace.PEGASUS, key="data.configuration", value="sharedfs")
             #.add_env(key="PATH", value="/y/program/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin")
+            sc.add_sites(exec_site)
+        else:
+            exec_site = local_site
+        exec_site.add_env(key="PEGASUS_HOME", value="/usr")
+
         """
         .add_env(key="PEGASUS_HOME", value="/usr") is needed because of this error
            java.lang.RuntimeException: Could not find entry in TC for lfn pegasus::transfer at site condor. 
@@ -395,7 +401,6 @@ class Workflow(PegaWorkflow):
 
         """
 
-        sc.add_sites(local, exec_site)
         return sc
 
     def constructOneExecutableObject(self, name=None, path=None,
