@@ -16,7 +16,7 @@ from copy import copy
 from optparse import Option, OptionParser, OptionValueError, make_option
 
 #
-import Pegasus.netlogger
+import pegaflow.netlogger
 from pegaflow.netlogger import configobj
 
 try:

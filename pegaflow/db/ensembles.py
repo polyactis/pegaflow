@@ -9,7 +9,7 @@ from sqlalchemy import sql
 from sqlalchemy.orm.exc import NoResultFound
 
 # TODO: circular import here...
-import Pegasus.db as db
+import pegaflow.db as db
 from pegaflow import user
 
 
