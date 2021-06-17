@@ -1,9 +1,7 @@
-# TOC
-
 - [1. An example to inherit Workflow.py](#1-an-example-to-inherit-workflowpy)
   - [1.1. Test on a Condor cluster](#11-test-on-a-condor-cluster)
-# 1. An example to inherit Workflow.py
 
+# 1. An example to inherit Workflow.py
 
 - [WordCountFiles.py](WordCountFiles.py) is an Object-Oriented example that runs `wc` (word-count) on all files with a given suffix in an input folder.
 - [WCFiles_Function.py](WCFiles_Function.py) provides the same function as [WordCountFiles.py](WordCountFiles.py), but is written in a procedural-programming way. No classes.

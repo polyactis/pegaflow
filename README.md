@@ -1,6 +1,7 @@
 - [1. Pegasus Workflow Management System Python3 API](#1-pegasus-workflow-management-system-python3-api)
-- [2. Installation](#2-installation)
-- [3. Examples](#3-examples)
+- [2. Prerequisites](#2-prerequisites)
+- [3. Installation](#3-installation)
+- [4. Examples](#4-examples)
 
 # 1. Pegasus Workflow Management System Python3 API
 
@@ -20,7 +21,17 @@ Pegasus jobs do NOT support UNIX pipes while many UNIX programs can only output 
 
 Part of this package's source code is copied from https://github.com/pegasus-isi/pegasus, version 5.0.0,
 
-# 2. Installation
+# 2. Prerequisites
+
+Pegasus and HTCondor (Condor) are only required on computers on which you intend to submit and run workflows.
+
+On computers where only DAG yml files are outputted, no need to install Pegasus and Condor.
+
+- Pegasus https://github.com/pegasus-isi/pegasus
+- HTCondor https://research.cs.wisc.edu/htcondor/, the underlying job scheduler.
+- Linux command bc and gzip are needed if [pegaflow/tools/pipe2File.sh](pegaflow/tools/pipe2File.sh) is to be used.
+
+# 3. Installation
 
 Install pegaflow:
 
@@ -28,28 +39,7 @@ Install pegaflow:
 pip3 install --upgrade pegaflow
 ```
 
-Pegasus and HTCondor (Condor) are only required on computers where you intend to submit and run workflows.
-
-On computers where only DAXs (DAG XML files) are outputted, no need to install Pegasus and Condor.
-
-- Pegasus https://github.com/pegasus-isi/pegasus
-- HTCondor https://research.cs.wisc.edu/htcondor/, the underlying job scheduler.
-
-If a user intends to use Non-DAX Pegasus APIs, the following Python packages need to be installed as well.
-
-- "Werkzeug==0.14.1",
-- "Flask==0.12.4",
-- "Jinja2==2.8.1",
-- "SQLAlchemy",
-- "Flask-Cache==0.13.1",
-- "requests==2.18.4",
-- "MarkupSafe==1.0",
-- "boto==2.48.0",
-- "pam==0.1.4",
-- "plex==2.0.0dev",
-- "future"
-
-# 3. Examples
+# 4. Examples
 
 Check [pegaflow/example/](pegaflow/example/) for examples.
 
