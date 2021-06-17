@@ -81,7 +81,8 @@ def create_site_catalog(wf_dir:str, sc_out_file:str=None, exec_site_name="condor
         exec_site.add_condor_profile(universe="vanilla")
         sc.add_sites(exec_site)
     else:
-        # use condor local universe
+        # Use condor local universe. 
+        ## Does not work on the local site, because non-local (non-stage) jobs require a condor vanilla universe.
         # The local universe allows a Condor job to be submitted and executed with
         #   different assumptions for the execution conditions of the job.
         #   The job does not wait to be matched with a machine.
