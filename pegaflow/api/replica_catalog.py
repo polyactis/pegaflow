@@ -60,6 +60,7 @@ class File(MetadataMixin):
 
         self.metadata = dict()
         self.lfn = lfn
+        self.name = lfn
         self.size = size
         if size:
             self.metadata["size"] = size
