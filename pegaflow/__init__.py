@@ -7,7 +7,7 @@ from .api import Directory, File, FileServer, Job, Operation, \
 from .api import Arch, OS
 from .api import Workflow as PegaWorkflow
 
-version = '5.0.2'
+version = '5.0.3'
 namespace = "pegasus"
 pegasus_version = "1.0"
 
