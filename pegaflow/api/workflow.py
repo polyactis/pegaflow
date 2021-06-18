@@ -22,6 +22,11 @@ __all__ = ["AbstractJob", "Job", "SubWorkflow", "Workflow"]
 
 class AbstractJob(HookMixin, ProfileMixin, MetadataMixin):
     """An abstract representation of a workflow job"""
+    input:File
+    output:File
+    inputLs:List[File]
+    outputLs:List[File]
+    outputList:List[File]
 
     def __init__(self, _id: Optional[str] = None, node_label: Optional[str] = None):
         """
@@ -402,7 +407,6 @@ class Job(AbstractJob):
                 .add_outputs(of1, of2, stage_out=True, register_replica=False)
 
     """
-
     def __init__(
         self,
         transformation: Union[str, Transformation],
