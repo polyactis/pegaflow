@@ -44,7 +44,7 @@ def find_package_data(dirname):
 
 setup_args = dict(
     name="Pegaflow",
-    version="5.0.1",
+    version="5.0.2",
     author="Yu S. Huang",
     author_email="polyactis@gmail.com",
     description="An easy-to-use Python API for Pegasus 5.0",
