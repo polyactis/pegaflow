@@ -406,7 +406,7 @@ def addMkDirJob(workflow:PegaWorkflow, executable:Transformation, outputDir:str,
     return job
 
 
-def setJobResourceRequirement(job:Job=None, job_max_memory=500, no_of_cpus=1,
+def setJobResourceRequirement(job:Job=None, job_max_memory:int=500, no_of_cpus:int=1,
     walltime=180, sshDBTunnel=0, db=None, io=None, gpu=None):
     """
     db: integer.
@@ -438,7 +438,10 @@ def setJobResourceRequirement(job:Job=None, job_max_memory=500, no_of_cpus=1,
     condorJobRequirementLs = []
     if job_max_memory == "" or job_max_memory == 0 or job_max_memory == "0":
         job_max_memory = 500
+    
     if job_max_memory:
+        #convert to clean integer. no float (100.0) allowed.
+        job_max_memory = int(float(job_max_memory))
         job.add_globus_profile(max_memory=f"{job_max_memory}")
         job.add_pegasus_profile(memory=f"{job_max_memory}")
         job.add_condor_profile(request_memory=f"{job_max_memory}")
@@ -455,6 +458,8 @@ def setJobResourceRequirement(job:Job=None, job_max_memory=500, no_of_cpus=1,
         job.add_pegasus_profile(gpus=gpu)
         job.add_condor_profile(request_gpus=f"{gpu}")
     if walltime:
+        #convert to clean integer. no float (100.0) allowed.
+        walltime = int(float(walltime))
         job.add_globus_profile(max_wall_time=f"{walltime}")
         #TimeToLive is in seconds
         condorJobRequirementLs.append(
