@@ -125,12 +125,13 @@ test_function:
 #   allow_failure: true
 
 
-clone_pymodule:
+clone_install_pymodule:
   stage: install
   script:
     - echo "Clone pymodule and compile ... "
     - git clone git@gitlab.yfish.x:horseshoe/pymodule.git
     - pushd pymodule
+    - pip3 install --user ./
     #InspectAlignmentPipeline needs some compiled binaries
     - make all
   artifacts:
@@ -149,9 +150,9 @@ DAG_CountReadsWorkflow:
       -l condor --pymodulePath `pwd`
       --hostname pdc --dbname pmdb --schema sunset
       -u sunset_r -p yfishLabSunset --commit
-  needs: [clone_pymodule, install]
+  needs: [clone_install_pymodule, install]
   dependencies:
-    - clone_pymodule
+    - clone_install_pymodule
 
 
 DAG_ShortRead2Alignment:
@@ -167,9 +168,9 @@ DAG_ShortRead2Alignment:
       --no_of_aln_threads 8
       -z pdc --dbname pmdb --schema sunset
       -u sunset_r -p yfishLabSunset
-  needs: [clone_pymodule, install]
+  needs: [clone_install_pymodule, install]
   dependencies:
-    - clone_pymodule
+    - clone_install_pymodule
 
 DAG_InspectAlignment:
   stage: output_pymodule_DAG
@@ -182,9 +183,9 @@ DAG_InspectAlignment:
       --home_path /y/home/huangyu --pymodulePath `pwd`
       --tmpDir /y/scratch/tmp/huangyu/
       -o InspectAln_2112_2132.yml
-  needs: [clone_pymodule, install]
+  needs: [clone_install_pymodule, install]
   dependencies:
-    - clone_pymodule
+    - clone_install_pymodule
 
 DAG_InspectBaseQuality:
   stage: output_pymodule_DAG
@@ -197,7 +198,7 @@ DAG_InspectBaseQuality:
       --home_path /y/home/huangyu --pymodulePath `pwd`
       --tmpDir /y/scratch/tmp/huangyu/
       -o InspectBaseQuality_650_850.yml
-  needs: [clone_pymodule, install]
+  needs: [clone_install_pymodule, install]
   dependencies:
-    - clone_pymodule
+    - clone_install_pymodule
 
