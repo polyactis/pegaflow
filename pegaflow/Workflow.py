@@ -177,7 +177,6 @@ class Workflow(PegaWorkflow):
     # --- Write files in directory -------------------------------------------------
     def write(self, output_path=None, **keywords):
         """
-        TODO: write properties, site_catalog, replica_catalog to files in the workflow folder.
         """
         ## Pegasus properties will be in the static file.
         #self.pegasus_props.write()
