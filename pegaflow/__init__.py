@@ -1,14 +1,13 @@
 __path__ = __import__("pkgutil").extend_path(__path__, __name__)
 import logging
 import os
-import sys
 from .api import Directory, File, FileServer, Job, Operation, \
     Properties, ReplicaCatalog, Site, SiteCatalog, Transformation, \
     TransformationCatalog
 from .api import Arch, OS
 from .api import Workflow as PegaWorkflow
 
-version = '5.0.0'
+version = '5.0.1'
 namespace = "pegasus"
 pegasus_version = "1.0"
 

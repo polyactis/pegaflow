@@ -44,7 +44,7 @@ def find_package_data(dirname):
 
 setup_args = dict(
     name="Pegaflow",
-    version="5.0.0",
+    version="5.0.1",
     author="Yu S. Huang",
     author_email="polyactis@gmail.com",
     description="An easy-to-use Python API for Pegasus 5.0",
@@ -68,7 +68,7 @@ setup_args = dict(
     packages=find_packages(exclude=['pegaflow.test*']),
     package_data={
         # If any package contains *.sh files, include them:
-        "": ["*.sh", "*.md", "pegasusrc"],
+        "": ["*.sh", "*.md", "pegasus.properties"],
     },
     include_package_data=True,
     zip_safe=False,

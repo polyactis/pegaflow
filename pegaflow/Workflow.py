@@ -175,7 +175,7 @@ class Workflow(PegaWorkflow):
         self.write(**keywords)
     
     # --- Write files in directory -------------------------------------------------
-    def write(self, **keywords):
+    def write(self, output_path=None, **keywords):
         """
         TODO: write properties, site_catalog, replica_catalog to files in the workflow folder.
         """
@@ -187,9 +187,12 @@ class Workflow(PegaWorkflow):
             #self.site_catalog.write()
         #self.replica_catalog.write()
         #self.transformation_catalog.write()
+        
         print(f'{self.no_of_jobs} jobs in the DAG.', flush=True)
-        print(f"Writing the DAG to {self.output_path} ... ", flush=True, end='')
-        out = open(self.output_path, 'w')
+        if output_path is None:
+            output_path = self.output_path
+        print(f"Writing the DAG to {output_path} ... ", flush=True, end='')
+        out = open(output_path, 'w')
         PegaWorkflow.write(self, out)
         out.write(f'#commandline: {self.commandline}\n')
         out.close()
