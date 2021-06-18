@@ -131,6 +131,18 @@ clone_pymodule:
     - echo "Clone pymodule and compile ... "
     - git clone git@gitlab.yfish.x:horseshoe/pymodule.git
     - pushd pymodule
+  artifacts:
+    name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
+    expire_in: 4 yrs
+    paths:
+    - pymodule
+
+compile_pymodule:
+  stage: install
+  script:
+    - echo "Clone pymodule and compile ... "
+    - git clone git@gitlab.yfish.x:horseshoe/pymodule.git
+    - pushd pymodule
     #InspectAlignmentPipeline needs some compiled binaries
     - make all
   artifacts:
@@ -138,6 +150,7 @@ clone_pymodule:
     expire_in: 4 yrs
     paths:
     - pymodule
+  allow_failure: true
 
 DAG_CountReadsWorkflow:
   stage: output_pymodule_DAG
@@ -152,6 +165,7 @@ DAG_CountReadsWorkflow:
   needs: [clone_pymodule, install]
   dependencies:
     - clone_pymodule
+  allow_failure: true
 
 
 DAG_ShortRead2Alignment:
@@ -170,6 +184,8 @@ DAG_ShortRead2Alignment:
   needs: [clone_pymodule, install]
   dependencies:
     - clone_pymodule
+  allow_failure: true
+
 
 DAG_InspectAlignment:
   stage: output_pymodule_DAG
@@ -177,14 +193,16 @@ DAG_InspectAlignment:
     - echo "Output a InspectAlignmentPipeline DAG ... "
     - pushd pymodule
     - pwd
+    #InspectAlignmentPipeline needs some compiled binaries
     - ./ngs/qc/InspectAlignmentPipeline.py -a 633 -i 2112-2132 -l condor -z pdc
       --dbname pmdb --schema sunset -u sunset_r -p yfishLabSunset
       --home_path /y/home/huangyu --pymodulePath `pwd`
       --tmpDir /y/scratch/tmp/huangyu/
       -o InspectAln_2112_2132.yml
-  needs: [clone_pymodule, install]
+  needs: [compile_pymodule, install]
   dependencies:
-    - clone_pymodule
+    - compile_pymodule
+  allow_failure: true
 
 DAG_InspectBaseQuality:
   stage: output_pymodule_DAG
@@ -200,4 +218,5 @@ DAG_InspectBaseQuality:
   needs: [clone_pymodule, install]
   dependencies:
     - clone_pymodule
+  allow_failure: true
 
