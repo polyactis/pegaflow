@@ -11,9 +11,8 @@ after_script:
 stages:
   - install
   - check_version
-  - test
-  - clone_pymodule_compile
-  - test_pymodule_DAG
+  - run_flows
+  - output_pymodule_DAG
   - uninstall
 
 install:
@@ -31,10 +30,13 @@ check_version:
   script:
     - echo "Checking the installed version"
     - python3 -c "import pegaflow; print(pegaflow.version)"
+  needs: [install]
+  dependencies:
+    - install
 
 
 # test_OO_direct_run:
-#   stage: test
+#   stage: run_flows
 #   script:
 #     - echo "Generate and run the Object-Oriented direct-run workflow ... "
 #     - cd pegaflow/example/
@@ -52,7 +54,7 @@ check_version:
 #   allow_failure: true
 
 test_OO:
-  stage: test
+  stage: run_flows
   script:
     - echo "Generate and run the Object-Oriented manul-run workflow ... "
     - cd pegaflow/example/
@@ -70,10 +72,13 @@ test_OO:
     expire_in: 3 mos
     paths:
     - pegaflow/example/merged.txt
+  needs: [install]
+  dependencies:
+    - install
 
 
 test_function:
-  stage: test
+  stage: run_flows
   script:
     - echo "Generate and run the function-example workflow ... "
     - cd pegaflow/example/
@@ -86,6 +91,9 @@ test_function:
     - cat submit/wc.python.code.*/statistics/breakdown.txt
     - mv wc.python.code.*/merged.txt ./
     - ls
+  needs: [install]
+  dependencies:
+    - install
   artifacts:
     name: "${CI_BUILD_ID}_${CI_BUILD_NAME}_${CI_BUILD_REF_NAME}"
     expire_in: 3 mos
@@ -94,7 +102,7 @@ test_function:
 
 ## Does not work on the local site, because non-local (non-stage) jobs require a condor vanilla universe.
 # test_local:
-#   stage: test
+#   stage: run_flows
 #   script:
 #     - echo "Generate and run the workflow on the local site ... "
 #     - cd pegaflow/example/
@@ -118,7 +126,7 @@ test_function:
 
 
 clone_pymodule:
-  stage: clone_pymodule_compile
+  stage: install
   script:
     - echo "Clone pymodule and compile ... "
     - git clone git@gitlab.yfish.x:horseshoe/pymodule.git
@@ -132,7 +140,7 @@ clone_pymodule:
     - pymodule
 
 DAG_CountReadsWorkflow:
-  stage: test_pymodule_DAG
+  stage: output_pymodule_DAG
   script:
     - echo "Output a CountReadsWorkflow DAG ... "
     - pushd pymodule
@@ -141,13 +149,13 @@ DAG_CountReadsWorkflow:
       -l condor --pymodulePath `pwd`
       --hostname pdc --dbname pmdb --schema sunset
       -u sunset_r -p yfishLabSunset --commit
-  needs: [clone_pymodule]
+  needs: [clone_pymodule, install]
   dependencies:
     - clone_pymodule
 
 
 DAG_ShortRead2Alignment:
-  stage: test_pymodule_DAG
+  stage: output_pymodule_DAG
   script:
     - echo "Output a ShortRead2Alignment DAG ... "
     - pushd pymodule
@@ -159,12 +167,12 @@ DAG_ShortRead2Alignment:
       --no_of_aln_threads 8
       -z pdc --dbname pmdb --schema sunset
       -u sunset_r -p yfishLabSunset
-  needs: [clone_pymodule]
+  needs: [clone_pymodule, install]
   dependencies:
     - clone_pymodule
 
 DAG_InspectAlignment:
-  stage: test_pymodule_DAG
+  stage: output_pymodule_DAG
   script:
     - echo "Output a InspectAlignmentPipeline DAG ... "
     - pushd pymodule
@@ -174,12 +182,12 @@ DAG_InspectAlignment:
       --home_path /y/home/huangyu --pymodulePath `pwd`
       --tmpDir /y/scratch/tmp/huangyu/
       -o InspectAln_2112_2132.yml
-  needs: [clone_pymodule]
+  needs: [clone_pymodule, install]
   dependencies:
     - clone_pymodule
 
 DAG_InspectBaseQuality:
-  stage: test_pymodule_DAG
+  stage: output_pymodule_DAG
   script:
     - echo "Output a InspectBaseQualityPipeline DAG ... "
     - pushd pymodule
@@ -189,7 +197,7 @@ DAG_InspectBaseQuality:
       --home_path /y/home/huangyu --pymodulePath `pwd`
       --tmpDir /y/scratch/tmp/huangyu/
       -o InspectBaseQuality_650_850.yml
-  needs: [clone_pymodule]
+  needs: [clone_pymodule, install]
   dependencies:
     - clone_pymodule
 
