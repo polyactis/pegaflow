@@ -769,13 +769,16 @@ class Workflow(PegaWorkflow):
         transfer is equivalent to stage_out, only for output file.
         """
         if is_input:
-            if hasattr(job, "inputLs"):
-                job.inputLs.append(file)
-            job.add_inputs(file)
+            if not job.has_input_file(file):
+                if hasattr(job, "inputLs"):
+                    job.inputLs.append(file)
+                job.add_inputs(file)
         else:
-            if hasattr(job, "outputLs"):
-                job.outputLs.append(file)
-            job.add_outputs(file, stage_out=transfer, register_replica=register_replica)
+            if not job.has_output_file(file):
+                if hasattr(job, "outputLs"):
+                    job.outputLs.append(file)
+                job.add_outputs(file, stage_out=transfer,
+                    register_replica=register_replica)
         return True
 
     def addJobDependency(self, parentJob=None, childJob=None):
@@ -1111,8 +1114,8 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
             flush=True)
         return
 
-    def getJVMMemRequirment(self, job_max_memory=5000, minMemory=500,
-        permSizeFraction=0, MaxPermSizeUpperBound=35000):
+    def getJVMMemRequirment(self, job_max_memory:int=5000, minMemory:int=500,
+        permSizeFraction:int=0, MaxPermSizeUpperBound=35000):
         """
         Java 8 does not support PermSize anymore. set permSizeFraction to 0.
         handle when job_max_memory is None and minMemory is None.
@@ -1153,7 +1156,7 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
         return PassingData(memRequirementInStr=memRequirementInStr,
             memRequirement=memRequirement)
 
-    def scaleJobWalltimeOrMemoryBasedOnInput(self, realInputVolume=10, \
+    def scaleJobWalltimeOrMemoryBasedOnInput(self, realInputVolume:int=10, \
         baseInputVolume=4, baseJobPropertyValue=120, \
         minJobPropertyValue=120, maxJobPropertyValue=1440):
         """
@@ -1162,7 +1165,7 @@ fastaDictJob = self.addGenericJavaJob(executable=CreateSequenceDictionaryJava,
         """
         walltime = min(max(minJobPropertyValue, 
             float(realInputVolume)/float(baseInputVolume)*baseJobPropertyValue),
-            maxJobPropertyValue)	#in minutes
+            maxJobPropertyValue)	#in minutes or MB
         return PassingData(value=int(walltime))
 
     def addMkDirJob(self, outputDir=None, executable=None, 

@@ -83,7 +83,20 @@ class AbstractJob(HookMixin, ProfileMixin, MetadataMixin):
                 )
 
             self.uses.add(_input)
-
+    
+    def has_input_file(self, input_file:File, bypass_staging: bool = False):
+        """
+        2021/06/18 Yu S. Huang
+        """
+        _input = _Use(
+            input_file,
+            _LinkType.INPUT,
+            register_replica=None,
+            stage_out=None,
+            bypass_staging=bypass_staging,
+        )
+        return _input in self.uses
+    
     def get_inputs(self):
         """Get this job's input :py:class:`~Pegasus.api.replica_catalog.File` s
 
@@ -140,6 +153,18 @@ class AbstractJob(HookMixin, ProfileMixin, MetadataMixin):
         :rtype: set
         """
         return {use.file for use in self.uses if use._type == "output"}
+    
+    def has_output_file(self, output_file:File, stage_out: bool = True, register_replica: bool = True):
+        """
+        2021/06/18 Yu S. Huang
+        """
+        output = _Use(
+            output_file,
+            _LinkType.OUTPUT,
+            stage_out=stage_out,
+            register_replica=register_replica,
+        )
+        return output in self.uses
 
     @_chained
     def add_checkpoint(
